@@ -4,7 +4,7 @@ export interface ExpenseInput {
   category_id: number
   amount: number
   notes?: string
-  expense_date: string // Nuova data della spesa
+  expense_date: string
 }
 
 /**
@@ -13,12 +13,11 @@ export interface ExpenseInput {
 export async function saveTripToSupabase(
   title: string,
   startDateStr: string,
-  endDateStr: string, // Nuova data fine
+  endDateStr: string,
   totalKm: number,
   points: Array<{ lat: number; lng: number; ele?: number | null; time?: string | null; speed?: number | null }>,
   expenses: ExpenseInput[]
 ) {
-  // 1. Inserisce il viaggio con data inizio e fine
   const { data: tripData, error: tripError } = await supabase
     .from('trips')
     .insert([{ 
@@ -32,7 +31,6 @@ export async function saveTripToSupabase(
   if (tripError) throw tripError
   const tripId = tripData.id
 
-  // 2. Inserisce i punti mappa se presenti
   if (points.length > 0) {
     const pointsToInsert = points.map((p) => ({
       trip_id: tripId,
@@ -51,14 +49,13 @@ export async function saveTripToSupabase(
     }
   }
 
-  // 3. Inserisce le spese con la loro data specifica
   if (expenses.length > 0) {
     const expensesToInsert = expenses.map((e) => ({
       trip_id: tripId,
       category_id: e.category_id,
       amount: e.amount,
       notes: e.notes ?? null,
-      expense_date: e.expense_date, // Nuova colonna
+      expense_date: e.expense_date,
     }))
 
     const { error: expError } = await supabase.from('expenses').insert(expensesToInsert)
@@ -105,26 +102,49 @@ export async function updateTripWithGpx(
 }
 
 /**
- * Sincronizza le spese aggiornate di un viaggio esistente
+ * CORREZIONE BLINDATA: Sincronizza le spese rimuovendo i duplicati con certezza
  */
 export async function updateTripExpenses(tripId: string, expenses: ExpenseInput[]) {
+  // 1. Forza la cancellazione totale delle vecchie spese per questo viaggio
   const { error: deleteError } = await supabase
     .from('expenses')
     .delete()
     .eq('trip_id', tripId)
 
-  if (deleteError) throw deleteError
+  if (deleteError) {
+    console.error("Errore durante la cancellazione delle spese vecchie:", deleteError)
+    throw deleteError
+  }
 
-  if (expenses.length > 0) {
-    const expensesToInsert = expenses.map((e) => ({
-      trip_id: tripId,
-      category_id: e.category_id,
-      amount: e.amount,
-      notes: e.notes ?? null,
-      expense_date: e.expense_date, // Nuova colonna salvata in modifica
-    }))
+  // 2. Se l'utente ha svuotato tutto o rimosso tutto, ci fermiamo qui
+  if (!expenses || expenses.length === 0) return
 
-    const { error: insertError } = await supabase.from('expenses').insert(expensesToInsert)
-    if (insertError) throw insertError
+  // 3. Rimuoviamo eventuali duplicati IDP/identici presenti nell'array locale prima di inviarlo
+  const uniqueExpenses = expenses.filter((expense, index, self) =>
+    index === self.findIndex((t) => (
+      t.category_id === expense.category_id && 
+      t.amount === expense.amount && 
+      t.expense_date === expense.expense_date &&
+      t.notes === expense.notes
+    ))
+  )
+
+  // 4. Prepariamo i dati puliti per Supabase
+  const expensesToInsert = uniqueExpenses.map((e) => ({
+    trip_id: tripId,
+    category_id: e.category_id,
+    amount: e.amount,
+    notes: e.notes ?? null,
+    expense_date: e.expense_date,
+  }))
+
+  // 5. Inseriamo le spese fresche sul database
+  const { error: insertError } = await supabase
+    .from('expenses')
+    .insert(expensesToInsert)
+
+  if (insertError) {
+    console.error("Errore durante l'inserimento delle nuove spese:", insertError)
+    throw insertError
   }
 }
