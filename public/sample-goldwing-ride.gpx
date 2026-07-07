@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="PAJ GPS" xmlns="http://www.topografix.com/GPX/1/1"
+     xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1">
+  <metadata>
+    <name>Passo dello Stelvio</name>
+    <time>2024-07-14T08:30:00Z</time>
+  </metadata>
+  <trk>
+    <name>Passo dello Stelvio</name>
+    <desc><![CDATA[<b>Giro epico</b> con <i>curve</i> mozzafiato & panorami]]></desc>
+    <trkseg>
+      <trkpt lat="46.5289" lon="10.4531">
+        <ele>1533</ele>
+        <time>2024-07-14T08:30:00Z</time>
+        <extensions><gpxtpx:TrackPointExtension><gpxtpx:speed>12.5</gpxtpx:speed></gpxtpx:TrackPointExtension></extensions>
+      </trkpt>
+      <trkpt lat="46.5312" lon="10.4602">
+        <ele>1712</ele>
+        <time>2024-07-14T08:42:00Z</time>
+        <extensions><gpxtpx:TrackPointExtension><gpxtpx:speed>18.2</gpxtpx:speed></gpxtpx:TrackPointExtension></extensions>
+      </trkpt>
+      <trkpt lat="46.5358" lon="10.4528">
+        <ele>1980</ele>
+        <time>2024-07-14T09:01:00Z</time>
+        <extensions><gpxtpx:TrackPointExtension><gpxtpx:speed>15.7</gpxtpx:speed></gpxtpx:TrackPointExtension></extensions>
+      </trkpt>
+      <trkpt lat="46.5401" lon="10.4489">
+        <ele>2210</ele>
+        <time>2024-07-14T09:20:00Z</time>
+        <extensions><gpxtpx:TrackPointExtension><gpxtpx:speed>22.9</gpxtpx:speed></gpxtpx:TrackPointExtension></extensions>
+      </trkpt>
+      <trkpt lat="46.5286" lon="10.4543">
+        <ele>2758</ele>
+        <time>2024-07-14T09:55:00Z</time>
+        <extensions><gpxtpx:TrackPointExtension><gpxtpx:speed>9.4</gpxtpx:speed></gpxtpx:TrackPointExtension></extensions>
+      </trkpt>
+    </trkseg>
+  </trk>
+  <wpt lat="46.5286" lon="10.4543">
+    <name>Cima Passo</name>
+    <ele>2758</ele>
+    <desc><![CDATA[<span>Sosta caffè</span>]]></desc>
+  </wpt>
+</gpx>
