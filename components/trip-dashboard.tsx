@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import {
   Bike,
@@ -14,6 +14,7 @@ import {
   Loader2,
   Map as MapIcon,
   AlertCircle,
+  Type,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { GpxUploader } from '@/components/gpx-uploader'
@@ -41,11 +42,21 @@ function formatDate(iso: string | null): string {
 
 export function TripDashboard() {
   const [trip, setTrip] = useState<ParsedTrip | null>(null)
+  const [customName, setCustomName] = useState<string>('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [saveState, setSaveState] = useState<SaveState>('idle')
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
+
+  // Sincronizza il nome personalizzato quando viene caricato un nuovo file
+  useEffect(() => {
+    if (trip) {
+      setCustomName(trip.name)
+    } else {
+      setCustomName('')
+    }
+  }, [trip])
 
   const handleFile = useCallback((fileName: string, content: string) => {
     setError(null)
@@ -59,7 +70,6 @@ export function TripDashboard() {
     }
 
     setLoading(true)
-    // Defer parsing so the loading state can paint.
     setTimeout(() => {
       try {
         const fallback = fileName.replace(/\.(gpx|xml)$/i, '')
@@ -85,7 +95,12 @@ export function TripDashboard() {
     setSaveError(null)
     setSaveMessage(null)
     try {
-      const { pointCount } = await saveTripToSupabase(trip)
+      // Uniamo i dati del viaggio inserendo il tuo nome personalizzato prima di salvare
+      const tripWithCustomName = {
+        ...trip,
+        name: customName.trim() || trip.name,
+      }
+      const { pointCount } = await saveTripToSupabase(tripWithCustomName)
       setSaveState('saved')
       setSaveMessage(
         `Viaggio Goldwing salvato nel database! (${pointCount} punti GPS)`,
@@ -95,10 +110,9 @@ export function TripDashboard() {
       const message =
         err instanceof Error ? err.message : 'Errore sconosciuto durante il salvataggio.'
       setSaveError(message)
-      // eslint-disable-next-line no-alert
       alert(`Salvataggio non riuscito: ${message}`)
     }
-  }, [trip])
+  }, [trip, customName])
 
   const stats = useMemo(() => {
     if (!trip) return null
@@ -145,14 +159,22 @@ export function TripDashboard() {
 
             {trip && (
               <div className="rounded-2xl border border-border bg-card p-5">
-                <div className="mb-4 space-y-2">
-                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    Viaggio
-                  </p>
-                  <h3 className="text-balance text-xl font-semibold text-foreground">
-                    {trip.name}
-                  </h3>
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                <div className="mb-5 space-y-3">
+                  <label className="block text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Nome del Viaggio (Modificabile)
+                  </label>
+                  <div className="relative flex items-center">
+                    <Type className="absolute left-3 size-4 text-muted-foreground" />
+                    <input
+                      type="text"
+                      value={customName}
+                      onChange={(e) => setCustomName(e.target.value)}
+                      placeholder="Dai un nome a questo giro..."
+                      className="w-full rounded-xl border border-border bg-secondary/20 py-2.5 pl-10 pr-4 text-base font-semibold text-foreground placeholder:text-muted-foreground/50 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors"
+                    />
+                  </div>
+                  
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-1 text-sm text-muted-foreground">
                     <span className="inline-flex items-center gap-1.5">
                       <CalendarDays className="size-4" />
                       {formatDate(trip.date)}
@@ -245,7 +267,7 @@ export function TripDashboard() {
                 <TripMap points={trip.points} />
               ) : (
                 <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
-                  <div className="flex size-14 items-center justify-center rounded-full bg-secondary/60 text-muted-foreground">
+                  <div className="flex size-14 items-center justify-full rounded-full bg-secondary/60 text-muted-foreground">
                     <MapIcon className="size-7" />
                   </div>
                   <p className="max-w-xs text-balance text-sm text-muted-foreground">
