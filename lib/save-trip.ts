@@ -1,5 +1,4 @@
-import { supabase, type TrackPointRow, type TripRow } from '@/lib/supabase'
-import { ANOMALOUS_SPEED_KMH, sanitizeSpeedKmh, type ParsedTrip } from '@/lib/gpx-parser'
+import { supabase } from './supabase'
 
 export interface ExpenseInput {
   category_id: number
@@ -7,124 +6,124 @@ export interface ExpenseInput {
   notes?: string
 }
 
-export interface SaveResult {
-  trip: TripRow
-  pointCount: number
-  expenseCount: number
-}
-
 /**
- * Crea un viaggio da zero (può essere un viaggio Live manuale senza GPX, oppure un viaggio completo con GPX)
+ * Salva un nuovo viaggio con le sue coordinate e le sue spese (tutto in una transazione)
  */
 export async function saveTripToSupabase(
   title: string,
-  tripDate: string,
-  totalKm: number = 0,
-  points: ParsedTrip['points'] = [],
-  expenses: ExpenseInput[] = []
-): Promise<SaveResult> {
-  // 1. Inserimento del viaggio principale
-  const { data: inserted, error: tripError } = await supabase
+  dateStr: string,
+  totalKm: number,
+  points: Array<{ lat: number; lng: number; ele?: number | null; time?: string | null; speed?: number | null }>,
+  expenses: ExpenseInput[]
+) {
+  // 1. Inserisce il viaggio
+  const { data: tripData, error: tripError } = await supabase
     .from('trips')
-    .insert({
-      title: title.trim(),
-      trip_date: tripDate,
-      total_km: Number(totalKm.toFixed(3)),
-    })
+    .insert([{ title, trip_date: dateStr, total_km: totalKm }])
     .select()
     .single()
 
-  if (tripError || !inserted) {
-    throw new Error(tripError?.message ?? 'Impossibile creare il viaggio.')
-  }
+  if (tripError) throw tripError
+  const tripId = tripData.id
 
-  const tripRow = inserted as TripRow
-
-  // 2. Inserimento punti GPS se presenti
+  // 2. Inserisce i punti mappa se presenti
+  let pointCount = 0
   if (points.length > 0) {
-    const rows: TrackPointRow[] = points.map((p) => {
-      const plausibleKmh = sanitizeSpeedKmh(p.speed, ANOMALOUS_SPEED_KMH)
-      const speed = plausibleKmh !== null && p.speed !== null ? Math.round(p.speed) : null
-
-      return {
-        trip_id: tripRow.id,
-        latitude: p.lat,
-        longitude: p.lon,
-        elevation: p.ele && p.ele !== 0 ? p.ele : null,
-        timestamp: p.time,
-        speed,
-      }
-    })
-
-    const { error: pointsError } = await supabase.from('track_points').insert(rows)
-    if (pointsError) {
-      await supabase.from('trips').delete().eq('id', tripRow.id)
-      throw new Error(`Errore nel salvataggio dei punti: ${pointsError.message}`)
-    }
-  }
-
-  // 3. Inserimento delle spese se presenti
-  if (expenses.length > 0) {
-    const expenseRows = expenses.map((exp) => ({
-      trip_id: tripRow.id,
-      category_id: exp.category_id,
-      amount: exp.amount,
-      notes: exp.notes || null,
+    const pointsToInsert = points.map((p) => ({
+      trip_id: tripId,
+      latitude: p.lat,
+      longitude: p.lng,
+      elevation: p.ele ?? null,
+      timestamp: p.time ?? null,
+      speed: p.speed ? Math.round(p.speed) : null,
     }))
 
-    const { error: expensesError } = await supabase.from('expenses').insert(expenseRows)
-    if (expensesError) {
-      await supabase.from('trips').delete().eq('id', tripRow.id)
-      throw new Error(`Errore nel salvataggio delle spese: ${expensesError.message}`)
+    // Inseriamo a blocchi di 2000 per evitare limiti di richiesta
+    const chunkSize = 2000
+    for (let i = 0; i < pointsToInsert.length; i += chunkSize) {
+      const chunk = pointsToInsert.slice(i, i + chunkSize)
+      const { error: ptsError } = await supabase.from('track_points').insert(chunk)
+      if (ptsError) throw ptsError
     }
+    pointCount = pointsToInsert.length
   }
 
-  return {
-    trip: tripRow,
-    pointCount: points.length,
-    expenseCount: expenses.length
+  // 3. Inserisce le spese se presenti
+  let expenseCount = 0
+  if (expenses.length > 0) {
+    const expensesToInsert = expenses.map((e) => ({
+      trip_id: tripId,
+      category_id: e.category_id,
+      amount: e.amount,
+      notes: e.notes ?? null,
+    }))
+
+    const { error: expError } = await supabase.from('expenses').insert(expensesToInsert)
+    if (expError) throw expError
+    expenseCount = expensesToInsert.length
   }
+
+  return { tripId, pointCount, expenseCount }
 }
 
 /**
- * Associa una traccia GPX a un viaggio già esistente nel database
+ * Associa una traccia GPX a un viaggio live pre-esistente
  */
 export async function updateTripWithGpx(
   tripId: string,
   totalKm: number,
-  points: ParsedTrip['points']
-): Promise<number> {
-  // Update dei km totali sul viaggio esistente
-  const { error: updateError } = await supabase
+  points: Array<{ lat: number; lng: number; ele?: number | null; time?: string | null; speed?: number | null }>
+) {
+  const { error: tripUpdateError } = await supabase
     .from('trips')
-    .update({ total_km: Number(totalKm.toFixed(3)) })
+    .update({ total_km: totalKm })
     .eq('id', tripId)
 
-  if (updateError) {
-    throw new Error(`Impossibile aggiornare i km del viaggio: ${updateError.message}`)
-  }
+  if (tripUpdateError) throw tripUpdateError
 
-  // Inserimento massivo dei punti mappa legati a questo specifico tripId
   if (points.length > 0) {
-    const rows: TrackPointRow[] = points.map((p) => {
-      const plausibleKmh = sanitizeSpeedKmh(p.speed, ANOMALOUS_SPEED_KMH)
-      const speed = plausibleKmh !== null && p.speed !== null ? Math.round(p.speed) : null
+    const pointsToInsert = points.map((p) => ({
+      trip_id: tripId,
+      latitude: p.lat,
+      longitude: p.lng,
+      elevation: p.ele ?? null,
+      timestamp: p.time ?? null,
+      speed: p.speed ? Math.round(p.speed) : null,
+    }))
 
-      return {
-        trip_id: tripId,
-        latitude: p.lat,
-        longitude: p.lon,
-        elevation: p.ele && p.ele !== 0 ? p.ele : null,
-        timestamp: p.time,
-        speed,
-      }
-    })
-
-    const { error: pointsError } = await supabase.from('track_points').insert(rows)
-    if (pointsError) {
-      throw new Error(`Errore nell'inserimento dei punti GPS: ${pointsError.message}`)
+    const chunkSize = 2000
+    for (let i = 0; i < pointsToInsert.length; i += chunkSize) {
+      const chunk = pointsToInsert.slice(i, i + chunkSize)
+      const { error: ptsError } = await supabase.from('track_points').insert(chunk)
+      if (ptsError) throw ptsError
     }
+    return pointsToInsert.length
   }
+  return 0
+}
 
-  return points.length;
+/**
+ * NOVITÀ: Sincronizza le spese aggiornate di un viaggio esistente
+ */
+export async function updateTripExpenses(tripId: string, expenses: ExpenseInput[]) {
+  // Rimuove le vecchie spese di questo viaggio per evitare duplicati
+  const { error: deleteError } = await supabase
+    .from('expenses')
+    .delete()
+    .eq('trip_id', tripId)
+
+  if (deleteError) throw deleteError
+
+  // Inserisce la nuova lista aggiornata
+  if (expenses.length > 0) {
+    const expensesToInsert = expenses.map((e) => ({
+      trip_id: tripId,
+      category_id: e.category_id,
+      amount: e.amount,
+      notes: e.notes ?? null,
+    }))
+
+    const { error: insertError } = await supabase.from('expenses').insert(expensesToInsert)
+    if (insertError) throw insertError
+  }
 }
