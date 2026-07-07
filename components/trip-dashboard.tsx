@@ -40,14 +40,6 @@ const TripMap = dynamic(() => import('@/components/trip-map'), {
 type SaveState = 'idle' | 'saving' | 'saved'
 type AppMode = 'select' | 'live' | 'gpx'
 
-const EXPENSE_CATEGORIES = [
-  { id: 1, name: 'Carburante' },
-  { id: 2, name: 'Pedaggio Autostradale / Traghetto' },
-  { id: 3, name: 'Parcheggio' },
-  { id: 4, name: 'Manutenzione / Riparazioni' },
-  { id: 5, name: 'Varie / Souvenir' },
-]
-
 function formatDate(iso: string | null): string {
   if (!iso) return '—'
   const d = new Date(iso)
@@ -61,7 +53,8 @@ export function TripDashboard() {
   const [customName, setCustomName] = useState<string>('')
   const [customDate, setCustomDate] = useState<string>('')
   
-  // Lista viaggi salvati incompleti (senza mappa) per l'aggiornamento successivo
+  // Categorie dinamiche scaricate da Supabase
+  const [expenseCategories, setExpenseCategories] = useState<any[]>([])
   const [incompleteTrips, setIncompleteTrips] = useState<any[]>([])
   const [updatingTripId, setUpdatingTripId] = useState<string | null>(null)
 
@@ -77,10 +70,22 @@ export function TripDashboard() {
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
 
-  // Carica i viaggi senza mappa da Supabase all'avvio
+  // Scarica le categorie di spesa reali da Supabase
+  const fetchCategories = async () => {
+    const { data, error } = await supabase
+      .from('expense_categories')
+      .select('id, name')
+      .order('id', { ascending: true })
+    
+    if (!error && data && data.length > 0) {
+      setExpenseCategories(data)
+      setSelectedCatId(data[0].id) // Imposta di default la prima categoria reale trovata
+    }
+  }
+
+  // Carica i viaggi senza mappa da Supabase
   const fetchIncompleteTrips = async () => {
     try {
-      // Un viaggio è incompleto se i km o i punti associati sono a 0
       const { data, error } = await supabase
         .from('trips')
         .select('id, title, trip_date, total_km')
@@ -95,11 +100,12 @@ export function TripDashboard() {
     }
   }
 
+  // Inizializzazione dati all'avvio dell'app
   useEffect(() => {
+    fetchCategories()
     fetchIncompleteTrips()
   }, [saveState])
 
-  // Inizializza un viaggio Live Manuale
   const startLiveTrip = () => {
     setMode('live')
     setCustomName('Nuovo Giro Goldwing')
@@ -131,7 +137,6 @@ export function TripDashboard() {
     return expenses.reduce((sum, exp) => sum + exp.amount, 0).toFixed(2)
   }, [expenses])
 
-  // Gestione caricamento file GPX
   const handleFile = useCallback((fileName: string, content: string) => {
     setError(null)
     setSaveState('idle')
@@ -162,13 +167,12 @@ export function TripDashboard() {
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Errore nella lettura del file.')
         setTrip(null)
-      } final {
+      } finally { // <--- CORRETTO DA FINAL A FINALLY!
         setLoading(false)
       }
     }, 60)
   }, [updatingTripId])
 
-  // Gestione Salvataggio Globale (Nuovo o Aggiornamento)
   const handleSave = async () => {
     setSaveState('saving')
     setSaveError(null)
@@ -176,7 +180,6 @@ export function TripDashboard() {
 
     try {
       if (updatingTripId && trip) {
-        // SCENARIO A: Stiamo inserendo la mappa su un viaggio esistente
         const pointsAdded = await updateTripWithGpx(updatingTripId, trip.totalKm, trip.points)
         setSaveState('saved')
         setSaveMessage(`Mappa sincronizzata con successo! Aggiunti ${pointsAdded} punti GPS.`)
@@ -184,7 +187,6 @@ export function TripDashboard() {
         setTrip(null)
         setMode('select')
       } else {
-        // SCENARIO B: Creazione nuovo viaggio (Live o da GPX)
         const titleToSave = customName.trim() || 'Giro Goldwing'
         const dateToSave = customDate || new Date().toISOString().slice(0, 10)
         const kmToSave = trip ? trip.totalKm : 0
@@ -199,9 +201,7 @@ export function TripDashboard() {
         )
 
         setSaveState('saved')
-        setSaveMessage(
-          `Viaggio salvato! (${pointCount} punti mappa, ${expenseCount} spese salvate nel cloud)`
-        )
+        setSaveMessage(`Viaggio salvato! (${pointCount} punti mappa, ${expenseCount} spese salvate nel cloud)`)
         setExpenses([])
         setTrip(null)
         setMode('select')
@@ -225,7 +225,6 @@ export function TripDashboard() {
 
   return (
     <div className="min-h-screen">
-      {/* Header */}
       <header className="border-b border-border bg-card/40 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-5 sm:px-6">
           <div className="flex items-center gap-3">
@@ -234,23 +233,21 @@ export function TripDashboard() {
             </div>
             <div>
               <h1 className="text-lg font-semibold leading-tight text-foreground">GoldWing Rides</h1>
-              <p className="text-sm text-muted-foreground">Diario di viaggio di bordo per la tua Honda Goldwing</p>
+              <p className="text-sm text-muted-foreground">Diario di viaggio per la tua Honda Goldwing</p>
             </div>
           </div>
           {mode !== 'select' && (
             <Button variant="outline" size="sm" onClick={() => { setMode('select'); setTrip(null); setUpdatingTripId(null); }}>
-              Indietro al Menu
+              Menu Principale
             </Button>
           )}
         </div>
       </header>
 
       <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
-        {/* SCHERMATA INIZIALE DI SELEZIONE MODALITÀ */}
         {mode === 'select' && !updatingTripId && (
           <div className="space-y-8">
             <div className="grid gap-6 md:grid-cols-2">
-              {/* Opzione 1: Live On the Road */}
               <div className="rounded-2xl border border-border bg-card p-6 flex flex-col justify-between space-y-4 hover:border-primary/40 transition-colors">
                 <div className="space-y-2">
                   <div className="flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
@@ -266,7 +263,6 @@ export function TripDashboard() {
                 </Button>
               </div>
 
-              {/* Opzione 2: Carica GPX da Casa */}
               <div className="rounded-2xl border border-border bg-card p-6 flex flex-col justify-between space-y-4 hover:border-primary/40 transition-colors">
                 <div className="space-y-2">
                   <div className="flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
@@ -283,14 +279,12 @@ export function TripDashboard() {
               </div>
             </div>
 
-            {/* SEZIONE: VIAGGI DA COMPLETARE CON MAPPA */}
             {incompleteTrips.length > 0 && (
               <div className="rounded-2xl border border-border bg-card p-6 space-y-4">
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <History className="size-5 text-primary" />
                   <h3 className="font-bold text-foreground">I tuoi viaggi On-The-Road (Senza mappa GPS)</h3>
                 </div>
-                <p className="text-xs text-muted-foreground">Ecco i viaggi che hai creato dal telefono. Clicca su "Associa Mappa" per caricare il file GPX finale ed unire il percorso alle spese!</p>
                 <div className="grid gap-3 sm:grid-cols-2">
                   {incompleteTrips.map((t) => (
                     <div key={t.id} className="flex items-center justify-between p-3 rounded-xl border border-border/60 bg-secondary/20 text-sm">
@@ -309,21 +303,18 @@ export function TripDashboard() {
           </div>
         )}
 
-        {/* MODALITÀ CARICAMENTO STRUMENTO GPX SU VIAGGIO ATTIVO */}
         {updatingTripId && !trip && (
           <div className="max-w-md mx-auto rounded-2xl border border-border bg-card p-6 space-y-4 text-center">
             <MapIcon className="size-10 text-primary mx-auto" />
             <h3 className="text-lg font-bold">Carica la traccia per: "{customName}"</h3>
-            <p className="text-sm text-muted-foreground">Seleziona il file GPS registrato per questo giro per calcolare la telemetria ed inserire la mappa.</p>
+            <p className="text-sm text-muted-foreground">Seleziona il file GPS per questo giro per calcolare la telemetria ed inserire la mappa.</p>
             <GpxUploader onFile={handleFile} loading={loading} error={error} />
             <Button variant="ghost" size="sm" onClick={() => setUpdatingTripId(null)} className="w-full">Annulla</Button>
           </div>
         )}
 
-        {/* INTERFACCIA CRUSCOTTO OPERATIVO (LIVE O GPX COMPILATO) */}
         {(mode === 'live' || mode === 'gpx' || (updatingTripId && trip)) && (
           <div className="grid gap-6 lg:grid-cols-[400px_1fr]">
-            {/* Pannello Configurazione Sinistro */}
             <section className="space-y-6">
               <div className="rounded-2xl border border-border bg-card p-5 space-y-5">
                 <div className="space-y-3">
@@ -339,7 +330,7 @@ export function TripDashboard() {
                       onChange={(e) => setCustomName(e.target.value)}
                       disabled={!!updatingTripId}
                       placeholder="Nome del viaggio..."
-                      className="w-full rounded-xl border border-border bg-secondary/20 py-2.5 pl-10 pr-4 text-base font-semibold text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                      className="w-full rounded-xl border border-border bg-secondary/20 py-2.5 pl-10 pr-4 text-base font-semibold text-foreground focus:border-primary focus:outline-none"
                     />
                   </div>
 
@@ -350,12 +341,11 @@ export function TripDashboard() {
                       value={customDate}
                       onChange={(e) => setCustomDate(e.target.value)}
                       disabled={!!updatingTripId}
-                      className="w-full rounded-xl border border-border bg-secondary/20 py-2.5 pl-10 pr-4 text-base font-semibold text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                      className="w-full rounded-xl border border-border bg-secondary/20 py-2.5 pl-10 pr-4 text-base font-semibold text-foreground focus:border-primary focus:outline-none"
                     />
                   </div>
                 </div>
 
-                {/* Blocco Gestione Contabilità Spese (Disponibile solo in creazione nuovo viaggio) */}
                 {!updatingTripId && (
                   <div className="border-t border-border/60 pt-4 space-y-4">
                     <div className="flex items-center justify-between">
@@ -364,12 +354,13 @@ export function TripDashboard() {
                     </div>
 
                     <div className="space-y-2 rounded-xl bg-secondary/10 p-3 border border-border/40">
+                      {/* Menu a tendina DINAMICO popolato da Supabase */}
                       <select
                         value={selectedCatId}
                         onChange={(e) => setSelectedCatId(parseInt(e.target.value))}
                         className="w-full rounded-lg border border-border bg-background p-2 text-sm text-foreground focus:border-primary focus:outline-none"
                       >
-                        {EXPENSE_CATEGORIES.map((cat) => (
+                        {expenseCategories.map((cat) => (
                           <option key={cat.id} value={cat.id}>{cat.name}</option>
                         ))}
                       </select>
@@ -402,7 +393,7 @@ export function TripDashboard() {
                     {expenses.length > 0 && (
                       <div className="max-h-[140px] overflow-y-auto space-y-1.5 pr-1">
                         {expenses.map((exp, idx) => {
-                          const catName = EXPENSE_CATEGORIES.find((c) => c.id === exp.category_id)?.name
+                          const catName = expenseCategories.find((c) => c.id === exp.category_id)?.name || 'Spesa'
                           return (
                             <div key={idx} className="flex items-center justify-between text-xs p-2 rounded-lg bg-secondary/30 border border-border/20">
                               <div className="truncate mr-2">
@@ -421,7 +412,6 @@ export function TripDashboard() {
                   </div>
                 )}
 
-                {/* Pulsante Salvataggio Finale */}
                 <Button onClick={handleSave} disabled={saveState === 'saving'} size="lg" className="w-full gap-2 font-medium border-t border-border/40">
                   {saveState === 'saving' && <Loader2 className="size-4 animate-spin" />}
                   {saveState === 'saved' && <CheckCircle2 className="size-4" />}
@@ -437,7 +427,6 @@ export function TripDashboard() {
               </div>
             </section>
 
-            {/* Pannello Mappa + Statistiche Destro */}
             <section className="space-y-6">
               {stats ? (
                 <div className="grid gap-3 sm:grid-cols-2">
