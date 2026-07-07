@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 
 // Sostituisci QUESTE DUE STRINGHE con i tuoi valori reali presi da Supabase
-const supabaseUrl = 'https://hlbkafbmpbhjbayuapwo.supabase.co/rest/v1/' 
-const supabaseAnonKey = 'sb_publishable_3OLSJvAakL-rSGui9ss05Q_OLjhyxxc'
+const supabaseUrl = 'https://hlbkafbmpbhjbayuapwo.supabase.co' 
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhsYmthZmJtcGJoamJheXVhcHdvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMzMzMyNzYsImV4cCI6MjA5ODkwOTI3Nn0.4M5bQpBarxfXuTytO8gR_MJt9Mt1AR34IqdDp92zuEU'
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
