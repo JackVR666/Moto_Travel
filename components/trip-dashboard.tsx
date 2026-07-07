@@ -6,7 +6,6 @@ import {
   Bike,
   Route,
   Gauge,
-  CalendarDays,
   CloudUpload,
   CheckCircle2,
   Loader2,
@@ -42,7 +41,7 @@ function formatDate(iso: string | null): string {
   if (!iso) return '—'
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return '—'
-  return d.toLocaleDateString('it-IT', { day: '2-digit', month: 'long', year: 'numeric' })
+  return d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
 export function TripDashboard() {
@@ -50,25 +49,24 @@ export function TripDashboard() {
   const [trip, setTrip] = useState<ParsedTrip | null>(null)
   const [customName, setCustomName] = useState<string>('')
   const [customDate, setCustomDate] = useState<string>('')
+  const [customEndDate, setCustomEndDate] = useState<string>('') // Fine viaggio
   
-  // Stati per il database
   const [expenseCategories, setExpenseCategories] = useState<any[]>([])
   const [allTrips, setAllTrips] = useState<any[]>([])
   const [editingTripId, setEditingTripId] = useState<string | null>(null)
   const [updatingTripId, setUpdatingTripId] = useState<string | null>(null)
 
-  // Spese temporanee (sia per nuovi viaggi che per modifiche)
+  // Stati per la singola spesa
   const [expenses, setExpenses] = useState<ExpenseInput[]>([])
   const [selectedCatId, setSelectedCatId] = useState<number>(1)
   const [expenseAmount, setExpenseAmount] = useState<string>('')
   const [expenseNotes, setExpenseNotes] = useState<string>('')
+  const [expenseDate, setExpenseDate] = useState<string>('') // Data singola spesa
 
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [saveState, setSaveState] = useState<SaveState>('idle')
-  const [saveMessage, setSaveMessage] = useState<string | null>(null)
 
-  // Scarica le categorie di spesa
   const fetchCategories = async () => {
     const { data } = await supabase
       .from('expense_categories')
@@ -81,11 +79,10 @@ export function TripDashboard() {
     }
   }
 
-  // Scarica TUTTI i viaggi salvati nel database per il Diario di Bordo
   const fetchAllTrips = async () => {
     const { data } = await supabase
       .from('trips')
-      .select('id, title, trip_date, total_km')
+      .select('id, title, trip_date, trip_end_date, total_km')
       .order('trip_date', { ascending: false })
     
     if (data) {
@@ -93,45 +90,48 @@ export function TripDashboard() {
     }
   }
 
-  // Carica i dati all'avvio e dopo ogni salvataggio
   useEffect(() => {
     fetchCategories()
     fetchAllTrips()
   }, [mode, saveState])
 
   const startLiveTrip = () => {
+    const today = new Date().toISOString().slice(0, 10)
     setMode('live')
     setCustomName('Nuovo Giro Goldwing')
-    setCustomDate(new Date().toISOString().slice(0, 10))
+    setCustomDate(today)
+    setCustomEndDate(today)
+    setExpenseDate(today)
     setExpenses([])
     setTrip(null)
     setEditingTripId(null)
   }
 
-  // Attiva la modalità modifica spese per un viaggio esistente
-  const startEditingExpenses = async (tripId: string, title: string, dateStr: string) => {
+  const startEditingExpenses = async (tripId: string, title: string, dateStr: string, endDateStr: string) => {
     setLoading(true)
     setEditingTripId(tripId)
     setCustomName(title)
-    setCustomDate(dateStr ? dateStr.slice(0, 10) : '')
+    const start = dateStr ? dateStr.slice(0, 10) : ''
+    setCustomDate(start)
+    setCustomEndDate(endDateStr ? endDateStr.slice(0, 10) : start)
+    setExpenseDate(start || new Date().toISOString().slice(0, 10))
     setExpenses([])
     setTrip(null)
 
-    // Scarica le spese correnti di questo specifico viaggio
     const { data, error } = await supabase
       .from('expenses')
-      .select('category_id, amount, notes')
+      .select('category_id, amount, notes, expense_date')
       .eq('trip_id', tripId)
 
     if (!error && data) {
       setExpenses(data.map(e => ({
         category_id: e.category_id,
         amount: Number(e.amount),
-        notes: e.notes || undefined
+        notes: e.notes || undefined,
+        expense_date: e.expense_date ? e.expense_date.slice(0, 10) : start
       })))
     }
 
-    // Scarica anche i punti mappa se esistono per farli vedere nello schermo laterale
     const { data: pointsData } = await supabase
       .from('track_points')
       .select('latitude, longitude')
@@ -142,7 +142,7 @@ export function TripDashboard() {
       setTrip({
         name: title,
         date: dateStr,
-        totalKm: 0, // non serve ricalcolarlo per la sola visualizzazione
+        totalKm: 0,
         points: pointsData.map(p => ({ lat: p.latitude, lng: p.longitude })),
         maxSpeedKmh: 0,
         maxElevation: null
@@ -159,10 +159,15 @@ export function TripDashboard() {
       alert('Inserisci un importo valido.')
       return
     }
+    if (!expenseDate) {
+      alert('Seleziona la data della spesa.')
+      return
+    }
     setExpenses((prev) => [...prev, {
       category_id: selectedCatId,
       amount: amount,
       notes: expenseNotes.trim() || undefined,
+      expense_date: expenseDate
     }])
     setExpenseAmount('')
     setExpenseNotes('')
@@ -179,7 +184,6 @@ export function TripDashboard() {
   const handleFile = useCallback((fileName: string, content: string) => {
     setError(null)
     setSaveState('idle')
-    setSaveMessage(null)
 
     if (content === '__INVALID__') {
       setError(`Formato non supportato per "${fileName}". Usa un file .gpx o .xml.`)
@@ -195,9 +199,12 @@ export function TripDashboard() {
           setError('Nessun punto traccia trovato nel file.')
           setTrip(null)
         } else {
+          const fileDate = parsed.date ? parsed.date.slice(0, 10) : new Date().toISOString().slice(0, 10)
           setTrip(parsed)
           setCustomName(parsed.name)
-          setCustomDate(parsed.date ? parsed.date.slice(0, 10) : new Date().toISOString().slice(0, 10))
+          setCustomDate(fileDate)
+          setCustomEndDate(fileDate)
+          setExpenseDate(fileDate)
           if (!updatingTripId) {
             setMode('gpx')
           }
@@ -213,36 +220,32 @@ export function TripDashboard() {
 
   const handleSave = async () => {
     setSaveState('saving')
-    setSaveMessage(null)
-
     try {
       if (mode === 'edit_expenses' && editingTripId) {
-        // Aggiorna solo la lista spese del viaggio esistente
         await updateTripExpenses(editingTripId, expenses)
         setSaveState('saved')
-        alert('Spese del viaggio aggiornate con successo nel cloud!')
+        alert('Spese del viaggio aggiornate nel cloud!')
         setMode('select')
       } else if (updatingTripId && trip) {
-        // Associa GPX a viaggio live esistente
         const pointsAdded = await updateTripWithGpx(updatingTripId, trip.totalKm, trip.points)
         setSaveState('saved')
         setUpdatingTripId(null)
         setTrip(null)
         setMode('select')
-        alert(`Mappa agganciata! Aggiunti ${pointsAdded} punti GPS.`)
+        alert(`Mappa agganciata correttamente! Aggiunti ${pointsAdded} punti GPS.`)
       } else {
-        // Nuovo viaggio (Live o GPX)
         const titleToSave = customName.trim() || 'Giro Goldwing'
-        const dateToSave = customDate || new Date().toISOString().slice(0, 10)
+        const startToSave = customDate || new Date().toISOString().slice(0, 10)
+        const endToSave = customEndDate || startToSave
         const kmToSave = trip ? trip.totalKm : 0
         const pointsToSave = trip ? trip.points : []
 
-        await saveTripToSupabase(titleToSave, dateToSave, kmToSave, pointsToSave, expenses)
+        await saveTripToSupabase(titleToSave, startToSave, endToSave, kmToSave, pointsToSave, expenses)
         setSaveState('saved')
         setExpenses([])
         setTrip(null)
         setMode('select')
-        alert('Nuovo viaggio memorizzato nel cloud!')
+        alert('Viaggio memorizzato con successo nel cloud!')
       }
     } catch (err) {
       setSaveState('idle')
@@ -259,7 +262,6 @@ export function TripDashboard() {
     }
   }, [trip, mode])
 
-  // Filtra i viaggi "Incomplete" (ovvero quelli inseriti live con km = 0)
   const incompleteTrips = useMemo(() => {
     return allTrips.filter(t => t.total_km === 0)
   }, [allTrips])
@@ -318,7 +320,7 @@ export function TripDashboard() {
               </div>
             </div>
 
-            {/* SEZIONE 1: VIAGGI LIVE DA ASSOCIARE */}
+            {/* VIAGGI LIVE IN ATTESA */}
             {incompleteTrips.length > 0 && (
               <div className="rounded-2xl border border-orange-500/20 bg-orange-500/5 p-6 space-y-4">
                 <div className="flex items-center gap-2 text-orange-500">
@@ -330,7 +332,7 @@ export function TripDashboard() {
                     <div key={t.id} className="flex items-center justify-between p-3 rounded-xl border border-border/60 bg-background text-sm">
                       <div className="truncate mr-3">
                         <p className="font-bold text-foreground truncate">{t.title}</p>
-                        <p className="text-xs text-muted-foreground">{formatDate(t.trip_date)}</p>
+                        <p className="text-xs text-muted-foreground">Inizio: {formatDate(t.trip_date)}</p>
                       </div>
                       <Button size="sm" variant="secondary" onClick={() => { setUpdatingTripId(t.id); setCustomName(t.title); }}>
                         Associa Mappa GPX
@@ -341,7 +343,7 @@ export function TripDashboard() {
               </div>
             )}
 
-            {/* SEZIONE 2: DIARIO DI BORDO GENERALE (MODIFICA SPESE) */}
+            {/* DIARIO DI BORDO GENERALE */}
             <div className="rounded-2xl border border-border bg-card p-6 space-y-4">
               <div className="flex items-center gap-2 text-muted-foreground">
                 <FolderHeart className="size-5 text-primary" />
@@ -349,7 +351,7 @@ export function TripDashboard() {
               </div>
               
               {allTrips.length === 0 ? (
-                <p className="text-sm text-muted-foreground italic text-center py-4">Nessun viaggio ancora salvato nel cloud. Inizia il tuo primo giro!</p>
+                <p className="text-sm text-muted-foreground italic text-center py-4">Nessun viaggio ancora salvato nel cloud.</p>
               ) : (
                 <div className="divide-y divide-border/60 max-h-[400px] overflow-y-auto pr-2">
                   {allTrips.map((t) => (
@@ -357,10 +359,10 @@ export function TripDashboard() {
                       <div>
                         <p className="font-bold text-foreground">{t.title}</p>
                         <p className="text-xs text-muted-foreground">
-                          {formatDate(t.trip_date)} • <span className="font-mono">{t.total_km > 0 ? `${t.total_km.toFixed(1)} km` : 'Modalità Live'}</span>
+                          Dal {formatDate(t.trip_date)} al {formatDate(t.trip_end_date || t.trip_date)} • <span className="font-mono">{t.total_km > 0 ? `${t.total_km.toFixed(1)} km` : 'Modalità Live'}</span>
                         </p>
                       </div>
-                      <Button size="sm" variant="outline" className="gap-1.5" onClick={() => startEditingExpenses(t.id, t.title, t.trip_date)}>
+                      <Button size="sm" variant="outline" className="gap-1.5" onClick={() => startEditingExpenses(t.id, t.title, t.trip_date, t.trip_end_date)}>
                         <Pencil className="size-3.5" /> Gestisci Spese
                       </Button>
                     </div>
@@ -375,7 +377,7 @@ export function TripDashboard() {
           <div className="max-w-md mx-auto rounded-2xl border border-border bg-card p-6 space-y-4 text-center">
             <MapIcon className="size-10 text-primary mx-auto" />
             <h3 className="text-lg font-bold">Inietta traccia mappa per: "{customName}"</h3>
-            <p className="text-sm text-muted-foreground">Seleziona il file GPX del giro per inserire mappa e statistiche.</p>
+            <p className="text-sm text-muted-foreground">Seleziona il file GPX del giro.</p>
             <GpxUploader onFile={handleFile} loading={loading} error={error} />
             <Button variant="ghost" size="sm" onClick={() => setUpdatingTripId(null)} className="w-full">Annulla</Button>
           </div>
@@ -387,25 +389,39 @@ export function TripDashboard() {
               <div className="rounded-2xl border border-border bg-card p-5 space-y-5">
                 <div className="space-y-3">
                   <label className="block text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    {mode === 'edit_expenses' ? 'Modifica Registro Spese' : 'Dettagli del Viaggio'}
+                    {mode === 'edit_expenses' ? 'Dettagli Durata e Registro Spese' : 'Dettagli del Viaggio'}
                   </label>
                   
-                  <div className="relative flex items-center">
-                    <input
-                      type="text"
-                      value={customName}
-                      disabled={mode === 'edit_expenses'}
-                      className="w-full rounded-xl border border-border bg-secondary/20 py-2.5 px-4 text-base font-semibold text-foreground focus:outline-none"
-                    />
-                  </div>
+                  <input
+                    type="text"
+                    value={customName}
+                    onChange={(e) => setCustomName(e.target.value)}
+                    disabled={mode === 'edit_expenses'}
+                    placeholder="Titolo Viaggio"
+                    className="w-full rounded-xl border border-border bg-secondary/20 py-2.5 px-4 text-base font-semibold text-foreground focus:outline-none disabled:opacity-70"
+                  />
 
-                  <div className="relative flex items-center">
-                    <input
-                      type="date"
-                      value={customDate}
-                      disabled={mode === 'edit_expenses'}
-                      className="w-full rounded-xl border border-border bg-secondary/20 py-2.5 px-4 text-base font-semibold text-foreground focus:outline-none"
-                    />
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <span className="text-[10px] text-muted-foreground font-medium uppercase block mb-1">Data Inizio</span>
+                      <input
+                        type="date"
+                        value={customDate}
+                        onChange={(e) => setCustomDate(e.target.value)}
+                        disabled={mode === 'edit_expenses'}
+                        className="w-full rounded-xl border border-border bg-secondary/20 py-2 px-3 text-sm font-medium text-foreground focus:outline-none disabled:opacity-70"
+                      />
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-muted-foreground font-medium uppercase block mb-1">Data Fine</span>
+                      <input
+                        type="date"
+                        value={customEndDate}
+                        onChange={(e) => setCustomEndDate(e.target.value)}
+                        disabled={mode === 'edit_expenses'}
+                        className="w-full rounded-xl border border-border bg-secondary/20 py-2 px-3 text-sm font-medium text-foreground focus:outline-none disabled:opacity-70"
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -415,16 +431,25 @@ export function TripDashboard() {
                     <span className="text-sm font-bold text-primary">Totale: €{totalExpensesCost}</span>
                   </div>
 
-                  <div className="space-y-2 rounded-xl bg-secondary/10 p-3 border border-border/40">
-                    <select
-                      value={selectedCatId}
-                      onChange={(e) => setSelectedCatId(parseInt(e.target.value))}
-                      className="w-full rounded-lg border border-border bg-background p-2 text-sm text-foreground focus:outline-none"
-                    >
-                      {expenseCategories.map((cat) => (
-                        <option key={cat.id} value={cat.id}>{cat.name}</option>
-                      ))}
-                    </select>
+                  <div className="space-y-2 rounded-xl bg-secondary/10 p-3 border border-border/40 space-y-2.5">
+                    <div className="grid grid-cols-2 gap-2">
+                      <select
+                        value={selectedCatId}
+                        onChange={(e) => setSelectedCatId(parseInt(e.target.value))}
+                        className="w-full rounded-lg border border-border bg-background p-2 text-xs text-foreground focus:outline-none"
+                      >
+                        {expenseCategories.map((cat) => (
+                          <option key={cat.id} value={cat.id}>{cat.name}</option>
+                        ))}
+                      </select>
+
+                      <input
+                        type="date"
+                        value={expenseDate}
+                        onChange={(e) => setExpenseDate(e.target.value)}
+                        className="w-full rounded-lg border border-border bg-background p-2 text-xs text-foreground focus:outline-none"
+                      />
+                    </div>
 
                     <div className="flex gap-2">
                       <div className="relative flex items-center flex-1">
@@ -435,7 +460,7 @@ export function TripDashboard() {
                           placeholder="Importo €"
                           value={expenseAmount}
                           onChange={(e) => setExpenseAmount(e.target.value)}
-                          className="w-full rounded-lg border border-border bg-background py-1.5 pl-8 pr-2 text-sm text-foreground focus:outline-none"
+                          className="w-full rounded-lg border border-border bg-background py-1.5 pl-8 pr-2 text-xs text-foreground focus:outline-none"
                         />
                       </div>
                       <input
@@ -443,7 +468,7 @@ export function TripDashboard() {
                         placeholder="Note"
                         value={expenseNotes}
                         onChange={(e) => setExpenseNotes(e.target.value)}
-                        className="w-full flex-[1.5] rounded-lg border border-border bg-background py-1.5 px-3 text-sm text-foreground focus:outline-none"
+                        className="w-full flex-[1.5] rounded-lg border border-border bg-background py-1.5 px-3 text-xs text-foreground focus:outline-none"
                       />
                       <Button type="button" onClick={addExpense} size="sm" className="px-2.5">
                         <Plus className="size-4" />
@@ -459,7 +484,10 @@ export function TripDashboard() {
                           <div key={idx} className="flex items-center justify-between text-xs p-2 rounded-lg bg-secondary/30 border border-border/20">
                             <div className="truncate mr-2">
                               <p className="font-semibold text-foreground truncate">{catName}</p>
-                              {exp.notes && <p className="text-muted-foreground text-[10px] truncate italic">"{exp.notes}"</p>}
+                              <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                                <span className="bg-primary/10 text-primary px-1 rounded font-mono">{formatDate(exp.expense_date)}</span>
+                                {exp.notes && <span className="truncate italic">"{exp.notes}"</span>}
+                              </div>
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
                               <span className="font-mono font-bold text-foreground">€{exp.amount.toFixed(2)}</span>
