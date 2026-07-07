@@ -235,11 +235,11 @@ export function TripDashboard() {
     }, 60)
   }, [updatingTripId])
 
-  const handleSave = async () => {
+ const handleSave = async () => {
     setSaveState('saving')
     try {
       if (mode === 'edit_expenses' && editingTripId) {
-        // NOVITÀ: In fase di modifica salviamo sia le spese che i cambi a titolo o date!
+        // Aggiorna titolo o date del viaggio
         const { error: updateTripError } = await supabase
           .from('trips')
           .update({
@@ -251,9 +251,16 @@ export function TripDashboard() {
 
         if (updateTripError) throw updateTripError
 
+        // Aggiorna le spese sul database
         await updateTripExpenses(editingTripId, expenses)
+        
         setSaveState('saved')
         alert('Viaggio e spese aggiornati con successo nel cloud!')
+        
+        // PULIZIA STATI PER EVITARE RADDOPPI
+        setExpenses([])
+        setEditingTripId(null)
+        setTrip(null)
         setMode('select')
       } else if (updatingTripId && trip) {
         const pointsAdded = await updateTripWithGpx(updatingTripId, trip.totalKm, trip.points)
