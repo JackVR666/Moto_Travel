@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useMemo, useState, useEffect } from 'react'
-import dynamic from 'next/dynamic'
+import dynamic from 'dynamic'
 import {
   Bike,
   Route,
@@ -94,9 +94,12 @@ export function TripDashboard() {
     }
   }
 
+  // CORREZIONE 1: Aggiorna l'elenco dei viaggi SOLO quando siamo nel menu principale
   useEffect(() => {
-    fetchCategories()
-    fetchAllTrips()
+    if (mode === 'select') {
+      fetchCategories()
+      fetchAllTrips()
+    }
   }, [mode, saveState])
 
   const startLiveTrip = () => {
@@ -119,7 +122,9 @@ export function TripDashboard() {
     setCustomDate(start)
     setCustomEndDate(endDateStr ? endDateStr.slice(0, 10) : start)
     setExpenseDate(start || new Date().toISOString().slice(0, 10))
-    setExpenses([])
+    
+    // CORREZIONE 2: Svuotiamo lo stato locale PRIMA di caricare i nuovi dati dal DB
+    setExpenses([]) 
     setTrip(null)
 
     const { data, error } = await supabase
@@ -235,11 +240,10 @@ export function TripDashboard() {
     }, 60)
   }, [updatingTripId])
 
- const handleSave = async () => {
+  const handleSave = async () => {
     setSaveState('saving')
     try {
       if (mode === 'edit_expenses' && editingTripId) {
-        // Aggiorna titolo o date del viaggio
         const { error: updateTripError } = await supabase
           .from('trips')
           .update({
@@ -251,22 +255,20 @@ export function TripDashboard() {
 
         if (updateTripError) throw updateTripError
 
-        // Aggiorna le spese sul database
         await updateTripExpenses(editingTripId, expenses)
         
-        setSaveState('saved')
-        alert('Viaggio e spese aggiornati con successo nel cloud!')
-        
-        // PULIZIA STATI PER EVITARE RADDOPPI
+        // CORREZIONE 3: Resettiamo gli stati prima di cambiare modalità
         setExpenses([])
         setEditingTripId(null)
         setTrip(null)
+        setSaveState('saved')
         setMode('select')
+        alert('Viaggio e spese aggiornati con successo nel cloud!')
       } else if (updatingTripId && trip) {
         const pointsAdded = await updateTripWithGpx(updatingTripId, trip.totalKm, trip.points)
-        setSaveState('saved')
         setUpdatingTripId(null)
         setTrip(null)
+        setSaveState('saved')
         setMode('select')
         alert(`Mappa agganciata correttamente! Aggiunti ${pointsAdded} punti GPS.`)
       } else {
@@ -277,9 +279,9 @@ export function TripDashboard() {
         const pointsToSave = trip ? trip.points : []
 
         await saveTripToSupabase(titleToSave, startToSave, endToSave, kmToSave, pointsToSave, expenses)
-        setSaveState('saved')
         setExpenses([])
         setTrip(null)
+        setSaveState('saved')
         setMode('select')
         alert('Viaggio memorizzato con successo nel cloud!')
       }
@@ -316,7 +318,7 @@ export function TripDashboard() {
             </div>
           </div>
           {mode !== 'select' && (
-            <Button variant="outline" size="sm" onClick={() => { setMode('select'); setTrip(null); setUpdatingTripId(null); setEditingTripId(null); }}>
+            <Button variant="outline" size="sm" onClick={() => { setMode('select'); setTrip(null); setUpdatingTripId(null); setEditingTripId(null); setExpenses([]); setSaveState('idle'); }}>
               Torna al Menu
             </Button>
           )}
@@ -413,14 +415,13 @@ export function TripDashboard() {
             <h3 className="text-lg font-bold">Inietta traccia mappa per: "{customName}"</h3>
             <p className="text-sm text-muted-foreground">Seleziona il file GPX del giro.</p>
             <GpxUploader onFile={handleFile} loading={loading} error={error} />
-            <Button variant="ghost" size="sm" onClick={() => setUpdatingTripId(null)} className="w-full">Annulla</Button>
+            <Button variant="ghost" size="sm" onClick={() => { setUpdatingTripId(null); setExpenses([]); }} className="w-full">Annulla</Button>
           </div>
         )}
 
         {(mode === 'live' || mode === 'gpx' || mode === 'edit_expenses') && (
           <div className="space-y-6">
             
-            {/* RIQUADRO 1: PARTE GENERALE - SBLOCCATO E MODIFICABILE SEMPRE */}
             <section className="rounded-2xl border border-border bg-card p-5 shadow-sm">
               <div className="flex items-center gap-2 text-muted-foreground mb-4">
                 <FileText className="size-4 text-primary" />
@@ -458,13 +459,10 @@ export function TripDashboard() {
               </div>
             </section>
 
-            {/* GRIGLIA OPERATIVA RE-INGEGNERIZZATA */}
             <div className="grid gap-6 lg:grid-cols-[1fr_420px]">
               
-              {/* COLONNA SINISTRA: INPUT E FILO DIRETTO REGISTRO ANALITICO */}
               <div className="space-y-6">
                 
-                {/* RIQUADRO 2: INSERIMENTO RAPIDO SPESA */}
                 <section className="rounded-2xl border border-border bg-card p-5 shadow-sm">
                   <div className="flex items-center gap-2 text-muted-foreground mb-4">
                     <Receipt className="size-4 text-primary" />
@@ -528,7 +526,6 @@ export function TripDashboard() {
                   </div>
                 </section>
 
-                {/* RIQUADRO 4 SPOSTATO QUI: REGISTRO ANALITICO VOCI SPESA */}
                 <section className="rounded-2xl border border-border bg-card p-5 shadow-sm">
                   <div className="flex items-center gap-2 text-muted-foreground mb-3">
                     <History className="size-4 text-primary" />
@@ -567,7 +564,6 @@ export function TripDashboard() {
                   )}
                 </section>
 
-                {/* PULSANTE DI SALVATAGGIO CLOUD GENERALE */}
                 <Button onClick={handleSave} disabled={saveState === 'saving'} size="lg" className="w-full gap-2 font-bold py-6 text-base rounded-xl shadow-md">
                   {saveState === 'saving' && <Loader2 className="size-5 animate-spin" />}
                   {saveState === 'saved' && <CheckCircle2 className="size-5" />}
@@ -581,10 +577,8 @@ export function TripDashboard() {
 
               </div>
 
-              {/* COLONNA DESTRA: ORA COMPRENDE RIEPILOGO SUBTOTALI IN ALTO + MAPPA IN BASSO */}
               <div className="space-y-6">
                 
-                {/* RIQUADRO 3 SPOSTATO QUI: RIEPILOGO STATISTICHE E SUBTOTALI A DESTRA */}
                 <section className="rounded-2xl border border-border bg-card p-5 shadow-sm">
                   <div className="flex items-center justify-between border-b border-border/50 pb-3 mb-4">
                     <div className="flex items-center gap-2 text-muted-foreground">
@@ -612,7 +606,6 @@ export function TripDashboard() {
                   </div>
                 </section>
 
-                {/* TELEMETRIA E MAPPA SPOSTATA SOTTO I SUBTOTALI */}
                 <div className="space-y-3">
                   {stats && (
                     <div className="grid gap-3 grid-cols-2">
