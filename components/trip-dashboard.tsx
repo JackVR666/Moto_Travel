@@ -70,16 +70,26 @@ export function TripDashboard() {
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
 
-  // Scarica le categorie di spesa reali da Supabase
+ // Scarica le categorie di spesa reali da Supabase
   const fetchCategories = async () => {
-    const { data, error } = await supabase
-      .from('expense_categories')
-      .select('id, name')
-      .order('id', { ascending: true })
-    
-    if (!error && data && data.length > 0) {
-      setExpenseCategories(data)
-      setSelectedCatId(data[0].id) // Imposta di default la prima categoria reale trovata
+    try {
+      const { data, error } = await supabase
+        .from('expense_categories')
+        .select('id, name')
+        .order('id', { ascending: true })
+      
+      if (error) {
+        console.error("Errore Supabase Categorie:", error)
+        setError(`Errore nel caricamento delle categorie: ${error.message}`)
+        return
+      }
+
+      if (data && data.length > 0) {
+        setExpenseCategories(data)
+        setSelectedCatId(data[0].id)
+      }
+    } catch (e) {
+      console.error("Errore di rete Categorie:", e)
     }
   }
 
@@ -100,11 +110,11 @@ export function TripDashboard() {
     }
   }
 
-  // Inizializzazione dati all'avvio dell'app
+  // Esegui il caricamento dei dati in modo sicuro all'avvio
   useEffect(() => {
     fetchCategories()
     fetchIncompleteTrips()
-  }, [saveState])
+  }, []) // Esegui una volta sola al caricamento della pagina
 
   const startLiveTrip = () => {
     setMode('live')
