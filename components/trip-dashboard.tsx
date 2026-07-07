@@ -181,18 +181,13 @@ export function TripDashboard() {
     setExpenses((prev) => prev.filter((_, i) => i !== index))
   }
 
-  // Calcola il totale generale delle spese
   const totalExpensesCost = useMemo(() => {
     return expenses.reduce((sum, exp) => sum + exp.amount, 0).toFixed(2)
   }, [expenses])
 
-  // NOVITÀ: Calcola i subtotali suddivisi per categoria in tempo reale
   const categorySubtotals = useMemo(() => {
     const subtotals: Record<number, number> = {}
-    // Inizializza tutte le categorie note a 0
     expenseCategories.forEach(cat => { subtotals[cat.id] = 0 })
-    
-    // Somma le spese inserite
     expenses.forEach(exp => {
       if (subtotals[exp.category_id] !== undefined) {
         subtotals[exp.category_id] += exp.amount
@@ -200,7 +195,6 @@ export function TripDashboard() {
         subtotals[exp.category_id] = exp.amount
       }
     })
-
     return subtotals
   }, [expenses, expenseCategories])
 
@@ -245,9 +239,21 @@ export function TripDashboard() {
     setSaveState('saving')
     try {
       if (mode === 'edit_expenses' && editingTripId) {
+        // NOVITÀ: In fase di modifica salviamo sia le spese che i cambi a titolo o date!
+        const { error: updateTripError } = await supabase
+          .from('trips')
+          .update({
+            title: customName.trim(),
+            trip_date: customDate,
+            trip_end_date: customEndDate
+          })
+          .eq('id', editingTripId)
+
+        if (updateTripError) throw updateTripError
+
         await updateTripExpenses(editingTripId, expenses)
         setSaveState('saved')
-        alert('Spese del viaggio aggiornate nel cloud!')
+        alert('Viaggio e spese aggiornati con successo nel cloud!')
         setMode('select')
       } else if (updatingTripId && trip) {
         const pointsAdded = await updateTripWithGpx(updatingTripId, trip.totalKm, trip.points)
@@ -343,7 +349,6 @@ export function TripDashboard() {
               </div>
             </div>
 
-            {/* VIAGGI LIVE IN ATTESA */}
             {incompleteTrips.length > 0 && (
               <div className="rounded-2xl border border-orange-500/20 bg-orange-500/5 p-6 space-y-4">
                 <div className="flex items-center gap-2 text-orange-500">
@@ -366,7 +371,6 @@ export function TripDashboard() {
               </div>
             )}
 
-            {/* DIARIO DI BORDO GENERALE */}
             <div className="rounded-2xl border border-border bg-card p-6 space-y-4">
               <div className="flex items-center gap-2 text-muted-foreground">
                 <FolderHeart className="size-5 text-primary" />
@@ -406,11 +410,10 @@ export function TripDashboard() {
           </div>
         )}
 
-        {/* --- NUOVA INTERFACCIA CRUSCOTTO STRUTTURATA A QUATTRO RIQUADRI --- */}
         {(mode === 'live' || mode === 'gpx' || mode === 'edit_expenses') && (
           <div className="space-y-6">
             
-            {/* RIQUADRO 1: PARTE GENERALE - DESCRIZIONE E DATE DEL VIAGGIO */}
+            {/* RIQUADRO 1: PARTE GENERALE - SBLOCCATO E MODIFICABILE SEMPRE */}
             <section className="rounded-2xl border border-border bg-card p-5 shadow-sm">
               <div className="flex items-center gap-2 text-muted-foreground mb-4">
                 <FileText className="size-4 text-primary" />
@@ -423,41 +426,38 @@ export function TripDashboard() {
                     type="text"
                     value={customName}
                     onChange={(e) => setCustomName(e.target.value)}
-                    disabled={mode === 'edit_expenses'}
                     placeholder="Es. Fine settimana sulle Dolomiti"
-                    className="w-full rounded-xl border border-border bg-secondary/15 py-2.5 px-4 text-base font-semibold text-foreground focus:outline-none disabled:opacity-75"
+                    className="w-full rounded-xl border border-border bg-secondary/15 py-2.5 px-4 text-base font-semibold text-foreground focus:outline-none"
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <span className="text-xs font-medium text-muted-foreground">Data Partenza</span>
+                  <span className="text-xs font-medium text-muted-foreground">Data Inizio Viaggio</span>
                   <input
                     type="date"
                     value={customDate}
                     onChange={(e) => setCustomDate(e.target.value)}
-                    disabled={mode === 'edit_expenses'}
-                    className="w-full rounded-xl border border-border bg-secondary/15 py-2.5 px-4 text-sm font-medium text-foreground focus:outline-none disabled:opacity-75"
+                    className="w-full rounded-xl border border-border bg-secondary/15 py-2.5 px-4 text-sm font-medium text-foreground focus:outline-none"
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <span className="text-xs font-medium text-muted-foreground">Data Ritorno</span>
+                  <span className="text-xs font-medium text-muted-foreground">Data Fine Viaggio</span>
                   <input
                     type="date"
                     value={customEndDate}
                     onChange={(e) => setCustomEndDate(e.target.value)}
-                    disabled={mode === 'edit_expenses'}
-                    className="w-full rounded-xl border border-border bg-secondary/15 py-2.5 px-4 text-sm font-medium text-foreground focus:outline-none disabled:opacity-75"
+                    className="w-full rounded-xl border border-border bg-secondary/15 py-2.5 px-4 text-sm font-medium text-foreground focus:outline-none"
                   />
                 </div>
               </div>
             </section>
 
-            {/* GRIGLIA OPERATIVA DELLE SPESE E MAPPA */}
-            <div className="grid gap-6 lg:grid-cols-[1fr_400px]">
+            {/* GRIGLIA OPERATIVA RE-INGEGNERIZZATA */}
+            <div className="grid gap-6 lg:grid-cols-[1fr_420px]">
               
-              {/* COLONNA SINISTRA: TUTTO IL BLOCCO CONTABILITÀ DIVISO IN RIQUADRI */}
+              {/* COLONNA SINISTRA: INPUT E FILO DIRETTO REGISTRO ANALITICO */}
               <div className="space-y-6">
                 
-                {/* RIQUADRO 2: INSERIMENTO NUOVA SPESA */}
+                {/* RIQUADRO 2: INSERIMENTO RAPIDO SPESA */}
                 <section className="rounded-2xl border border-border bg-card p-5 shadow-sm">
                   <div className="flex items-center gap-2 text-muted-foreground mb-4">
                     <Receipt className="size-4 text-primary" />
@@ -521,40 +521,11 @@ export function TripDashboard() {
                   </div>
                 </section>
 
-                {/* RIQUADRO 3: RIEPILOGO STATISTICHE E SUBTOTALI PER CATEGORIA */}
-                <section className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-                  <div className="flex items-center justify-between border-b border-border/50 pb-3 mb-4">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <PieChart className="size-4 text-primary" />
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">3. Riepilogo e Statistiche Categorie</h3>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-xs text-muted-foreground block font-medium">TOTALE SPESO</span>
-                      <span className="text-xl font-black text-primary font-mono">€ {totalExpensesCost}</span>
-                    </div>
-                  </div>
-
-                  {/* Tabella / Griglia dei Subtotali */}
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    {expenseCategories.map((cat) => {
-                      const subtotal = categorySubtotals[cat.id] || 0
-                      return (
-                        <div key={cat.id} className="flex items-center justify-between p-2.5 rounded-xl bg-secondary/20 border border-border/30 text-xs">
-                          <span className="font-medium text-muted-foreground truncate mr-2">{cat.name}</span>
-                          <span className="font-mono font-bold text-foreground shrink-0 bg-background px-2 py-1 rounded border border-border/40">
-                            € {subtotal.toFixed(2)}
-                          </span>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </section>
-
-                {/* RIQUADRO 4: CRONOLOGIA DELLE SINGOLE SPESE */}
+                {/* RIQUADRO 4 SPOSTATO QUI: REGISTRO ANALITICO VOCI SPESA */}
                 <section className="rounded-2xl border border-border bg-card p-5 shadow-sm">
                   <div className="flex items-center gap-2 text-muted-foreground mb-3">
                     <History className="size-4 text-primary" />
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">4. Registro analitico voci di spesa ({expenses.length})</h3>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">3. Registro analitico voci di spesa ({expenses.length})</h3>
                   </div>
 
                   {expenses.length === 0 ? (
@@ -562,7 +533,7 @@ export function TripDashboard() {
                       Nessuna voce inserita nel registro spese per il momento.
                     </p>
                   ) : (
-                    <div className="max-h-[220px] overflow-y-auto space-y-2 pr-1">
+                    <div className="max-h-[340px] overflow-y-auto space-y-2 pr-1">
                       {expenses.map((exp, idx) => {
                         const catName = expenseCategories.find((c) => c.id === exp.category_id)?.name || 'Spesa'
                         return (
@@ -597,33 +568,66 @@ export function TripDashboard() {
                   {saveState === 'saving'
                     ? 'Sincronizzazione dati cloud in corso…'
                     : mode === 'edit_expenses'
-                      ? 'Salva Modifiche Spese nel Cloud ☁️'
+                      ? 'Salva Modifiche Viaggio e Spese nel Cloud ☁️'
                       : 'Salva Intero Viaggio nel Cloud ☁️'}
                 </Button>
 
               </div>
 
-              {/* COLONNA DESTRA: MAPPA E TELEMETRIA PERCORSO */}
+              {/* COLONNA DESTRA: ORA COMPRENDE RIEPILOGO SUBTOTALI IN ALTO + MAPPA IN BASSO */}
               <div className="space-y-6">
-                {stats && (
-                  <div className="grid gap-3 grid-cols-2">
-                    <StatCard icon={Route} label="Km totali traccia" value={stats.km} unit="km" />
-                    <StatCard icon={Gauge} label="Velocità max" value={stats.maxSpeed} unit="km/h" />
+                
+                {/* RIQUADRO 3 SPOSTATO QUI: RIEPILOGO STATISTICHE E SUBTOTALI A DESTRA */}
+                <section className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+                  <div className="flex items-center justify-between border-b border-border/50 pb-3 mb-4">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <PieChart className="size-4 text-primary" />
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">4. Riepilogo Categorie</h3>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[10px] text-muted-foreground block font-bold uppercase tracking-wider">TOTALE SPESO</span>
+                      <span className="text-2xl font-black text-primary font-mono">€ {totalExpensesCost}</span>
+                    </div>
                   </div>
-                )}
 
-                <div className="relative h-[400px] overflow-hidden rounded-2xl border border-border bg-secondary/30 lg:h-[580px] shadow-inner">
-                  {trip ? (
-                    <TripMap points={trip.points} />
-                  ) : (
-                    <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center bg-card/20">
-                      <Play className="size-8 text-primary animate-pulse" />
-                      <p className="max-w-xs text-xs text-muted-foreground font-medium">
-                        {mode === 'edit_expenses' ? 'Nessuna mappa GPS associata a questo storico.' : 'Modalità Live On-The-Road attiva. Mappa disponibile al caricamento del GPX finale.'}
-                      </p>
+                  <div className="grid gap-2 grid-cols-1">
+                    {expenseCategories.map((cat) => {
+                      const subtotal = categorySubtotals[cat.id] || 0
+                      return (
+                        <div key={cat.id} className="flex items-center justify-between p-2.5 rounded-xl bg-secondary/20 border border-border/30 text-xs">
+                          <span className="font-medium text-muted-foreground truncate mr-2">{cat.name}</span>
+                          <span className="font-mono font-bold text-foreground shrink-0 bg-background px-2 py-0.5 rounded border border-border/40">
+                            € {subtotal.toFixed(2)}
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </section>
+
+                {/* TELEMETRIA E MAPPA SPOSTATA SOTTO I SUBTOTALI */}
+                <div className="space-y-3">
+                  {stats && (
+                    <div className="grid gap-3 grid-cols-2">
+                      <StatCard icon={Route} label="Km totali traccia" value={stats.km} unit="km" />
+                      <StatCard icon={Gauge} label="Velocità max" value={stats.maxSpeed} unit="km/h" />
                     </div>
                   )}
+
+                  <div className="relative h-[340px] overflow-hidden rounded-2xl border border-border bg-secondary/30 shadow-inner">
+                    {trip ? (
+                      <TripMap points={trip.points} />
+                    ) : (
+                      <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center bg-card/15">
+                        <Play className="size-6 text-primary animate-pulse" />
+                        <p className="max-w-xs text-[11px] text-muted-foreground font-medium">
+                          {mode === 'edit_expenses' ? 'Nessuna mappa GPS associata a questo storico.' : 'Modalità Live On-The-Road attiva. Mappa disponibile al caricamento del GPX finale.'}
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </div>
+
               </div>
 
             </div>
