@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useMemo, useState, useEffect } from 'react'
-import dynamic from 'dynamic'
+import dynamic from 'next/dynamic'
 import {
   Bike,
   Route,
