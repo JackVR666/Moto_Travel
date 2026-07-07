@@ -15,12 +15,15 @@ import {
   Map as MapIcon,
   AlertCircle,
   Type,
+  Plus,
+  Trash2,
+  Euro,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { GpxUploader } from '@/components/gpx-uploader'
 import { StatCard } from '@/components/stat-card'
 import { parseGpx, type ParsedTrip } from '@/lib/gpx-parser'
-import { saveTripToSupabase } from '@/lib/save-trip'
+import { saveTripToSupabase, type ExpenseInput } from '@/lib/save-trip'
 
 const TripMap = dynamic(() => import('@/components/trip-map'), {
   ssr: false,
@@ -33,6 +36,15 @@ const TripMap = dynamic(() => import('@/components/trip-map'), {
 
 type SaveState = 'idle' | 'saving' | 'saved'
 
+// Categorie rigide allineate con gli ID del database Supabase
+const EXPENSE_CATEGORIES = [
+  { id: 1, name: 'Carburante' },
+  { id: 2, name: 'Pedaggio Autostradale / Traghetto' },
+  { id: 3, name: 'Parcheggio' },
+  { id: 4, name: 'Manutenzione / Riparazioni' },
+  { id: 5, name: 'Varie / Souvenir' },
+]
+
 function formatDate(iso: string | null): string {
   if (!iso) return '—'
   const d = new Date(iso)
@@ -43,20 +55,60 @@ function formatDate(iso: string | null): string {
 export function TripDashboard() {
   const [trip, setTrip] = useState<ParsedTrip | null>(null)
   const [customName, setCustomName] = useState<string>('')
+  
+  // Stato per gestire la lista delle spese dinamiche
+  const [expenses, setExpenses] = useState<ExpenseInput[]>([])
+  
+  // Stati per i campi del modulo della nuova spesa
+  const [selectedCatId, setSelectedCatId] = useState<number>(1)
+  const [expenseAmount, setExpenseAmount] = useState<string>('')
+  const [expenseNotes, setExpenseNotes] = useState<string>('')
+
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [saveState, setSaveState] = useState<SaveState>('idle')
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
 
-  // Sincronizza il nome personalizzato quando viene caricato un nuovo file
+  // Sincronizza i dati quando carichi un nuovo file GPX
   useEffect(() => {
     if (trip) {
       setCustomName(trip.name)
+      setExpenses([]) // Resetta le spese per il nuovo viaggio
     } else {
       setCustomName('')
+      setExpenses([])
     }
   }, [trip])
+
+  // Aggiunge una spesa alla lista temporanea nell'interfaccia
+  const addExpense = () => {
+    const amount = parseFloat(expenseAmount)
+    if (Number.isNaN(amount) || amount <= 0) {
+      alert('Inserisci un importo valido e maggiore di zero.')
+      return
+    }
+
+    const newExpense: ExpenseInput = {
+      category_id: selectedCatId,
+      amount: amount,
+      notes: expenseNotes.trim() || undefined,
+    }
+
+    setExpenses((prev) => [...prev, newExpense])
+    setExpenseAmount('')
+    setExpenseNotes('')
+  }
+
+  // Rimuove una spesa inserita per errore
+  const removeExpense = (index: number) => {
+    setExpenses((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  // Calcola il totale delle spese inserite
+  const totalExpensesCost = useMemo(() => {
+    return expenses.reduce((sum, exp) => sum + exp.amount, 0).toFixed(2)
+  }, [expenses])
 
   const handleFile = useCallback((fileName: string, content: string) => {
     setError(null)
@@ -95,24 +147,25 @@ export function TripDashboard() {
     setSaveError(null)
     setSaveMessage(null)
     try {
-      // Uniamo i dati del viaggio inserendo il tuo nome personalizzato prima di salvare
       const tripWithCustomName = {
         ...trip,
         name: customName.trim() || trip.name,
       }
-      const { pointCount } = await saveTripToSupabase(tripWithCustomName)
+      
+      // Invia sia il viaggio che la lista delle spese compilate!
+      const { pointCount, expenseCount } = await saveTripToSupabase(tripWithCustomName, expenses)
+      
       setSaveState('saved')
       setSaveMessage(
-        `Viaggio Goldwing salvato nel database! (${pointCount} punti GPS)`,
+        `Viaggio Goldwing salvato nel database con successo! (${pointCount} punti GPS, ${expenseCount} spese registrate)`,
       )
     } catch (err) {
       setSaveState('idle')
-      const message =
-        err instanceof Error ? err.message : 'Errore sconosciuto durante il salvataggio.'
+      const message = err instanceof Error ? err.message : 'Errore sconosciuto durante il salvataggio.'
       setSaveError(message)
       alert(`Salvataggio non riuscito: ${message}`)
     }
-  }, [trip, customName])
+  }, [trip, customName, expenses])
 
   const stats = useMemo(() => {
     if (!trip) return null
@@ -144,8 +197,8 @@ export function TripDashboard() {
       </header>
 
       <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
-        <div className="grid gap-6 lg:grid-cols-[380px_1fr]">
-          {/* Left column — upload + save */}
+        <div className="grid gap-6 lg:grid-cols-[400px_1fr]">
+          {/* Left column — upload, name + expenses management */}
           <section className="space-y-6">
             <div className="rounded-2xl border border-border bg-card p-5">
               <div className="mb-4 flex items-center gap-2">
@@ -158,8 +211,9 @@ export function TripDashboard() {
             </div>
 
             {trip && (
-              <div className="rounded-2xl border border-border bg-card p-5">
-                <div className="mb-5 space-y-3">
+              <div className="rounded-2xl border border-border bg-card p-5 space-y-5">
+                {/* Info Principali */}
+                <div className="space-y-3">
                   <label className="block text-xs font-medium uppercase tracking-wide text-muted-foreground">
                     Nome del Viaggio (Modificabile)
                   </label>
@@ -170,7 +224,7 @@ export function TripDashboard() {
                       value={customName}
                       onChange={(e) => setCustomName(e.target.value)}
                       placeholder="Dai un nome a questo giro..."
-                      className="w-full rounded-xl border border-border bg-secondary/20 py-2.5 pl-10 pr-4 text-base font-semibold text-foreground placeholder:text-muted-foreground/50 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors"
+                      className="w-full rounded-xl border border-border bg-secondary/20 py-2.5 pl-10 pr-4 text-base font-semibold text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors"
                     />
                   </div>
                   
@@ -186,11 +240,84 @@ export function TripDashboard() {
                   </div>
                 </div>
 
+                {/* Blocco Inserimento Spese Gestione Relazionale */}
+                <div className="border-t border-border/60 pt-4 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      Contabilità Spese Giro
+                    </label>
+                    <span className="text-sm font-bold text-primary">Totale: €{totalExpensesCost}</span>
+                  </div>
+
+                  {/* Form input rapido */}
+                  <div className="space-y-2 rounded-xl bg-secondary/10 p-3 border border-border/40">
+                    <select
+                      value={selectedCatId}
+                      onChange={(e) => setSelectedCatId(parseInt(e.target.value))}
+                      className="w-full rounded-lg border border-border bg-background p-2 text-sm text-foreground focus:border-primary focus:outline-none"
+                    >
+                      {EXPENSE_CATEGORIES.map((cat) => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </option>
+                      ))}
+                    </select>
+
+                    <div className="flex gap-2">
+                      <div className="relative flex items-center flex-1">
+                        <Euro className="absolute left-2.5 size-4 text-muted-foreground" />
+                        <input
+                          type="number"
+                          step="0.01"
+                          placeholder="Importo €"
+                          value={expenseAmount}
+                          onChange={(e) => setExpenseAmount(e.target.value)}
+                          className="w-full rounded-lg border border-border bg-background py-1.5 pl-8 pr-2 text-sm text-foreground focus:border-primary focus:outline-none"
+                        />
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="Note (es: Pieno Cortina)"
+                        value={expenseNotes}
+                        onChange={(e) => setExpenseNotes(e.target.value)}
+                        className="w-full flex-[1.5] rounded-lg border border-border bg-background py-1.5 px-3 text-sm text-foreground focus:border-primary focus:outline-none"
+                      />
+                      <Button type="button" onClick={addExpense} size="sm" className="px-2.5">
+                        <Plus className="size-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Lista Spese Aggiunte temporanee */}
+                  {expenses.length > 0 && (
+                    <div className="max-h-[160px] overflow-y-auto space-y-1.5 pr-1">
+                      {expenses.map((exp, idx) => {
+                        const catName = EXPENSE_CATEGORIES.find((c) => c.id === exp.category_id)?.name
+                        return (
+                          <div key={idx} className="flex items-center justify-between text-xs p-2 rounded-lg bg-secondary/30 border border-border/20">
+                            <div className="space-y-0.5 truncate mr-2">
+                              <p className="font-semibold text-foreground truncate">{catName}</p>
+                              {exp.notes && <p className="text-muted-foreground truncate italic">"{exp.notes}"</p>}
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="font-mono font-bold text-foreground">€{exp.amount.toFixed(2)}</span>
+                              <button onClick={() => removeExpense(idx)} className="text-muted-foreground hover:text-destructive transition-colors">
+                                <Trash2 className="size-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Pulsante di Salvataggio Globale */}
                 <Button
                   onClick={handleSave}
                   disabled={saveState === 'saving'}
                   size="lg"
-                  className="w-full gap-2 font-medium"
+                  className="w-full gap-2 font-medium border-t border-border/40"
                 >
                   {saveState === 'saving' && <Loader2 className="size-4 animate-spin" />}
                   {saveState === 'saved' && <CheckCircle2 className="size-4" />}
@@ -198,7 +325,7 @@ export function TripDashboard() {
                   {saveState === 'saving'
                     ? 'Salvataggio nel cloud in corso…'
                     : saveState === 'saved'
-                      ? 'Salvato nel Cloud'
+                      ? 'Salvato nel Cloud con Spese'
                       : 'Salva nel Cloud Supabase'}
                 </Button>
 
@@ -267,7 +394,7 @@ export function TripDashboard() {
                 <TripMap points={trip.points} />
               ) : (
                 <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
-                  <div className="flex size-14 items-center justify-full rounded-full bg-secondary/60 text-muted-foreground">
+                  <div className="flex size-14 items-center justify-center rounded-full bg-secondary/60 text-muted-foreground">
                     <MapIcon className="size-7" />
                   </div>
                   <p className="max-w-xs text-balance text-sm text-muted-foreground">
