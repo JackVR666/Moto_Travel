@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useMemo, useState, useEffect } from 'react'
-import dynamic from 'next/dynamic'
+import dynamic from 'dynamic'
 import {
   Bike,
   Route,
@@ -17,6 +17,10 @@ import {
   History,
   FolderHeart,
   Pencil,
+  PieChart,
+  Receipt,
+  FileText,
+  Calendar,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { GpxUploader } from '@/components/gpx-uploader'
@@ -49,19 +53,19 @@ export function TripDashboard() {
   const [trip, setTrip] = useState<ParsedTrip | null>(null)
   const [customName, setCustomName] = useState<string>('')
   const [customDate, setCustomDate] = useState<string>('')
-  const [customEndDate, setCustomEndDate] = useState<string>('') // Fine viaggio
+  const [customEndDate, setCustomEndDate] = useState<string>('')
   
   const [expenseCategories, setExpenseCategories] = useState<any[]>([])
   const [allTrips, setAllTrips] = useState<any[]>([])
   const [editingTripId, setEditingTripId] = useState<string | null>(null)
   const [updatingTripId, setUpdatingTripId] = useState<string | null>(null)
 
-  // Stati per la singola spesa
+  // Stati singola spesa
   const [expenses, setExpenses] = useState<ExpenseInput[]>([])
   const [selectedCatId, setSelectedCatId] = useState<number>(1)
   const [expenseAmount, setExpenseAmount] = useState<string>('')
   const [expenseNotes, setExpenseNotes] = useState<string>('')
-  const [expenseDate, setExpenseDate] = useState<string>('') // Data singola spesa
+  const [expenseDate, setExpenseDate] = useState<string>('')
 
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -177,9 +181,28 @@ export function TripDashboard() {
     setExpenses((prev) => prev.filter((_, i) => i !== index))
   }
 
+  // Calcola il totale generale delle spese
   const totalExpensesCost = useMemo(() => {
     return expenses.reduce((sum, exp) => sum + exp.amount, 0).toFixed(2)
   }, [expenses])
+
+  // NOVITÀ: Calcola i subtotali suddivisi per categoria in tempo reale
+  const categorySubtotals = useMemo(() => {
+    const subtotals: Record<number, number> = {}
+    // Inizializza tutte le categorie note a 0
+    expenseCategories.forEach(cat => { subtotals[cat.id] = 0 })
+    
+    // Somma le spese inserite
+    expenses.forEach(exp => {
+      if (subtotals[exp.category_id] !== undefined) {
+        subtotals[exp.category_id] += exp.amount
+      } else {
+        subtotals[exp.category_id] = exp.amount
+      }
+    })
+
+    return subtotals
+  }, [expenses, expenseCategories])
 
   const handleFile = useCallback((fileName: string, content: string) => {
     setError(null)
@@ -332,7 +355,7 @@ export function TripDashboard() {
                     <div key={t.id} className="flex items-center justify-between p-3 rounded-xl border border-border/60 bg-background text-sm">
                       <div className="truncate mr-3">
                         <p className="font-bold text-foreground truncate">{t.title}</p>
-                        <p className="text-xs text-muted-foreground">Inizio: {formatDate(t.trip_date)}</p>
+                        <p className="text-xs text-muted-foreground">Ininizio: {formatDate(t.trip_date)}</p>
                       </div>
                       <Button size="sm" variant="secondary" onClick={() => { setUpdatingTripId(t.id); setCustomName(t.title); }}>
                         Associa Mappa GPX
@@ -383,66 +406,80 @@ export function TripDashboard() {
           </div>
         )}
 
+        {/* --- NUOVA INTERFACCIA CRUSCOTTO STRUTTURATA A QUATTRO RIQUADRI --- */}
         {(mode === 'live' || mode === 'gpx' || mode === 'edit_expenses') && (
-          <div className="grid gap-6 lg:grid-cols-[400px_1fr]">
-            <section className="space-y-6">
-              <div className="rounded-2xl border border-border bg-card p-5 space-y-5">
-                <div className="space-y-3">
-                  <label className="block text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    {mode === 'edit_expenses' ? 'Dettagli Durata e Registro Spese' : 'Dettagli del Viaggio'}
-                  </label>
-                  
+          <div className="space-y-6">
+            
+            {/* RIQUADRO 1: PARTE GENERALE - DESCRIZIONE E DATE DEL VIAGGIO */}
+            <section className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+              <div className="flex items-center gap-2 text-muted-foreground mb-4">
+                <FileText className="size-4 text-primary" />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">1. Informazioni Generali del Viaggio</h3>
+              </div>
+              <div className="grid gap-4 md:grid-cols-3 items-end">
+                <div className="space-y-1.5">
+                  <span className="text-xs font-medium text-muted-foreground">Titolo del Tour / Località</span>
                   <input
                     type="text"
                     value={customName}
                     onChange={(e) => setCustomName(e.target.value)}
                     disabled={mode === 'edit_expenses'}
-                    placeholder="Titolo Viaggio"
-                    className="w-full rounded-xl border border-border bg-secondary/20 py-2.5 px-4 text-base font-semibold text-foreground focus:outline-none disabled:opacity-70"
+                    placeholder="Es. Fine settimana sulle Dolomiti"
+                    className="w-full rounded-xl border border-border bg-secondary/15 py-2.5 px-4 text-base font-semibold text-foreground focus:outline-none disabled:opacity-75"
                   />
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <span className="text-[10px] text-muted-foreground font-medium uppercase block mb-1">Data Inizio</span>
-                      <input
-                        type="date"
-                        value={customDate}
-                        onChange={(e) => setCustomDate(e.target.value)}
-                        disabled={mode === 'edit_expenses'}
-                        className="w-full rounded-xl border border-border bg-secondary/20 py-2 px-3 text-sm font-medium text-foreground focus:outline-none disabled:opacity-70"
-                      />
-                    </div>
-                    <div>
-                      <span className="text-[10px] text-muted-foreground font-medium uppercase block mb-1">Data Fine</span>
-                      <input
-                        type="date"
-                        value={customEndDate}
-                        onChange={(e) => setCustomEndDate(e.target.value)}
-                        disabled={mode === 'edit_expenses'}
-                        className="w-full rounded-xl border border-border bg-secondary/20 py-2 px-3 text-sm font-medium text-foreground focus:outline-none disabled:opacity-70"
-                      />
-                    </div>
-                  </div>
                 </div>
+                <div className="space-y-1.5">
+                  <span className="text-xs font-medium text-muted-foreground">Data Partenza</span>
+                  <input
+                    type="date"
+                    value={customDate}
+                    onChange={(e) => setCustomDate(e.target.value)}
+                    disabled={mode === 'edit_expenses'}
+                    className="w-full rounded-xl border border-border bg-secondary/15 py-2.5 px-4 text-sm font-medium text-foreground focus:outline-none disabled:opacity-75"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <span className="text-xs font-medium text-muted-foreground">Data Ritorno</span>
+                  <input
+                    type="date"
+                    value={customEndDate}
+                    onChange={(e) => setCustomEndDate(e.target.value)}
+                    disabled={mode === 'edit_expenses'}
+                    className="w-full rounded-xl border border-border bg-secondary/15 py-2.5 px-4 text-sm font-medium text-foreground focus:outline-none disabled:opacity-75"
+                  />
+                </div>
+              </div>
+            </section>
 
-                <div className="border-t border-border/60 pt-4 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <label className="block text-xs font-medium uppercase tracking-wide text-muted-foreground">Contabilità Spese</label>
-                    <span className="text-sm font-bold text-primary">Totale: €{totalExpensesCost}</span>
+            {/* GRIGLIA OPERATIVA DELLE SPESE E MAPPA */}
+            <div className="grid gap-6 lg:grid-cols-[1fr_400px]">
+              
+              {/* COLONNA SINISTRA: TUTTO IL BLOCCO CONTABILITÀ DIVISO IN RIQUADRI */}
+              <div className="space-y-6">
+                
+                {/* RIQUADRO 2: INSERIMENTO NUOVA SPESA */}
+                <section className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+                  <div className="flex items-center gap-2 text-muted-foreground mb-4">
+                    <Receipt className="size-4 text-primary" />
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">2. Inserimento Rapido Spesa</h3>
                   </div>
-
-                  <div className="space-y-2 rounded-xl bg-secondary/10 p-3 border border-border/40 space-y-2.5">
-                    <div className="grid grid-cols-2 gap-2">
+                  
+                  <div className="grid gap-3 sm:grid-cols-3 bg-secondary/10 p-3.5 rounded-xl border border-border/40">
+                    <div className="space-y-1">
+                      <span className="text-[10px] uppercase font-bold text-muted-foreground">Categoria blindata</span>
                       <select
                         value={selectedCatId}
                         onChange={(e) => setSelectedCatId(parseInt(e.target.value))}
-                        className="w-full rounded-lg border border-border bg-background p-2 text-xs text-foreground focus:outline-none"
+                        className="w-full rounded-lg border border-border bg-background p-2 text-xs font-medium text-foreground focus:outline-none"
                       >
                         {expenseCategories.map((cat) => (
                           <option key={cat.id} value={cat.id}>{cat.name}</option>
                         ))}
                       </select>
+                    </div>
 
+                    <div className="space-y-1">
+                      <span className="text-[10px] uppercase font-bold text-muted-foreground">Data Spesa</span>
                       <input
                         type="date"
                         value={expenseDate}
@@ -451,89 +488,145 @@ export function TripDashboard() {
                       />
                     </div>
 
-                    <div className="flex gap-2">
-                      <div className="relative flex items-center flex-1">
-                        <Euro className="absolute left-2.5 size-4 text-muted-foreground" />
+                    <div className="space-y-1">
+                      <span className="text-[10px] uppercase font-bold text-muted-foreground">Cifra in Euro (€)</span>
+                      <div className="relative flex items-center">
+                        <Euro className="absolute left-2.5 size-3.5 text-muted-foreground" />
                         <input
                           type="number"
                           step="0.01"
-                          placeholder="Importo €"
+                          placeholder="0.00"
                           value={expenseAmount}
                           onChange={(e) => setExpenseAmount(e.target.value)}
-                          className="w-full rounded-lg border border-border bg-background py-1.5 pl-8 pr-2 text-xs text-foreground focus:outline-none"
+                          className="w-full rounded-lg border border-border bg-background py-2 pl-8 pr-2 text-xs font-bold text-foreground focus:outline-none"
                         />
                       </div>
-                      <input
-                        type="text"
-                        placeholder="Note"
-                        value={expenseNotes}
-                        onChange={(e) => setExpenseNotes(e.target.value)}
-                        className="w-full flex-[1.5] rounded-lg border border-border bg-background py-1.5 px-3 text-xs text-foreground focus:outline-none"
-                      />
-                      <Button type="button" onClick={addExpense} size="sm" className="px-2.5">
-                        <Plus className="size-4" />
+                    </div>
+
+                    <div className="sm:col-span-3 flex gap-2 items-end pt-1">
+                      <div className="flex-1 space-y-1">
+                        <span className="text-[10px] uppercase font-bold text-muted-foreground">Note aggiuntive / Dettagli</span>
+                        <input
+                          type="text"
+                          placeholder="Es. Benzina ENI - Pieno Passo Giau"
+                          value={expenseNotes}
+                          onChange={(e) => setExpenseNotes(e.target.value)}
+                          className="w-full rounded-lg border border-border bg-background py-2 px-3 text-xs text-foreground focus:outline-none"
+                        />
+                      </div>
+                      <Button type="button" onClick={addExpense} size="sm" className="h-9 px-4 font-bold gap-1">
+                        <Plus className="size-4" /> Aggiungi Spesa
                       </Button>
                     </div>
                   </div>
+                </section>
 
-                  {expenses.length > 0 && (
-                    <div className="max-h-[200px] overflow-y-auto space-y-1.5 pr-1">
+                {/* RIQUADRO 3: RIEPILOGO STATISTICHE E SUBTOTALI PER CATEGORIA */}
+                <section className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+                  <div className="flex items-center justify-between border-b border-border/50 pb-3 mb-4">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <PieChart className="size-4 text-primary" />
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">3. Riepilogo e Statistiche Categorie</h3>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-xs text-muted-foreground block font-medium">TOTALE SPESO</span>
+                      <span className="text-xl font-black text-primary font-mono">€ {totalExpensesCost}</span>
+                    </div>
+                  </div>
+
+                  {/* Tabella / Griglia dei Subtotali */}
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {expenseCategories.map((cat) => {
+                      const subtotal = categorySubtotals[cat.id] || 0
+                      return (
+                        <div key={cat.id} className="flex items-center justify-between p-2.5 rounded-xl bg-secondary/20 border border-border/30 text-xs">
+                          <span className="font-medium text-muted-foreground truncate mr-2">{cat.name}</span>
+                          <span className="font-mono font-bold text-foreground shrink-0 bg-background px-2 py-1 rounded border border-border/40">
+                            € {subtotal.toFixed(2)}
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </section>
+
+                {/* RIQUADRO 4: CRONOLOGIA DELLE SINGOLE SPESE */}
+                <section className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+                  <div className="flex items-center gap-2 text-muted-foreground mb-3">
+                    <History className="size-4 text-primary" />
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">4. Registro analitico voci di spesa ({expenses.length})</h3>
+                  </div>
+
+                  {expenses.length === 0 ? (
+                    <p className="text-xs text-muted-foreground italic text-center py-6 bg-secondary/5 rounded-xl border border-dashed border-border">
+                      Nessuna voce inserita nel registro spese per il momento.
+                    </p>
+                  ) : (
+                    <div className="max-h-[220px] overflow-y-auto space-y-2 pr-1">
                       {expenses.map((exp, idx) => {
                         const catName = expenseCategories.find((c) => c.id === exp.category_id)?.name || 'Spesa'
                         return (
-                          <div key={idx} className="flex items-center justify-between text-xs p-2 rounded-lg bg-secondary/30 border border-border/20">
-                            <div className="truncate mr-2">
-                              <p className="font-semibold text-foreground truncate">{catName}</p>
-                              <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                                <span className="bg-primary/10 text-primary px-1 rounded font-mono">{formatDate(exp.expense_date)}</span>
-                                {exp.notes && <span className="truncate italic">"{exp.notes}"</span>}
+                          <div key={idx} className="flex items-center justify-between text-xs p-3 rounded-xl bg-background border border-border/60 shadow-sm hover:border-border transition-colors">
+                            <div className="truncate mr-3 space-y-1">
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-foreground text-sm">{catName}</span>
+                                <span className="text-[10px] bg-secondary text-muted-foreground px-1.5 py-0.5 rounded font-mono font-medium flex items-center gap-1">
+                                  <Calendar className="size-3" /> {formatDate(exp.expense_date)}
+                                </span>
                               </div>
+                              {exp.notes && <p className="text-muted-foreground italic text-xs">"{exp.notes}"</p>}
                             </div>
-                            <div className="flex items-center gap-2 shrink-0">
-                              <span className="font-mono font-bold text-foreground">€{exp.amount.toFixed(2)}</span>
-                              <button onClick={() => removeExpense(idx)} className="text-muted-foreground hover:text-destructive"><Trash2 className="size-3.5" /></button>
+                            <div className="flex items-center gap-3 shrink-0">
+                              <span className="font-mono font-black text-base text-foreground bg-secondary/30 px-2.5 py-1 rounded-lg border border-border/20">€{exp.amount.toFixed(2)}</span>
+                              <button onClick={() => removeExpense(idx)} className="text-muted-foreground hover:text-destructive p-1 rounded-lg hover:bg-destructive/5 transition-colors">
+                                <Trash2 className="size-4" />
+                              </button>
                             </div>
                           </div>
                         )
                       })}
                     </div>
                   )}
-                </div>
+                </section>
 
-                <Button onClick={handleSave} disabled={saveState === 'saving'} size="lg" className="w-full gap-2 font-medium border-t border-border/40">
-                  {saveState === 'saving' && <Loader2 className="size-4 animate-spin" />}
-                  {saveState === 'saved' && <CheckCircle2 className="size-4" />}
-                  {saveState === 'idle' && <CloudUpload className="size-4" />}
+                {/* PULSANTE DI SALVATAGGIO CLOUD GENERALE */}
+                <Button onClick={handleSave} disabled={saveState === 'saving'} size="lg" className="w-full gap-2 font-bold py-6 text-base rounded-xl shadow-md">
+                  {saveState === 'saving' && <Loader2 className="size-5 animate-spin" />}
+                  {saveState === 'saved' && <CheckCircle2 className="size-5" />}
+                  {saveState === 'idle' && <CloudUpload className="size-5" />}
                   {saveState === 'saving'
-                    ? 'Allineamento dati cloud…'
+                    ? 'Sincronizzazione dati cloud in corso…'
                     : mode === 'edit_expenses'
-                      ? 'Salva Modifiche Spese nel Cloud'
-                      : 'Salva Viaggio nel Cloud'}
+                      ? 'Salva Modifiche Spese nel Cloud ☁️'
+                      : 'Salva Intero Viaggio nel Cloud ☁️'}
                 </Button>
+
               </div>
-            </section>
 
-            <section className="space-y-6">
-              {stats && (
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <StatCard icon={Route} label="Km totali traccia" value={stats.km} unit="km" />
-                  <StatCard icon={Gauge} label="Velocità max" value={stats.maxSpeed} unit="km/h" />
-                </div>
-              )}
-
-              <div className="relative h-[440px] overflow-hidden rounded-2xl border border-border bg-secondary/30 lg:h-[560px]">
-                {trip ? (
-                  <TripMap points={trip.points} />
-                ) : (
-                  <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
-                    <Play className="size-7 text-primary animate-pulse" />
-                    <p className="max-w-xs text-sm text-muted-foreground">
-                      {mode === 'edit_expenses' ? 'Questo viaggio non conteneva una mappa GPX.' : 'Sei in sella! Registrazione contabilità attiva.'}
-                    </p>
+              {/* COLONNA DESTRA: MAPPA E TELEMETRIA PERCORSO */}
+              <div className="space-y-6">
+                {stats && (
+                  <div className="grid gap-3 grid-cols-2">
+                    <StatCard icon={Route} label="Km totali traccia" value={stats.km} unit="km" />
+                    <StatCard icon={Gauge} label="Velocità max" value={stats.maxSpeed} unit="km/h" />
                   </div>
                 )}
+
+                <div className="relative h-[400px] overflow-hidden rounded-2xl border border-border bg-secondary/30 lg:h-[580px] shadow-inner">
+                  {trip ? (
+                    <TripMap points={trip.points} />
+                  ) : (
+                    <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center bg-card/20">
+                      <Play className="size-8 text-primary animate-pulse" />
+                      <p className="max-w-xs text-xs text-muted-foreground font-medium">
+                        {mode === 'edit_expenses' ? 'Nessuna mappa GPS associata a questo storico.' : 'Modalità Live On-The-Road attiva. Mappa disponibile al caricamento del GPX finale.'}
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
-            </section>
+
+            </div>
           </div>
         )}
       </main>
