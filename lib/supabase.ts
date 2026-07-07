@@ -1,13 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error(
-    'Variabili Supabase mancanti: imposta NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY.',
-  )
-}
+// Sostituisci QUESTE DUE STRINGHE con i tuoi valori reali presi da Supabase
+const supabaseUrl = 'https://hlbkafbmpbhjbayuapwo.supabase.co/rest/v1/' 
+const supabaseAnonKey = 'sb_publishable_3OLSJvAakL-rSGui9ss05Q_OLjhyxxc'
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
@@ -26,6 +21,5 @@ export interface TrackPointRow {
   longitude: number
   elevation: number | null
   timestamp: string | null
-  /** Integer speed in m/s (column is typed as integer in the DB). */
   speed: number | null
 }
