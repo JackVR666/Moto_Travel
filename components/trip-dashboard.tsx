@@ -20,13 +20,12 @@ import {
   Receipt,
   FileText,
   Calendar,
-  Layers,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { GpxUploader } from '@/components/gpx-uploader'
 import { StatCard } from '@/components/stat-card'
 import { parseGpx, type ParsedTrip } from '@/lib/gpx-parser'
-import { saveTripToSupabase, updateTripWithGpx, updateTripExpenses, type ExpenseInput } from '@/lib/save-trip'
+import { updateTripWithGpx, updateTripExpenses, type ExpenseInput } from '@/lib/save-trip'
 import { supabase } from '@/lib/supabase'
 
 const TripMap = dynamic(() => import('@/components/trip-map'), {
@@ -69,7 +68,7 @@ export function TripDashboard() {
   const [expenseNotes, setExpenseNotes] = useState<string>('')
   const [expenseDate, setExpenseDate] = useState<string>('')
 
-  // Nuove idee: Note viaggio testuali libere
+  // Note viaggio testuali libere
   const [tripNotes, setTripNotes] = useState<string>('')
 
   const [error, setError] = useState<string | null>(null)
@@ -89,14 +88,14 @@ export function TripDashboard() {
     }
   }
 
-const fetchAllTrips = async () => {
-    const { data, error } = await supabase
+  const fetchAllTrips = async () => {
+    const { data, error: dbError } = await supabase
       .from('trips')
       .select('id, title, trip_date, trip_end_date, total_km, notes')
       .order('trip_date', { ascending: false })
     
-    if (error) {
-      console.error("Errore Supabase:", error)
+    if (dbError) {
+      console.error("Errore Supabase:", dbError)
       return
     }
 
@@ -150,12 +149,12 @@ const fetchAllTrips = async () => {
     setTripNotes(currentTripData?.notes || '')
 
     // Scarica le spese esistenti
-    const { data, error } = await supabase
+    const { data, error: expError } = await supabase
       .from('expenses')
       .select('category_id, amount, notes, expense_date')
       .eq('trip_id', tripId)
 
-    if (!error && data) {
+    if (!expError && data) {
       setExpenses(data.map(e => ({
         category_id: e.category_id,
         amount: Number(e.amount),
@@ -167,18 +166,28 @@ const fetchAllTrips = async () => {
     // Scarica la mappa associata se esiste
     const { data: pointsData } = await supabase
       .from('track_points')
-      .select('latitude, longitude')
+      .select('latitude, longitude, ele, time, speed')
       .eq('trip_id', tripId)
       .order('id', { ascending: true })
 
     const savedKm = currentTripData ? currentTripData.total_km : 0
 
-if (pointsData && pointsData.length > 0) {
+    if (pointsData && pointsData.length > 0) {
+      const validPoints = pointsData
+        .filter(p => p.latitude !== null && p.longitude !== null)
+        .map(p => ({
+          lat: Number(p.latitude),
+          lng: Number(p.longitude),
+          ele: p.ele ?? null,
+          time: p.time ?? null,
+          speed: p.speed ?? null
+        }))
+
       setTrip({
         name: title,
         date: dateStr,
         totalKm: savedKm,
-        points: pointsData.map(p => ({ lat: p.latitude, lng: p.longitude })),
+        points: validPoints,
         maxSpeedKmh: 0,
         maxElevation: null,
         minElevation: null,
@@ -277,7 +286,6 @@ if (pointsData && pointsData.length > 0) {
       if (mode === 'edit_expenses' && editingTripId) {
         const finalKm = hasNewGpxLoaded && trip ? trip.totalKm : (allTrips.find(t => t.id === editingTripId)?.total_km || 0)
 
-        // 1. Aggiorna i dati generali del viaggio (incluse le note)
         const { error: updateTripError } = await supabase
           .from('trips')
           .update({
@@ -291,14 +299,12 @@ if (pointsData && pointsData.length > 0) {
 
         if (updateTripError) throw updateTripError
 
-        // 2. Aggiorna le spese associate
         await updateTripExpenses(editingTripId, expenses)
         
-        // 3. Se è stata caricata una nuova mappa, aggiorna i punti
         if (hasNewGpxLoaded && trip && trip.points.length > 0) {
           const pointsToUpdate = trip.points.map((p: any) => ({
             lat: p.lat ?? p.latitude,
-            lng: p.lng ?? p.longitude ?? p.lon, // Fallback totale per non mandare mai null
+            lng: p.lng ?? p.longitude ?? p.lon,
             ele: p.ele ?? null,
             time: p.time ?? null,
             speed: p.speed ?? null
@@ -316,14 +322,12 @@ if (pointsData && pointsData.length > 0) {
         await fetchAllTrips()
         alert('Viaggio aggiornato correttamente nel cloud!')
       } else {
-        // NUOVO VIAGGIO DA ZERO
         const titleToSave = customName.trim() || 'Giro Goldwing'
         const startToSave = customDate || new Date().toISOString().slice(0, 10)
         const endToSave = customEndDate || startToSave
         const kmToSave = trip ? trip.totalKm : 0
         const pointsToSave = trip ? trip.points : []
 
-        // Inseriamo il record iniziale direttamente per poter includere la colonna notes senza rompere saveTripToSupabase
         const { data: tripData, error: tripError } = await supabase
           .from('trips')
           .insert([{ 
@@ -365,7 +369,6 @@ if (pointsData && pointsData.length > 0) {
       }
     } catch (err) {
       setSaveState('idle')
-      // Sostituisci la riga dell'alert con questa:
       alert(`Errore nel salvataggio: ${err instanceof Error ? err.message : JSON.stringify(err)}`)
     }
   }
@@ -464,7 +467,6 @@ if (pointsData && pointsData.length > 0) {
         {(mode === 'live' || mode === 'gpx' || mode === 'edit_expenses') && (
           <div className="space-y-4">
             
-            {/* Sezione 1: Info Generali (Sempre visibile in alto) */}
             <section className="rounded-xl border border-border bg-card p-4 shadow-sm space-y-3">
               <div className="grid gap-3 grid-cols-1 sm:grid-cols-3">
                 <div className="space-y-1">
@@ -498,7 +500,6 @@ if (pointsData && pointsData.length > 0) {
               </div>
             </section>
 
-            {/* SELETTORE TAB DI NAVIGAZIONE INTERNA (Ottimizzato Mobile) */}
             <div className="flex border border-border bg-card p-1 rounded-xl shadow-sm">
               <button
                 type="button"
@@ -526,15 +527,12 @@ if (pointsData && pointsData.length > 0) {
               </button>
             </div>
 
-            {/* AREA CONTENUTO DELLE TAB */}
             <div className="grid gap-4">
               
-              {/* TAB 1: CONTABILITÀ E SPESE */}
               {activeTab === 'expenses' && (
                 <div className="space-y-4 grid lg:grid-cols-[1fr_320px] gap-4 lg:space-y-0">
                   
                   <div className="space-y-4">
-                    {/* Inserimento */}
                     <div className="rounded-xl border border-border bg-card p-4 shadow-sm space-y-3">
                       <div className="flex items-center gap-1.5 text-muted-foreground">
                         <Plus className="size-4 text-primary" />
@@ -594,7 +592,6 @@ if (pointsData && pointsData.length > 0) {
                       </div>
                     </div>
 
-                    {/* Elenco Analitico */}
                     <div className="rounded-xl border border-border bg-card p-4 shadow-sm space-y-2">
                       <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Lista Voci Inserite ({expenses.length})</h4>
                       {expenses.length === 0 ? (
@@ -630,7 +627,6 @@ if (pointsData && pointsData.length > 0) {
                     </div>
                   </div>
 
-                  {/* Riepilogo Laterale Spese */}
                   <div className="space-y-4">
                     <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
                       <div className="flex items-center justify-between border-b border-border/50 pb-2 mb-3">
@@ -656,7 +652,6 @@ if (pointsData && pointsData.length > 0) {
                 </div>
               )}
 
-              {/* TAB 2: MAPPA E ASSOCIAZIONE TRACCIA GPX */}
               {activeTab === 'map' && (
                 <div className="space-y-4">
                   {stats && (
@@ -666,9 +661,8 @@ if (pointsData && pointsData.length > 0) {
                     </div>
                   )}
 
-                  {/* Contenitore della Mappa: rimosso l'uploader fluttuante dall'interno */}
                   <div className="relative h-[380px] sm:h-[450px] overflow-hidden rounded-xl border border-border bg-secondary/10 shadow-inner">
-                    {trip ? (
+                    {trip && trip.points && trip.points.length > 0 ? (
                       <TripMap points={trip.points} />
                     ) : (
                       <div className="flex h-full flex-col items-center justify-center gap-3 px-4 text-center bg-card/20 py-8">
@@ -683,7 +677,6 @@ if (pointsData && pointsData.length > 0) {
                     )}
                   </div>
 
-                  {/* Uploader spostato ordinatamente SOTTO la mappa (visibile sia se la mappa c'è, sia se manca) */}
                   <div className="rounded-xl border border-border bg-card p-4 shadow-sm space-y-2">
                     <div className="flex items-center gap-1.5 text-muted-foreground">
                       <CloudUpload className="size-4 text-primary" />
@@ -702,7 +695,6 @@ if (pointsData && pointsData.length > 0) {
                 </div>
               )}
 
-              {/* TAB 3: NOTE DIARIO VIAGGIO LIBERE */}
               {activeTab === 'notes' && (
                 <div className="rounded-xl border border-border bg-card p-4 shadow-sm space-y-3">
                   <div className="flex items-center gap-1.5 text-muted-foreground">
@@ -724,7 +716,6 @@ if (pointsData && pointsData.length > 0) {
 
             </div>
 
-            {/* BOTTONE DI SALVATAGGIO CLOUD (Sempre ancorato e visibile) */}
             <Button onClick={handleSave} disabled={saveState === 'saving'} size="lg" className="w-full gap-2 font-bold py-5 text-sm rounded-xl shadow-md mt-2">
               {saveState === 'saving' && <Loader2 className="size-4 animate-spin" />}
               {saveState === 'saved' && <CheckCircle2 className="size-4" />}
