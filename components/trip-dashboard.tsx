@@ -243,7 +243,11 @@ export function TripDashboard() {
   const handleSave = async () => {
     setSaveState('saving')
     try {
-      if (mode === 'edit_expenses' && editingTripId) {
+      if (mode === 'edit_expenses') {
+        if (!editingTripId) {
+          throw new Error("Errore: ID del viaggio mancante nello stato locale.")
+        }
+
         const { error: updateTripError } = await supabase
           .from('trips')
           .update({
@@ -262,16 +266,23 @@ export function TripDashboard() {
         setTrip(null)
         setSaveState('saved')
         setMode('select')
-        await fetchAllTrips() // <-- FORZA REFRESH IMMEDIATO
+        await fetchAllTrips()
         alert('Viaggio e spese aggiornati con successo nel cloud!')
-      } else if (updatingTripId && trip) {
-        const pointsAdded = await updateTripWithGpx(updatingTripId, trip.totalKm, trip.points)
+      } else if (mode === 'gpx' || updatingTripId) {
+        const targetId = updatingTripId || editingTripId
+        if (!targetId || !trip) {
+          throw new Error("Impossibile associare la mappa: Dati o ID viaggio non agganciati correttamente.")
+        }
+
+        const pointsAdded = await updateTripWithGpx(targetId, trip.totalKm, trip.points)
+        
         setUpdatingTripId(null)
+        setEditingTripId(null)
         setTrip(null)
         setSaveState('saved')
         setMode('select')
-        await fetchAllTrips() // <-- FORZA REFRESH IMMEDIATO
-        alert(`Mappa agganciata correttamente! Aggiunti ${pointsAdded} punti GPS.`);
+        await fetchAllTrips()
+        alert(`Mappa agganciata correttamente! Aggiunti ${pointsAdded} punti GPS.`)
       } else {
         const titleToSave = customName.trim() || 'Giro Goldwing'
         const startToSave = customDate || new Date().toISOString().slice(0, 10)
@@ -280,11 +291,12 @@ export function TripDashboard() {
         const pointsToSave = trip ? trip.points : []
 
         await saveTripToSupabase(titleToSave, startToSave, endToSave, kmToSave, pointsToSave, expenses)
+        
         setExpenses([])
         setTrip(null)
         setSaveState('saved')
         setMode('select')
-        await fetchAllTrips() // <-- FORZA REFRESH IMMEDIATO
+        await fetchAllTrips()
         alert('Viaggio memorizzato con successo nel cloud!')
       }
     } catch (err) {
