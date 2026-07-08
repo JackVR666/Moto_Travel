@@ -163,7 +163,7 @@ export function TripDashboard() {
       })))
     }
 
-    // Scarica la mappa associata se esiste
+     // Scarica la mappa associata se esiste
     const { data: pointsData } = await supabase
       .from('track_points')
       .select('latitude, longitude, ele, time, speed')
@@ -173,26 +173,33 @@ export function TripDashboard() {
     const savedKm = currentTripData ? currentTripData.total_km : 0
 
     if (pointsData && pointsData.length > 0) {
+      // FILTRO E PARSING DI SICUREZZA
       const validPoints = pointsData
-        .filter(p => p.latitude !== null && p.longitude !== null)
+        .filter(p => p.latitude !== null && p.longitude !== null && !isNaN(parseFloat(p.latitude)) && !isNaN(parseFloat(p.longitude)))
         .map(p => ({
-          lat: Number(p.latitude),
-          lng: Number(p.longitude),
-          ele: p.ele ?? null,
-          time: p.time ?? null,
-          speed: p.speed ?? null
+          lat: parseFloat(p.latitude),
+          lng: parseFloat(p.longitude),
+          ele: p.ele ? parseFloat(p.ele) : null,
+          time: p.time || null,
+          speed: p.speed ? parseFloat(p.speed) : null
         }))
 
-      setTrip({
-        name: title,
-        date: dateStr,
-        totalKm: savedKm,
-        points: validPoints,
-        maxSpeedKmh: 0,
-        maxElevation: null,
-        minElevation: null,
-        avgElevation: null
-      })
+      if (validPoints.length > 0) {
+        setTrip({
+          name: title,
+          date: dateStr,
+          totalKm: savedKm,
+          points: validPoints,
+          maxSpeedKmh: 0,
+          maxElevation: null,
+          minElevation: null,
+          avgElevation: null
+        })
+      } else {
+        setTrip(null)
+      }
+    } else {
+      setTrip(null)
     }
 
     setMode('edit_expenses')
@@ -662,13 +669,14 @@ export function TripDashboard() {
                   )}
 
                   <div className="relative h-[380px] sm:h-[450px] overflow-hidden rounded-xl border border-border bg-secondary/10 shadow-inner">
-                    {trip && trip.points && trip.points.length > 0 ? (
-                      <TripMap points={trip.points} />
+                    {trip && trip.points && Array.isArray(trip.points) && trip.points.length > 0 ? (
+                      // Forziamo una chiave dinamica basata sul numero di punti per resettare il ciclo di vita del componente Leaflet in caso di cambio traccia
+                      <TripMap key={trip.points.length} points={trip.points} />
                     ) : (
                       <div className="flex h-full flex-col items-center justify-center gap-3 px-4 text-center bg-card/20 py-8">
                         <MapIcon className="size-6 text-primary animate-pulse" />
                         <div className="space-y-1">
-                          <p className="text-xs font-bold">Nessuna traccia GPS associata</p>
+                          <p className="text-xs font-bold">Nessuna traccia GPS associata o dati non validi</p>
                           <p className="max-w-xs text-[11px] text-muted-foreground leading-normal">
                             Trascina o seleziona il file esportato dal navigatore qui sotto per mappare l'itinerario e calcolare i km.
                           </p>
