@@ -163,10 +163,10 @@ export function TripDashboard() {
       })))
     }
 
-     // CORREZIONE: Interroghiamo i campi corretti 'lat' e 'lng' dal tuo database
+     // 1. Interroghiamo i campi esatti presenti sul tuo DB: latitude, longitude, elevation, timestamp, speed
     const { data: pointsData, error: pointsError } = await supabase
       .from('track_points')
-      .select('lat, lng, ele, time, speed')
+      .select('latitude, longitude, elevation, timestamp, speed')
       .eq('trip_id', tripId)
       .order('id', { ascending: true })
 
@@ -177,15 +177,15 @@ export function TripDashboard() {
     const savedKm = currentTripData ? currentTripData.total_km : 0
 
     if (pointsData && pointsData.length > 0) {
-      // Usiamo direttamente p.lat e p.lng visto che sul DB si chiamano così
+      // 2. Filtriamo e convertiamo i campi del DB mappandoli nell'oggetto { lat, lng } che vuole Leaflet
       const validPoints = pointsData
-        .filter(p => p.lat !== null && p.lng !== null && !isNaN(parseFloat(p.lat)) && !isNaN(parseFloat(p.lng)))
+        .filter(p => p.latitude !== null && p.longitude !== null)
         .map(p => ({
-          lat: parseFloat(p.lat),
-          lng: parseFloat(p.lng),
-          ele: p.ele ? parseFloat(p.ele) : null,
-          time: p.time || null,
-          speed: p.speed ? parseFloat(p.speed) : null
+          lat: Number(p.latitude),
+          lng: Number(p.longitude),
+          ele: p.elevation !== null ? Number(p.elevation) : null,
+          time: p.timestamp || null,
+          speed: p.speed !== null ? Number(p.speed) : null
         }))
 
       if (validPoints.length > 0) {
