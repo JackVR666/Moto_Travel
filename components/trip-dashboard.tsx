@@ -320,7 +320,7 @@ export function TripDashboard() {
             ele: p.ele ?? p.elevation ?? null,
             time: p.time ?? p.timestamp ?? null,
             speed: p.speed ?? null
-          })).filter(p => p.lat !== undefined && p.lon !== undefined && !isNaN(p.lat) && !isNaN(p.lon))
+          })).filter(p => p.lat !== undefined && p.lng !== undefined && !isNaN(p.lat) && !isNaN(p.lng))
           
           if (pointsToUpdate.length > 0) {
             await updateTripWithGpx(editingTripId, finalKm, pointsToUpdate)
@@ -368,7 +368,7 @@ export function TripDashboard() {
               ele: p.ele ?? p.elevation ?? null,
               time: p.time ?? p.timestamp ?? null,
               speed: p.speed ?? null
-            })).filter(p => p.lat !== undefined && p.lon !== undefined && !isNaN(p.lat) && !isNaN(p.lon))
+            })).filter(p => p.lat !== undefined && p.lng !== undefined && !isNaN(p.lat) && !isNaN(p.lng))
 
             if (formattedPointsToSave.length > 0) {
               await updateTripWithGpx(tripData.id, kmToSave, formattedPointsToSave)
