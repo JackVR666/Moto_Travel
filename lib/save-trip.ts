@@ -68,18 +68,18 @@ export async function saveTripToSupabase(
 }
 
 /**
- * Associa una traccia GPX a un viaggio live pre-esistente
+ * Associa una traccia GPX a un viaggio live pre-esistente (Svuota i vecchi punti prima dell'aggiornamento)
  */
 export async function updateTripWithGpx(
   tripId: string,
   totalKm: number,
   points: Array<{ lat: number; lng: number; ele?: number | null; time?: string | null; speed?: number | null }>
 ) {
-  // BLOCCO DI SICUREZZA: Impedisce update su ID mancanti o invalidi
   if (!tripId || tripId === 'undefined' || tripId === '') {
     throw new Error("Impossibile associare il GPX: ID del viaggio mancante o non valido.")
   }
 
+  // 1. Aggiorna i chilometri totali del viaggio
   const { error: tripUpdateError } = await supabase
     .from('trips')
     .update({ total_km: totalKm })
@@ -87,6 +87,15 @@ export async function updateTripWithGpx(
 
   if (tripUpdateError) throw tripUpdateError
 
+  // 2. CORREZIONE FONDAMENTALE: Cancella i vecchi punti traccia per evitare record infiniti e duplicati
+  const { error: deletePtsError } = await supabase
+    .from('track_points')
+    .delete()
+    .eq('trip_id', tripId)
+
+  if (deletePtsError) throw deletePtsError
+
+  // 3. Se ci sono nuovi punti, inseriscili a blocchi
   if (points.length > 0) {
     const pointsToInsert = points.map((p) => ({
       trip_id: tripId,
@@ -112,13 +121,11 @@ export async function updateTripWithGpx(
  * Sincronizza le spese rimuovendo i duplicati con certezza e controllo di sicurezza anti-wipe
  */
 export async function updateTripExpenses(tripId: string, expenses: ExpenseInput[]) {
-  // CRITICAL ANTI-WIPE BLOCK: Se l'ID è nullo o vuoto, blocca l'esecuzione prima di fare danni sul DB
   if (!tripId || tripId === 'undefined' || tripId === '') {
     console.error("Tentativo di cancellazione intercettato e bloccato: tripId vuoto.")
     return
   }
 
-  // 1. Cancella le vecchie spese SOLO per questo specifico viaggio
   const { error: deleteError } = await supabase
     .from('expenses')
     .delete()
@@ -129,10 +136,8 @@ export async function updateTripExpenses(tripId: string, expenses: ExpenseInput[
     throw deleteError
   }
 
-  // 2. Se l'utente ha svuotato la lista, ci fermiamo
   if (!expenses || expenses.length === 0) return
 
-  // 3. Rimuove i duplicati nell'array locale
   const uniqueExpenses = expenses.filter((expense, index, self) =>
     index === self.findIndex((t) => (
       t.category_id === expense.category_id && 
@@ -142,7 +147,6 @@ export async function updateTripExpenses(tripId: string, expenses: ExpenseInput[
     ))
   )
 
-  // 4. Prepara i dati puliti
   const expensesToInsert = uniqueExpenses.map((e) => ({
     trip_id: tripId,
     category_id: e.category_id,
@@ -151,7 +155,6 @@ export async function updateTripExpenses(tripId: string, expenses: ExpenseInput[
     expense_date: e.expense_date,
   }))
 
-  // 5. Inserisce le spese fresche
   const { error: insertError } = await supabase
     .from('expenses').insert(expensesToInsert)
 

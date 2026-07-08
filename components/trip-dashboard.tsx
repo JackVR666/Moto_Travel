@@ -174,7 +174,6 @@ export function TripDashboard() {
       const savedKm = currentTripData ? currentTripData.total_km : 0
 
       if (pointsData && pointsData.length > 0) {
-        // Mappatura esatta: p.latitude valorizza lat, p.longitude valorizza lng (quello che vuole Leaflet)
         const validPoints = pointsData
           .filter(p => p.latitude !== null && p.longitude !== null)
           .map(p => ({
@@ -310,12 +309,12 @@ export function TripDashboard() {
         
         if (trip && trip.points && trip.points.length > 0) {
           const pointsToUpdate = trip.points.map((p: any) => ({
-            lat: p.lat ?? p.latitude,
-            lng: p.lng ?? p.longitude,
+            lat: Number(p.lat ?? p.latitude),
+            lng: Number(p.lng ?? p.longitude),
             ele: p.ele ?? p.elevation ?? null,
             time: p.time ?? p.timestamp ?? null,
             speed: p.speed ?? null
-          })).filter(p => p.lat !== undefined && p.lng !== undefined && p.lat !== null && p.lng !== null)
+          })).filter(p => p.lat !== undefined && p.lng !== undefined && !isNaN(p.lat) && !isNaN(p.lng))
           
           if (pointsToUpdate.length > 0) {
             await updateTripWithGpx(editingTripId, finalKm, pointsToUpdate)
@@ -355,12 +354,12 @@ export function TripDashboard() {
         if (tripData) {
           if (pointsToSave.length > 0) {
             const formattedPointsToSave = pointsToSave.map((p: any) => ({
-              lat: p.lat ?? p.latitude,
-              lng: p.lng ?? p.longitude,
+              lat: Number(p.lat ?? p.latitude),
+              lng: Number(p.lng ?? p.longitude),
               ele: p.ele ?? p.elevation ?? null,
               time: p.time ?? p.timestamp ?? null,
               speed: p.speed ?? null
-            })).filter(p => p.lat !== undefined && p.lng !== undefined && p.lat !== null && p.lng !== null)
+            })).filter(p => p.lat !== undefined && p.lng !== undefined && !isNaN(p.lat) && !isNaN(p.lng))
 
             if (formattedPointsToSave.length > 0) {
               await updateTripWithGpx(tripData.id, kmToSave, formattedPointsToSave)
