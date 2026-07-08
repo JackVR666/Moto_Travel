@@ -163,22 +163,26 @@ export function TripDashboard() {
       })))
     }
 
-     // Scarica la mappa associata se esiste
-    const { data: pointsData } = await supabase
+     // CORREZIONE: Interroghiamo i campi corretti 'lat' e 'lng' dal tuo database
+    const { data: pointsData, error: pointsError } = await supabase
       .from('track_points')
-      .select('latitude, longitude, ele, time, speed')
+      .select('lat, lng, ele, time, speed')
       .eq('trip_id', tripId)
       .order('id', { ascending: true })
+
+    if (pointsError) {
+      console.error("Errore nel recupero dei punti mappa:", pointsError)
+    }
 
     const savedKm = currentTripData ? currentTripData.total_km : 0
 
     if (pointsData && pointsData.length > 0) {
-      // FILTRO E PARSING DI SICUREZZA
+      // Usiamo direttamente p.lat e p.lng visto che sul DB si chiamano così
       const validPoints = pointsData
-        .filter(p => p.latitude !== null && p.longitude !== null && !isNaN(parseFloat(p.latitude)) && !isNaN(parseFloat(p.longitude)))
+        .filter(p => p.lat !== null && p.lng !== null && !isNaN(parseFloat(p.lat)) && !isNaN(parseFloat(p.lng)))
         .map(p => ({
-          lat: parseFloat(p.latitude),
-          lng: parseFloat(p.longitude),
+          lat: parseFloat(p.lat),
+          lng: parseFloat(p.lng),
           ele: p.ele ? parseFloat(p.ele) : null,
           time: p.time || null,
           speed: p.speed ? parseFloat(p.speed) : null
