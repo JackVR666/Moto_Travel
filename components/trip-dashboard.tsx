@@ -296,9 +296,9 @@ if (pointsData && pointsData.length > 0) {
         
         // 3. Se è stata caricata una nuova mappa, aggiorna i punti
         if (hasNewGpxLoaded && trip && trip.points.length > 0) {
-          const pointsToUpdate = trip.points.map(p => ({
-            lat: p.lat,
-            lng: p.lng,
+          const pointsToUpdate = trip.points.map((p: any) => ({
+            lat: p.lat ?? p.latitude,
+            lng: p.lng ?? p.longitude ?? p.lon, // Fallback totale per non mandare mai null
             ele: p.ele ?? null,
             time: p.time ?? null,
             speed: p.speed ?? null
@@ -340,9 +340,9 @@ if (pointsData && pointsData.length > 0) {
 
         if (tripData) {
           if (pointsToSave.length > 0) {
-            const formattedPointsToSave = pointsToSave.map(p => ({
-              lat: p.lat,
-              lng: p.lng,
+            const formattedPointsToSave = pointsToSave.map((p: any) => ({
+              lat: p.lat ?? p.latitude,
+              lng: p.lng ?? p.longitude ?? p.lon,
               ele: p.ele ?? null,
               time: p.time ?? null,
               speed: p.speed ?? null
