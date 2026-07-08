@@ -291,8 +291,11 @@ export function TripDashboard() {
     setSaveState('saving')
     try {
       if (mode === 'edit_expenses' && editingTripId) {
-        const finalKm = hasNewGpxLoaded && trip ? trip.totalKm : (allTrips.find(t => t.id === editingTripId)?.total_km || 0)
+        // 1. Determina i chilometri finali corretti
+        const currentSavedKm = allTrips.find(t => t.id === editingTripId)?.total_km || 0
+        const finalKm = hasNewGpxLoaded && trip ? trip.totalKm : currentSavedKm
 
+        // 2. Aggiorna i dati base del viaggio
         const { error: updateTripError } = await supabase
           .from('trips')
           .update({
@@ -306,8 +309,10 @@ export function TripDashboard() {
 
         if (updateTripError) throw updateTripError
 
+        // 3. Sincronizza le spese (eseguito sempre)
         await updateTripExpenses(editingTripId, expenses)
         
+        // 4. Aggiorna i punti mappa SOLO se è stato caricato un nuovo GPX o se sono presenti nello stato
         if (trip && trip.points && trip.points.length > 0) {
           const pointsToUpdate = trip.points.map((p: any) => ({
             lat: Number(p.lat ?? p.latitude),
@@ -322,6 +327,7 @@ export function TripDashboard() {
           }
         }
 
+        // Reset e pulizia stato
         setExpenses([])
         setEditingTripId(null)
         setTrip(null)
@@ -331,7 +337,9 @@ export function TripDashboard() {
         setMode('select')
         await fetchAllTrips()
         alert('Viaggio aggiornato correttamente nel cloud!')
+
       } else {
+        // RAMO NUOVO INSERIMENTO (Invariato e stabile)
         const titleToSave = customName.trim() || 'Giro Goldwing'
         const startToSave = customDate || new Date().toISOString().slice(0, 10)
         const endToSave = customEndDate || startToSave
@@ -382,6 +390,7 @@ export function TripDashboard() {
       }
     } catch (err) {
       setSaveState('idle')
+      console.error("Errore bloccante durante il salvataggio:", err)
       alert(`Errore nel salvataggio: ${err instanceof Error ? err.message : JSON.stringify(err)}`)
     }
   }
