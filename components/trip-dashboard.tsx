@@ -161,7 +161,7 @@ export function TripDashboard() {
       })))
     }
 
-    // 2. Scarica la mappa basandosi sui campi reali (latitude, longitude)
+    // 2. Scarica la mappa basandosi sui campi reali float8: latitude, longitude
     try {
       const { data: pointsData, error: pointsError } = await supabase
         .from('track_points')
@@ -174,16 +174,17 @@ export function TripDashboard() {
       const savedKm = currentTripData ? currentTripData.total_km : 0
 
       if (pointsData && pointsData.length > 0) {
+        // Mappatura esatta: p.latitude valorizza lat, p.longitude valorizza lng (quello che vuole Leaflet)
         const validPoints = pointsData
-          .filter(p => p.latitude !== null && p.longitude !== null && !isNaN(Number(p.latitude)) && !isNaN(Number(p.longitude)))
+          .filter(p => p.latitude !== null && p.longitude !== null)
           .map(p => ({
-            lat: Number(p.latitude),
-            lng: Number(p.longitude), // Questo deve puntare a p.longitude per popolare correttamente 'lng' richiesto da Leaflet!
-            ele: p.elevation !== null ? Number(p.elevation) : null,
+            lat: p.latitude,
+            lng: p.longitude,
+            ele: p.elevation !== null ? p.elevation : null,
             time: p.timestamp || null,
-            speed: p.speed !== null ? Number(p.speed) : null
+            speed: p.speed !== null ? p.speed : null
           }))
-          
+
         if (validPoints.length > 0) {
           setTrip({
             name: title,
@@ -308,17 +309,13 @@ export function TripDashboard() {
         await updateTripExpenses(editingTripId, expenses)
         
         if (trip && trip.points && trip.points.length > 0) {
-          const pointsToUpdate = trip.points.map((p: any) => {
-            const latitudeValue = p.lat ?? p.latitude
-            const longitudeValue = p.lng ?? p.longitude
-            return {
-              lat: latitudeValue !== undefined && latitudeValue !== null ? Number(latitudeValue) : undefined,
-              lng: longitudeValue !== undefined && longitudeValue !== null ? Number(longitudeValue) : undefined,
-              ele: p.ele ?? p.elevation ?? null,
-              time: p.time ?? p.timestamp ?? null,
-              speed: p.speed ?? null
-            }
-          }).filter(p => p.lat !== undefined && p.lng !== undefined && !isNaN(p.lat) && !isNaN(p.lng))
+          const pointsToUpdate = trip.points.map((p: any) => ({
+            lat: p.lat ?? p.latitude,
+            lng: p.lng ?? p.longitude,
+            ele: p.ele ?? p.elevation ?? null,
+            time: p.time ?? p.timestamp ?? null,
+            speed: p.speed ?? null
+          })).filter(p => p.lat !== undefined && p.lng !== undefined && p.lat !== null && p.lng !== null)
           
           if (pointsToUpdate.length > 0) {
             await updateTripWithGpx(editingTripId, finalKm, pointsToUpdate)
@@ -357,17 +354,13 @@ export function TripDashboard() {
 
         if (tripData) {
           if (pointsToSave.length > 0) {
-            const formattedPointsToSave = pointsToSave.map((p: any) => {
-              const latitudeValue = p.lat ?? p.latitude
-              const longitudeValue = p.lng ?? p.longitude
-              return {
-                lat: latitudeValue !== undefined && latitudeValue !== null ? Number(latitudeValue) : undefined,
-                lng: longitudeValue !== undefined && longitudeValue !== null ? Number(longitudeValue) : undefined,
-                ele: p.ele ?? p.elevation ?? null,
-                time: p.time ?? p.timestamp ?? null,
-                speed: p.speed ?? null
-              }
-            }).filter(p => p.lat !== undefined && p.lng !== undefined && !isNaN(p.lat) && !isNaN(p.lng))
+            const formattedPointsToSave = pointsToSave.map((p: any) => ({
+              lat: p.lat ?? p.latitude,
+              lng: p.lng ?? p.longitude,
+              ele: p.ele ?? p.elevation ?? null,
+              time: p.time ?? p.timestamp ?? null,
+              speed: p.speed ?? null
+            })).filter(p => p.lat !== undefined && p.lng !== undefined && p.lat !== null && p.lng !== null)
 
             if (formattedPointsToSave.length > 0) {
               await updateTripWithGpx(tripData.id, kmToSave, formattedPointsToSave)
