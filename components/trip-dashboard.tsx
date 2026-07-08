@@ -277,6 +277,7 @@ if (pointsData && pointsData.length > 0) {
       if (mode === 'edit_expenses' && editingTripId) {
         const finalKm = hasNewGpxLoaded && trip ? trip.totalKm : (allTrips.find(t => t.id === editingTripId)?.total_km || 0)
 
+        // 1. Aggiorna i dati generali del viaggio (incluse le note)
         const { error: updateTripError } = await supabase
           .from('trips')
           .update({
@@ -290,11 +291,11 @@ if (pointsData && pointsData.length > 0) {
 
         if (updateTripError) throw updateTripError
 
+        // 2. Aggiorna le spese associate
         await updateTripExpenses(editingTripId, expenses)
         
-        // Se l'utente ha caricato un nuovo GPX dall'interno, salviamo i track_points sul DB
+        // 3. Se è stata caricata una nuova mappa, aggiorna i punti
         if (hasNewGpxLoaded && trip && trip.points.length > 0) {
-          // Mappiamo esplicitamente i punti per garantire la perfetta compatibilità dei tipi
           const pointsToUpdate = trip.points.map(p => ({
             lat: p.lat,
             lng: p.lng,
@@ -302,7 +303,6 @@ if (pointsData && pointsData.length > 0) {
             time: p.time ?? null,
             speed: p.speed ?? null
           }))
-          
           await updateTripWithGpx(editingTripId, finalKm, pointsToUpdate)
         }
 
@@ -316,13 +316,14 @@ if (pointsData && pointsData.length > 0) {
         await fetchAllTrips()
         alert('Viaggio aggiornato correttamente nel cloud!')
       } else {
+        // NUOVO VIAGGIO DA ZERO
         const titleToSave = customName.trim() || 'Giro Goldwing'
         const startToSave = customDate || new Date().toISOString().slice(0, 10)
         const endToSave = customEndDate || startToSave
         const kmToSave = trip ? trip.totalKm : 0
         const pointsToSave = trip ? trip.points : []
 
-        // Salviamo includendo anche le note libere
+        // Inseriamo il record iniziale direttamente per poter includere la colonna notes senza rompere saveTripToSupabase
         const { data: tripData, error: tripError } = await supabase
           .from('trips')
           .insert([{ 
@@ -337,20 +338,20 @@ if (pointsData && pointsData.length > 0) {
 
         if (tripError) throw tripError
 
-          if (pointsToSave.length > 0 && tripData) {
-          // Mappiamo esplicitamente i punti per uniformare il tipo richiesto con 'lng'
-          const formattedPointsToSave = pointsToSave.map(p => ({
-            lat: p.lat,
-            lng: p.lng,
-            ele: p.ele ?? null,
-            time: p.time ?? null,
-            speed: p.speed ?? null
-          }))
-
-          await updateTripWithGpx(tripData.id, kmToSave, formattedPointsToSave)
-        }
-        if (expenses.length > 0 && tripData) {
-          await updateTripExpenses(tripData.id, expenses)
+        if (tripData) {
+          if (pointsToSave.length > 0) {
+            const formattedPointsToSave = pointsToSave.map(p => ({
+              lat: p.lat,
+              lng: p.lng,
+              ele: p.ele ?? null,
+              time: p.time ?? null,
+              speed: p.speed ?? null
+            }))
+            await updateTripWithGpx(tripData.id, kmToSave, formattedPointsToSave)
+          }
+          if (expenses.length > 0) {
+            await updateTripExpenses(tripData.id, expenses)
+          }
         }
         
         setExpenses([])
