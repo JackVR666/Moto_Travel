@@ -163,46 +163,44 @@ export function TripDashboard() {
       })))
     }
 
-    // 2. Scarica la mappa associata basandosi sui campi reali della tabella public.track_points
-    const { data: pointsData, error: pointsError } = await supabase
-      .from('track_points')
-      .select('latitude, longitude, elevation, timestamp, speed')
-      .eq('trip_id', tripId)
-      .order('id', { ascending: true })
+    // 2. Scarica la mappa basandosi sui campi reali (latitude, longitude)
+    try {
+      const { data: pointsData, error: pointsError } = await supabase
+        .from('track_points')
+        .select('latitude, longitude, elevation, timestamp, speed')
+        .eq('trip_id', tripId)
+        .order('id', { ascending: true })
 
-    if (pointsError) {
-      console.error("Errore nel recupero dei punti mappa:", pointsError)
-    }
+      if (pointsError) throw pointsError
 
-    const savedKm = currentTripData ? currentTripData.total_km : 0
+      const savedKm = currentTripData ? currentTripData.total_km : 0
 
-    if (pointsData && pointsData.length > 0) {
-      const validPoints = pointsData
-        .filter(p => p.latitude !== null && p.longitude !== null)
-        .map(p => ({
-          lat: Number(p.latitude),
-          lng: Number(p.longitude),
-          ele: p.elevation !== null ? Number(p.elevation) : null,
-          time: p.timestamp || null,
-          speed: p.speed !== null ? Number(p.speed) : null
-        }))
+      if (pointsData && pointsData.length > 0) {
+        const validPoints = pointsData
+          .filter(p => p.latitude !== null && p.longitude !== null && !isNaN(Number(p.latitude)) && !isNaN(Number(p.longitude)))
+          .map(p => ({
+            lat: Number(p.latitude),
+            lng: Number(p.longitude),
+            ele: p.elevation !== null ? Number(p.elevation) : null,
+            time: p.timestamp || null,
+            speed: p.speed !== null ? Number(p.speed) : null
+          }))
 
-      if (validPoints.length > 0) {
-        setTrip({
-          name: title,
-          date: dateStr,
-          totalKm: Number(savedKm),
-          points: validPoints,
-          maxSpeedKmh: 0,
-          maxElevation: null,
-          minElevation: null,
-          avgElevation: null
-        })
-      } else {
-        setTrip(null)
+        if (validPoints.length > 0) {
+          setTrip({
+            name: title,
+            date: dateStr,
+            totalKm: Number(savedKm),
+            points: validPoints,
+            maxSpeedKmh: 0,
+            maxElevation: null,
+            minElevation: null,
+            avgElevation: null
+          })
+        }
       }
-    } else {
-      setTrip(null)
+    } catch (err) {
+      console.error("Errore recupero punti:", err)
     }
 
     setMode('edit_expenses')
@@ -312,15 +310,21 @@ export function TripDashboard() {
         await updateTripExpenses(editingTripId, expenses)
         
         if (trip && trip.points && trip.points.length > 0) {
-          const pointsToUpdate = trip.points.map((p: any) => ({
-            lat: p.lat ?? p.latitude,
-            lng: p.lng ?? p.longitude,
-            ele: p.ele ?? p.elevation ?? null,
-            time: p.time ?? p.timestamp ?? null,
-            speed: p.speed ?? null
-          })).filter(p => p.lat !== undefined && p.lng !== undefined && p.lat !== null && p.lng !== null)
+          const pointsToUpdate = trip.points.map((p: any) => {
+            const latitudeValue = p.lat ?? p.latitude
+            const longitudeValue = p.lng ?? p.longitude
+            return {
+              lat: latitudeValue !== undefined && latitudeValue !== null ? Number(latitudeValue) : undefined,
+              lng: longitudeValue !== undefined && longitudeValue !== null ? Number(longitudeValue) : undefined,
+              ele: p.ele ?? p.elevation ?? null,
+              time: p.time ?? p.timestamp ?? null,
+              speed: p.speed ?? null
+            }
+          }).filter(p => p.lat !== undefined && p.lng !== undefined && !isNaN(p.lat) && !isNaN(p.lng))
           
-          await updateTripWithGpx(editingTripId, finalKm, pointsToUpdate)
+          if (pointsToUpdate.length > 0) {
+            await updateTripWithGpx(editingTripId, finalKm, pointsToUpdate)
+          }
         }
 
         setExpenses([])
@@ -355,15 +359,21 @@ export function TripDashboard() {
 
         if (tripData) {
           if (pointsToSave.length > 0) {
-            const formattedPointsToSave = pointsToSave.map((p: any) => ({
-              lat: p.lat ?? p.latitude,
-              lng: p.lng ?? p.longitude,
-              ele: p.ele ?? p.elevation ?? null,
-              time: p.time ?? p.timestamp ?? null,
-              speed: p.speed ?? null
-            })).filter(p => p.lat !== undefined && p.lng !== undefined && p.lat !== null && p.lng !== null)
+            const formattedPointsToSave = pointsToSave.map((p: any) => {
+              const latitudeValue = p.lat ?? p.latitude
+              const longitudeValue = p.lng ?? p.longitude
+              return {
+                lat: latitudeValue !== undefined && latitudeValue !== null ? Number(latitudeValue) : undefined,
+                lng: longitudeValue !== undefined && longitudeValue !== null ? Number(longitudeValue) : undefined,
+                ele: p.ele ?? p.elevation ?? null,
+                time: p.time ?? p.timestamp ?? null,
+                speed: p.speed ?? null
+              }
+            }).filter(p => p.lat !== undefined && p.lng !== undefined && !isNaN(p.lat) && !isNaN(p.lng))
 
-            await updateTripWithGpx(tripData.id, kmToSave, formattedPointsToSave)
+            if (formattedPointsToSave.length > 0) {
+              await updateTripWithGpx(tripData.id, kmToSave, formattedPointsToSave)
+            }
           }
           if (expenses.length > 0) {
             await updateTripExpenses(tripData.id, expenses)
@@ -391,6 +401,11 @@ export function TripDashboard() {
       km: trip.totalKm.toFixed(1),
       maxSpeed: trip.maxSpeedKmh > 0 ? trip.maxSpeedKmh.toFixed(0) : '—',
     }
+  }, [trip])
+
+  // RENDERING DIFENSIVO DELLA MAPPA: restituisce vero solo se i dati contengono coordinate numeriche reali
+  const hasValidPoints = useMemo(() => {
+    return !!(trip && trip.points && Array.isArray(trip.points) && trip.points.length > 0 && trip.points[0].lat && trip.points[0].lng)
   }, [trip])
 
   return (
@@ -568,7 +583,7 @@ export function TripDashboard() {
                           <input
                             type="date"
                             value={expenseDate}
-                            onChange={(e) => setExpenseDate(e.target.value)}
+                            onChange={(e) => setExpenseDate(t => e.target.value)}
                             className="w-full rounded-md border border-border bg-background p-1.5 text-xs text-foreground focus:outline-none"
                           />
                         </div>
@@ -674,7 +689,7 @@ export function TripDashboard() {
                   )}
 
                   <div className="relative h-[380px] sm:h-[450px] overflow-hidden rounded-xl border border-border bg-secondary/10 shadow-inner">
-                    {trip && trip.points && Array.isArray(trip.points) && trip.points.length > 0 ? (
+                    {hasValidPoints && trip && trip.points ? (
                       <TripMap key={trip.points.length} points={trip.points} />
                     ) : (
                       <div className="flex h-full flex-col items-center justify-center gap-3 px-4 text-center bg-card/20 py-8">
