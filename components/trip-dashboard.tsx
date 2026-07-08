@@ -365,7 +365,8 @@ if (pointsData && pointsData.length > 0) {
       }
     } catch (err) {
       setSaveState('idle')
-      alert(`Errore nel salvataggio: ${err instanceof Error ? err.message : 'Errore generico'}`)
+      // Sostituisci la riga dell'alert con questa:
+      alert(`Errore nel salvataggio: ${err instanceof Error ? err.message : JSON.stringify(err)}`)
     }
   }
 
