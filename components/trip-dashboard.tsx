@@ -161,7 +161,7 @@ export function TripDashboard() {
       })))
     }
 
-    // 2. Scarica la mappa basandosi sui campi reali float8: latitude, longitude
+    // 2. Scarica la mappa basandosi sui campi reali: latitude, longitude
     try {
       const { data: pointsData, error: pointsError } = await supabase
         .from('track_points')
@@ -171,14 +171,15 @@ export function TripDashboard() {
 
       if (pointsError) throw pointsError
 
+      const currentTripData = allTrips.find(t => t.id === tripId)
       const savedKm = currentTripData ? currentTripData.total_km : 0
 
       if (pointsData && pointsData.length > 0) {
         const validPoints = pointsData
           .filter(p => p.latitude !== null && p.longitude !== null)
           .map(p => ({
-            lat: p.latitude,
-            lng: p.longitude,
+            lat: Number(p.latitude),  // Mappa correttamente la colonna del DB su 'lat' per Leaflet
+            lng: Number(p.longitude), // Usa p.longitude, NON p.lng! Mappa su 'lng' per Leaflet
             ele: p.elevation !== null ? p.elevation : null,
             time: p.timestamp || null,
             speed: p.speed !== null ? p.speed : null
