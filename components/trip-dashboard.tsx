@@ -148,14 +148,14 @@ export function TripDashboard() {
     const currentTripData = allTrips.find(t => t.id === tripId)
     setTripNotes(currentTripData?.notes || '')
 
-    // Scarica le spese esistenti
-    const { data, error: expError } = await supabase
+    // 1. Scarica le spese esistenti
+    const { data: expData, error: expError } = await supabase
       .from('expenses')
       .select('category_id, amount, notes, expense_date')
       .eq('trip_id', tripId)
 
-    if (!expError && data) {
-      setExpenses(data.map(e => ({
+    if (!expError && expData) {
+      setExpenses(expData.map(e => ({
         category_id: e.category_id,
         amount: Number(e.amount),
         notes: e.notes || undefined,
@@ -163,7 +163,7 @@ export function TripDashboard() {
       })))
     }
 
-    // Scarica la mappa associata basandosi sui campi reali del DB
+    // 2. Scarica la mappa associata basandosi sui campi reali della tabella public.track_points
     const { data: pointsData, error: pointsError } = await supabase
       .from('track_points')
       .select('latitude, longitude, elevation, timestamp, speed')
@@ -191,7 +191,7 @@ export function TripDashboard() {
         setTrip({
           name: title,
           date: dateStr,
-          totalKm: savedKm,
+          totalKm: Number(savedKm),
           points: validPoints,
           maxSpeedKmh: 0,
           maxElevation: null,
@@ -314,11 +314,11 @@ export function TripDashboard() {
         if (trip && trip.points && trip.points.length > 0) {
           const pointsToUpdate = trip.points.map((p: any) => ({
             lat: p.lat ?? p.latitude,
-            lng: p.lng ?? p.longitude ?? p.lon,
+            lng: p.lng ?? p.longitude,
             ele: p.ele ?? p.elevation ?? null,
             time: p.time ?? p.timestamp ?? null,
             speed: p.speed ?? null
-          })).filter(p => p.lat !== undefined && p.lng !== undefined)
+          })).filter(p => p.lat !== undefined && p.lng !== undefined && p.lat !== null && p.lng !== null)
           
           await updateTripWithGpx(editingTripId, finalKm, pointsToUpdate)
         }
@@ -357,11 +357,11 @@ export function TripDashboard() {
           if (pointsToSave.length > 0) {
             const formattedPointsToSave = pointsToSave.map((p: any) => ({
               lat: p.lat ?? p.latitude,
-              lng: p.lng ?? p.longitude ?? p.lon,
+              lng: p.lng ?? p.longitude,
               ele: p.ele ?? p.elevation ?? null,
               time: p.time ?? p.timestamp ?? null,
               speed: p.speed ?? null
-            })).filter(p => p.lat !== undefined && p.lng !== undefined)
+            })).filter(p => p.lat !== undefined && p.lng !== undefined && p.lat !== null && p.lng !== null)
 
             await updateTripWithGpx(tripData.id, kmToSave, formattedPointsToSave)
           }
