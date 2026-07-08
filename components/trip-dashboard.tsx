@@ -268,13 +268,13 @@ export function TripDashboard() {
         setMode('select')
         await fetchAllTrips()
         alert('Viaggio e spese aggiornati con successo nel cloud!')
-      } else if (mode === 'gpx' || updatingTripId) {
-        const targetId = updatingTripId || editingTripId
-        if (!targetId || !trip) {
-          throw new Error("Impossibile associare la mappa: Dati o ID viaggio non agganciati correttamente.")
+      } else if (updatingTripId) {
+        // CORREZIONE: Se c'è un updatingTripId attivo, stiamo agganciando la mappa a un viaggio esistente
+        if (!trip) {
+          throw new Error("Impossibile associare la mappa: Traccia GPX non caricata o non valida.")
         }
 
-        const pointsAdded = await updateTripWithGpx(targetId, trip.totalKm, trip.points)
+        const pointsAdded = await updateTripWithGpx(updatingTripId, trip.totalKm, trip.points)
         
         setUpdatingTripId(null)
         setEditingTripId(null)
@@ -284,6 +284,7 @@ export function TripDashboard() {
         await fetchAllTrips()
         alert(`Mappa agganciata correttamente! Aggiunti ${pointsAdded} punti GPS.`)
       } else {
+        // Nuovo viaggio (Live da zero o GPX da zero)
         const titleToSave = customName.trim() || 'Giro Goldwing'
         const startToSave = customDate || new Date().toISOString().slice(0, 10)
         const endToSave = customEndDate || startToSave
@@ -385,7 +386,7 @@ export function TripDashboard() {
                         <p className="font-bold text-foreground truncate">{t.title}</p>
                         <p className="text-xs text-muted-foreground">Ininizio: {formatDate(t.trip_date)}</p>
                       </div>
-                      <Button size="sm" variant="secondary" onClick={() => { setUpdatingTripId(t.id); setCustomName(t.title); }}>
+                      <<Button size="sm" variant="secondary" onClick={() => { setUpdatingTripId(t.id); setCustomName(t.title); setMode('gpx'); }}>
                         Associa Mappa GPX
                       </Button>
                     </div>
