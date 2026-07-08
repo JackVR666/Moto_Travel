@@ -179,7 +179,7 @@ export function TripDashboard() {
           .filter(p => p.latitude !== null && p.longitude !== null)
           .map(p => ({
             lat: Number(p.latitude),  // Mappa correttamente la colonna del DB su 'lat' per Leaflet
-            lng: Number(p.longitude), // Usa p.longitude, NON p.lng! Mappa su 'lng' per Leaflet
+            lon: Number(p.longitude), // Usa p.longitude, NON p.lon! Mappa su 'lon' per Leaflet
             ele: p.elevation !== null ? p.elevation : null,
             time: p.timestamp || null,
             speed: p.speed !== null ? p.speed : null
@@ -316,7 +316,7 @@ export function TripDashboard() {
         if (trip && trip.points && trip.points.length > 0) {
           const pointsToUpdate = trip.points.map((p: any) => ({
             lat: Number(p.lat ?? p.latitude),
-            lng: Number(p.lon ?? p.longitude),
+            lon: Number(p.lon ?? p.longitude),
             ele: p.ele ?? p.elevation ?? null,
             time: p.time ?? p.timestamp ?? null,
             speed: p.speed ?? null
@@ -364,7 +364,7 @@ export function TripDashboard() {
           if (pointsToSave.length > 0) {
             const formattedPointsToSave = pointsToSave.map((p: any) => ({
               lat: Number(p.lat ?? p.latitude),
-              lng: Number(p.lon ?? p.longitude),
+              lon: Number(p.lon ?? p.longitude),
               ele: p.ele ?? p.elevation ?? null,
               time: p.time ?? p.timestamp ?? null,
               speed: p.speed ?? null
@@ -404,7 +404,7 @@ export function TripDashboard() {
   }, [trip])
 
   const hasValidPoints = useMemo(() => {
-    return !!(trip && trip.points && Array.isArray(trip.points) && trip.points.length > 0 && trip.points[0].lat && trip.points[0].lng)
+    return !!(trip && trip.points && Array.isArray(trip.points) && trip.points.length > 0 && trip.points[0].lat && trip.points[0].lon)
   }, [trip])
 
   return (
