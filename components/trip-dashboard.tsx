@@ -320,7 +320,7 @@ export function TripDashboard() {
             lat: p.lat ?? p.latitude,
             lng: p.lng ?? p.longitude ?? p.lon,
             ele: p.ele ?? p.elevation ?? null,
-            time: p.time ?? p.timestamp || null,
+            time: p.time ?? p.timestamp ?? null,
             speed: p.speed ?? null
           })).filter(p => p.lat !== undefined && p.lng !== undefined)
           
@@ -364,7 +364,7 @@ export function TripDashboard() {
               lat: p.lat ?? p.latitude,
               lng: p.lng ?? p.longitude ?? p.lon,
               ele: p.ele ?? p.elevation ?? null,
-              time: p.time ?? p.timestamp || null,
+              time: p.time ?? p.timestamp ?? null,
               speed: p.speed ?? null
             })).filter(p => p.lat !== undefined && p.lng !== undefined)
 
