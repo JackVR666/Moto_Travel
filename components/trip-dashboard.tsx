@@ -178,12 +178,12 @@ export function TripDashboard() {
           .filter(p => p.latitude !== null && p.longitude !== null && !isNaN(Number(p.latitude)) && !isNaN(Number(p.longitude)))
           .map(p => ({
             lat: Number(p.latitude),
-            lng: Number(p.longitude),
+            lng: Number(p.longitude), // Questo deve puntare a p.longitude per popolare correttamente 'lng' richiesto da Leaflet!
             ele: p.elevation !== null ? Number(p.elevation) : null,
             time: p.timestamp || null,
             speed: p.speed !== null ? Number(p.speed) : null
           }))
-
+          
         if (validPoints.length > 0) {
           setTrip({
             name: title,
