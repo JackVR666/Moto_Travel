@@ -386,7 +386,7 @@ export function TripDashboard() {
                         <p className="font-bold text-foreground truncate">{t.title}</p>
                         <p className="text-xs text-muted-foreground">Ininizio: {formatDate(t.trip_date)}</p>
                       </div>
-                      <<Button size="sm" variant="secondary" onClick={() => { setUpdatingTripId(t.id); setCustomName(t.title); setMode('gpx'); }}>
+                      <Button size="sm" variant="secondary" onClick={() => { setUpdatingTripId(t.id); setCustomName(t.title); setMode('gpx'); }}>
                         Associa Mappa GPX
                       </Button>
                     </div>
