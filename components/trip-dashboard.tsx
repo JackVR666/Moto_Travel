@@ -101,7 +101,12 @@ const fetchAllTrips = async () => {
     }
 
     if (data) {
-      setAllTrips(data)
+      // CORREZIONE CRUCIALE: Se total_km è NULL o indefinito, lo forziamo a 0
+      const sanitizedTrips = data.map((t) => ({
+        ...t,
+        total_km: t.total_km === null || t.total_km === undefined ? 0 : t.total_km
+      }))
+      setAllTrips(sanitizedTrips)
     }
   }
 
