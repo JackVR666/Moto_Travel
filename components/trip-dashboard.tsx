@@ -14,7 +14,6 @@ import {
   Trash2,
   Euro,
   Play,
-  History,
   FolderHeart,
   Pencil,
   PieChart,
@@ -58,7 +57,6 @@ export function TripDashboard() {
   const [expenseCategories, setExpenseCategories] = useState<any[]>([])
   const [allTrips, setAllTrips] = useState<any[]>([])
   const [editingTripId, setEditingTripId] = useState<string | null>(null)
-  const [updatingTripId, setUpdatingTripId] = useState<string | null>(null)
 
   // Stati singola spesa
   const [expenses, setExpenses] = useState<ExpenseInput[]>([])
@@ -70,6 +68,9 @@ export function TripDashboard() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [saveState, setSaveState] = useState<SaveState>('idle')
+
+  // Flag per capire se l'utente ha appena iniettato un nuovo GPX mentre modifica un viaggio esistente
+  const [hasNewGpxLoaded, setHasNewGpxLoaded] = useState(false)
 
   const fetchCategories = async () => {
     const { data } = await supabase
@@ -94,7 +95,6 @@ export function TripDashboard() {
     }
   }
 
-  // CORREZIONE 1: Aggiorna l'elenco dei viaggi SOLO quando siamo nel menu principale
   useEffect(() => {
     if (mode === 'select') {
       fetchCategories()
@@ -112,21 +112,23 @@ export function TripDashboard() {
     setExpenses([])
     setTrip(null)
     setEditingTripId(null)
+    setHasNewGpxLoaded(false)
   }
 
   const startEditingExpenses = async (tripId: string, title: string, dateStr: string, endDateStr: string) => {
     setLoading(true)
     setEditingTripId(tripId)
     setCustomName(title)
+    setHasNewGpxLoaded(false)
     const start = dateStr ? dateStr.slice(0, 10) : ''
     setCustomDate(start)
     setCustomEndDate(endDateStr ? endDateStr.slice(0, 10) : start)
     setExpenseDate(start || new Date().toISOString().slice(0, 10))
     
-    // CORREZIONE 2: Svuotiamo lo stato locale PRIMA di caricare i nuovi dati dal DB
     setExpenses([]) 
     setTrip(null)
 
+    // Scarica le spese esistenti
     const { data, error } = await supabase
       .from('expenses')
       .select('category_id, amount, notes, expense_date')
@@ -141,17 +143,22 @@ export function TripDashboard() {
       })))
     }
 
+    // Scarica la mappa associata se esiste
     const { data: pointsData } = await supabase
       .from('track_points')
       .select('latitude, longitude')
       .eq('trip_id', tripId)
       .order('id', { ascending: true })
 
+    // Recupera anche i km reali salvati nella tabella trips
+    const currentTripData = allTrips.find(t => t.id === tripId)
+    const savedKm = currentTripData ? currentTripData.total_km : 0
+
     if (pointsData && pointsData.length > 0) {
       setTrip({
         name: title,
         date: dateStr,
-        totalKm: 0,
+        totalKm: savedKm,
         points: pointsData.map(p => ({ lat: p.latitude, lng: p.longitude })),
         maxSpeedKmh: 0,
         maxElevation: null
@@ -219,72 +226,69 @@ export function TripDashboard() {
         const parsed = parseGpx(content, fallback)
         if (parsed.points.length === 0) {
           setError('Nessun punto traccia trovato nel file.')
-          setTrip(null)
         } else {
           const fileDate = parsed.date ? parsed.date.slice(0, 10) : new Date().toISOString().slice(0, 10)
+          
           setTrip(parsed)
-          setCustomName(parsed.name)
-          setCustomDate(fileDate)
-          setCustomEndDate(fileDate)
-          setExpenseDate(fileDate)
-          if (!updatingTripId) {
+          
+          // Se siamo in modalità creazione, aggiorna anche le info generali
+          if (mode !== 'edit_expenses') {
+            setCustomName(parsed.name)
+            setCustomDate(fileDate)
+            setCustomEndDate(fileDate)
+            setExpenseDate(fileDate)
             setMode('gpx')
+          } else {
+            // Se eravamo già in modifica spese dall'interno, segnaliamo che è stato caricato un nuovo GPX da associare
+            setHasNewGpxLoaded(true)
           }
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Errore nella lettura del file.')
-        setTrip(null)
       } finally {
         setLoading(false)
       }
     }, 60)
-  }, [updatingTripId])
+  }, [mode])
 
   const handleSave = async () => {
     setSaveState('saving')
     try {
-      if (mode === 'edit_expenses') {
-        if (!editingTripId) {
-          throw new Error("Errore: ID del viaggio mancante nello stato locale.")
-        }
+      if (mode === 'edit_expenses' && editingTripId) {
+        // Aggiorna dettagli del viaggio esistente
+        // Se è stata caricata una nuova traccia dall'interno, salviamo anche i nuovi chilometri totali calcolati
+        const finalKm = hasNewGpxLoaded && trip ? trip.totalKm : (allTrips.find(t => t.id === editingTripId)?.total_km || 0)
 
         const { error: updateTripError } = await supabase
           .from('trips')
           .update({
             title: customName.trim(),
             trip_date: customDate,
-            trip_end_date: customEndDate
+            trip_end_date: customEndDate,
+            total_km: finalKm
           })
           .eq('id', editingTripId)
 
         if (updateTripError) throw updateTripError
 
+        // Aggiorna le spese associate
         await updateTripExpenses(editingTripId, expenses)
         
+        // Se l'utente ha caricato un nuovo GPX dall'interno, salviamo i track_points sul DB
+        if (hasNewGpxLoaded && trip && trip.points.length > 0) {
+          await updateTripWithGpx(editingTripId, finalKm, trip.points)
+        }
+
         setExpenses([])
         setEditingTripId(null)
         setTrip(null)
+        setHasNewGpxLoaded(false)
         setSaveState('saved')
         setMode('select')
         await fetchAllTrips()
-        alert('Viaggio e spese aggiornati con successo nel cloud!')
-      } else if (updatingTripId) {
-        // CORREZIONE: Se c'è un updatingTripId attivo, stiamo agganciando la mappa a un viaggio esistente
-        if (!trip) {
-          throw new Error("Impossibile associare la mappa: Traccia GPX non caricata o non valida.")
-        }
-
-        const pointsAdded = await updateTripWithGpx(updatingTripId, trip.totalKm, trip.points)
-        
-        setUpdatingTripId(null)
-        setEditingTripId(null)
-        setTrip(null)
-        setSaveState('saved')
-        setMode('select')
-        await fetchAllTrips()
-        alert(`Mappa agganciata correttamente! Aggiunti ${pointsAdded} punti GPS.`)
+        alert('Viaggio aggiornato correttamente nel cloud!')
       } else {
-        // Nuovo viaggio (Live da zero o GPX da zero)
+        // Nuovo viaggio da zero (Live o GPX)
         const titleToSave = customName.trim() || 'Giro Goldwing'
         const startToSave = customDate || new Date().toISOString().slice(0, 10)
         const endToSave = customEndDate || startToSave
@@ -295,10 +299,11 @@ export function TripDashboard() {
         
         setExpenses([])
         setTrip(null)
+        setHasNewGpxLoaded(false)
         setSaveState('saved')
         setMode('select')
         await fetchAllTrips()
-        alert('Viaggio memorizzato con successo nel cloud!')
+        alert('Nuovo viaggio memorizzato nel cloud!')
       }
     } catch (err) {
       setSaveState('idle')
@@ -307,17 +312,13 @@ export function TripDashboard() {
   }
 
   const stats = useMemo(() => {
-    if (!trip || mode === 'edit_expenses') return null
+    if (!trip) return null
     return {
       km: trip.totalKm.toFixed(1),
       maxSpeed: trip.maxSpeedKmh > 0 ? trip.maxSpeedKmh.toFixed(0) : '—',
       maxEle: trip.maxElevation !== null ? Math.round(trip.maxElevation).toString() : '—',
     }
-  }, [trip, mode])
-
-  const incompleteTrips = useMemo(() => {
-    return allTrips.filter(t => t.total_km === 0)
-  }, [allTrips])
+  }, [trip])
 
   return (
     <div className="min-h-screen">
@@ -333,7 +334,7 @@ export function TripDashboard() {
             </div>
           </div>
           {mode !== 'select' && (
-            <Button variant="outline" size="sm" onClick={() => { setMode('select'); setTrip(null); setUpdatingTripId(null); setEditingTripId(null); setExpenses([]); setSaveState('idle'); }}>
+            <Button variant="outline" size="sm" onClick={() => { setMode('select'); setTrip(null); setEditingTripId(null); setExpenses([]); setSaveState('idle'); setHasNewGpxLoaded(false); }}>
               Torna al Menu
             </Button>
           )}
@@ -351,7 +352,7 @@ export function TripDashboard() {
                   </div>
                   <h3 className="text-lg font-bold">Inizia un Viaggio Live (In sella)</h3>
                   <p className="text-sm text-muted-foreground">
-                    Ottimo dal telefono durante il giro: inserisci al volo benzina, pedaggi e note senza mappa.
+                    Ottimo dal telefono durante il giro: inserisci al volo spese e note. Potrai associare la mappa GPX in un secondo momento dall'interno!
                   </p>
                 </div>
                 <Button onClick={startLiveTrip} className="w-full gap-2 font-medium">
@@ -364,41 +365,19 @@ export function TripDashboard() {
                   <div className="flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
                     <MapIcon className="size-6" />
                   </div>
-                  <h3 className="text-lg font-bold">Carica Traccia GPX (Da PC / Casa)</h3>
+                  <h3 className="text-lg font-bold">Carica Traccia GPX (Nuovo Tour)</h3>
                   <p className="text-sm text-muted-foreground">
-                    Carica il file GPS esportato per calcolare chilometri reali, telemetria e inserire spese.
+                    Crea un nuovo viaggio partendo direttamente dal file GPS per ricavare mappa, chilometri e registrare la contabilità.
                   </p>
                 </div>
                 <GpxUploader onFile={handleFile} loading={loading} error={error} />
               </div>
             </div>
 
-            {incompleteTrips.length > 0 && (
-              <div className="rounded-2xl border border-orange-500/20 bg-orange-500/5 p-6 space-y-4">
-                <div className="flex items-center gap-2 text-orange-500">
-                  <History className="size-5" />
-                  <h3 className="font-bold text-foreground">Viaggi Live in attesa di file GPX</h3>
-                </div>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {incompleteTrips.map((t) => (
-                    <div key={t.id} className="flex items-center justify-between p-3 rounded-xl border border-border/60 bg-background text-sm">
-                      <div className="truncate mr-3">
-                        <p className="font-bold text-foreground truncate">{t.title}</p>
-                        <p className="text-xs text-muted-foreground">Ininizio: {formatDate(t.trip_date)}</p>
-                      </div>
-                      <Button size="sm" variant="secondary" onClick={() => { setUpdatingTripId(t.id); setCustomName(t.title); setMode('gpx'); }}>
-                        Associa Mappa GPX
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
             <div className="rounded-2xl border border-border bg-card p-6 space-y-4">
               <div className="flex items-center gap-2 text-muted-foreground">
                 <FolderHeart className="size-5 text-primary" />
-                <h3 className="font-bold text-foreground">Diario di Bordo: Gestisci i tuoi Viaggi nel Cloud</h3>
+                <h3 className="font-bold text-foreground">Diario di Bordo: Gestisci i tuoi Viaggi e Mappe</h3>
               </div>
               
               {allTrips.length === 0 ? (
@@ -410,27 +389,17 @@ export function TripDashboard() {
                       <div>
                         <p className="font-bold text-foreground">{t.title}</p>
                         <p className="text-xs text-muted-foreground">
-                          Dal {formatDate(t.trip_date)} al {formatDate(t.trip_end_date || t.trip_date)} • <span className="font-mono">{t.total_km > 0 ? `${t.total_km.toFixed(1)} km` : 'Modalità Live'}</span>
+                          Dal {formatDate(t.trip_date)} al {formatDate(t.trip_end_date || t.trip_date)} • <span className="font-mono">{t.total_km > 0 ? `${t.total_km.toFixed(1)} km` : 'Solo spese (No Mappa)'}</span>
                         </p>
                       </div>
                       <Button size="sm" variant="outline" className="gap-1.5" onClick={() => startEditingExpenses(t.id, t.title, t.trip_date, t.trip_end_date)}>
-                        <Pencil className="size-3.5" /> Gestisci Spese
+                        <Pencil className="size-3.5" /> Gestisci Viaggio
                       </Button>
                     </div>
                   ))}
                 </div>
               )}
             </div>
-          </div>
-        )}
-
-        {updatingTripId && !trip && (
-          <div className="max-w-md mx-auto rounded-2xl border border-border bg-card p-6 space-y-4 text-center">
-            <MapIcon className="size-10 text-primary mx-auto" />
-            <h3 className="text-lg font-bold">Inietta traccia mappa per: "{customName}"</h3>
-            <p className="text-sm text-muted-foreground">Seleziona il file GPX del giro.</p>
-            <GpxUploader onFile={handleFile} loading={loading} error={error} />
-            <Button variant="ghost" size="sm" onClick={() => { setUpdatingTripId(null); setExpenses([]); }} className="w-full">Annulla</Button>
           </div>
         )}
 
@@ -486,7 +455,7 @@ export function TripDashboard() {
                   
                   <div className="grid gap-3 sm:grid-cols-3 bg-secondary/10 p-3.5 rounded-xl border border-border/40">
                     <div className="space-y-1">
-                      <span className="text-[10px] uppercase font-bold text-muted-foreground">Categoria blindata</span>
+                      <span className="text-[10px] uppercase font-bold text-muted-foreground">Categoria spesa</span>
                       <select
                         value={selectedCatId}
                         onChange={(e) => setSelectedCatId(parseInt(e.target.value))}
@@ -543,7 +512,7 @@ export function TripDashboard() {
 
                 <section className="rounded-2xl border border-border bg-card p-5 shadow-sm">
                   <div className="flex items-center gap-2 text-muted-foreground mb-3">
-                    <History className="size-4 text-primary" />
+                    <Calendar className="size-4 text-primary" />
                     <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">3. Registro analitico voci di spesa ({expenses.length})</h3>
                   </div>
 
@@ -584,7 +553,7 @@ export function TripDashboard() {
                   {saveState === 'saved' && <CheckCircle2 className="size-5" />}
                   {saveState === 'idle' && <CloudUpload className="size-5" />}
                   {saveState === 'saving'
-                    ? 'Sincronizzazione dati cloud in corso…'
+                    ? 'Salvataggio in corso…'
                     : mode === 'edit_expenses'
                       ? 'Salva Modifiche Viaggio e Spese nel Cloud ☁️'
                       : 'Salva Intero Viaggio nel Cloud ☁️'}
@@ -629,15 +598,29 @@ export function TripDashboard() {
                     </div>
                   )}
 
-                  <div className="relative h-[340px] overflow-hidden rounded-2xl border border-border bg-secondary/30 shadow-inner">
+                  <div className="relative h-[340px] overflow-hidden rounded-2xl border border-border bg-secondary/30 shadow-inner flex flex-col justify-between">
                     {trip ? (
-                      <TripMap points={trip.points} />
+                      <>
+                        <TripMap points={trip.points} />
+                        {mode === 'edit_expenses' && (
+                          <div className="absolute top-2 right-2 z-[1000] bg-background/90 backdrop-blur p-2 rounded-xl border border-border shadow-md max-w-[200px]">
+                            <p className="text-[10px] text-muted-foreground leading-tight mb-1">Vuoi cambiare o sovrascrivere questa traccia mappa?</p>
+                            <GpxUploader onFile={handleFile} loading={loading} error={error} />
+                          </div>
+                        )}
+                      </>
                     ) : (
-                      <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center bg-card/15">
-                        <Play className="size-6 text-primary animate-pulse" />
-                        <p className="max-w-xs text-[11px] text-muted-foreground font-medium">
-                          {mode === 'edit_expenses' ? 'Nessuna mappa GPS associata a questo storico.' : 'Modalità Live On-The-Road attiva. Mappa disponibile al caricamento del GPX finale.'}
-                        </p>
+                      <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center bg-card/25 py-8">
+                        <MapIcon className="size-6 text-primary animate-pulse" />
+                        <div className="space-y-1">
+                          <p className="text-xs font-bold">Nessuna mappa associata a questo viaggio</p>
+                          <p className="max-w-xs text-[11px] text-muted-foreground">
+                            Questo giro al momento ha solo dati contabili. Se hai la traccia GPX, caricala subito qui sotto per generare la mappa e i chilometri reali!
+                          </p>
+                        </div>
+                        <div className="w-full max-w-xs bg-background p-2 rounded-xl border border-border shadow-sm">
+                          <GpxUploader onFile={handleFile} loading={loading} error={error} />
+                        </div>
                       </div>
                     )}
                   </div>
