@@ -257,12 +257,12 @@ export function TripDashboard() {
 
         await updateTripExpenses(editingTripId, expenses)
         
-        // CORREZIONE 3: Resettiamo gli stati prima di cambiare modalità
         setExpenses([])
         setEditingTripId(null)
         setTrip(null)
         setSaveState('saved')
         setMode('select')
+        await fetchAllTrips() // <-- FORZA REFRESH IMMEDIATO
         alert('Viaggio e spese aggiornati con successo nel cloud!')
       } else if (updatingTripId && trip) {
         const pointsAdded = await updateTripWithGpx(updatingTripId, trip.totalKm, trip.points)
@@ -270,7 +270,8 @@ export function TripDashboard() {
         setTrip(null)
         setSaveState('saved')
         setMode('select')
-        alert(`Mappa agganciata correttamente! Aggiunti ${pointsAdded} punti GPS.`)
+        await fetchAllTrips() // <-- FORZA REFRESH IMMEDIATO
+        alert(`Mappa agganciata correttamente! Aggiunti ${pointsAdded} punti GPS.`);
       } else {
         const titleToSave = customName.trim() || 'Giro Goldwing'
         const startToSave = customDate || new Date().toISOString().slice(0, 10)
@@ -283,6 +284,7 @@ export function TripDashboard() {
         setTrip(null)
         setSaveState('saved')
         setMode('select')
+        await fetchAllTrips() // <-- FORZA REFRESH IMMEDIATO
         alert('Viaggio memorizzato con successo nel cloud!')
       }
     } catch (err) {
