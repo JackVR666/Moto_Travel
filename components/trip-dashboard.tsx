@@ -16,10 +16,8 @@ import {
   Play,
   FolderHeart,
   Pencil,
-  PieChart,
   Receipt,
   FileText,
-  Calendar,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { GpxUploader } from '@/components/gpx-uploader'
@@ -102,7 +100,7 @@ export function TripDashboard() {
     if (data) {
       const sanitizedTrips = data.map((t) => ({
         ...t,
-        total_km: t.total_km === null || t.total_km === undefined ? 0 : t.total_km
+        total_km: t.total_km === null || t.total_km === undefined ? 0 : Number(t.total_km)
       }))
       setAllTrips(sanitizedTrips)
     }
@@ -403,7 +401,6 @@ export function TripDashboard() {
     }
   }, [trip])
 
-  // RENDERING DIFENSIVO DELLA MAPPA: restituisce vero solo se i dati contengono coordinate numeriche reali
   const hasValidPoints = useMemo(() => {
     return !!(trip && trip.points && Array.isArray(trip.points) && trip.points.length > 0 && trip.points[0].lat && trip.points[0].lng)
   }, [trip])
@@ -583,7 +580,7 @@ export function TripDashboard() {
                           <input
                             type="date"
                             value={expenseDate}
-                            onChange={(e) => setExpenseDate(t => e.target.value)}
+                            onChange={(e) => setExpenseDate(e.target.value)}
                             className="w-full rounded-md border border-border bg-background p-1.5 text-xs text-foreground focus:outline-none"
                           />
                         </div>
