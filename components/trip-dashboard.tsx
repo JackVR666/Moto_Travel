@@ -90,23 +90,30 @@ export function TripDashboard() {
   }
 
 const fetchAllTrips = async () => {
-    const { data, error } = await supabase
-      .from('trips')
-      .select('id, title, trip_date, trip_end_date, total_km, notes')
-      .order('trip_date', { ascending: false })
-    
-    if (error) {
-      console.error("Errore Supabase:", error)
-      return
-    }
+    try {
+      const { data, error: dbError } = await supabase
+        .from('trips')
+        .select('id, title, trip_date, trip_end_date, total_km, notes')
+        .order('trip_date', { ascending: false })
+      
+      if (dbError) {
+        console.error("Dettaglio Errore Supabase:", dbError)
+        setError(`Errore Database: [${dbError.code}] ${dbError.message} - ${dbError.details}`)
+        return
+      }
 
-    if (data) {
-      // CORREZIONE CRUCIALE: Se total_km è NULL o indefinito, lo forziamo a 0
-      const sanitizedTrips = data.map((t) => ({
-        ...t,
-        total_km: t.total_km === null || t.total_km === undefined ? 0 : t.total_km
-      }))
-      setAllTrips(sanitizedTrips)
+      console.log("Dati grezzi ricevuti dal DB:", data)
+
+      if (data) {
+        const sanitizedTrips = data.map((t) => ({
+          ...t,
+          total_km: t.total_km === null || t.total_km === undefined ? 0 : t.total_km
+        }))
+        setAllTrips(sanitizedTrips)
+      }
+    } catch (e) {
+      console.error("Eccezione generica runtime:", e)
+      setError(`Eccezione applicazione: ${e instanceof Error ? e.message : 'Errore sconosciuto'}`)
     }
   }
 
