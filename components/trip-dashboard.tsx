@@ -316,7 +316,7 @@ export function TripDashboard() {
         if (trip && trip.points && trip.points.length > 0) {
           const pointsToUpdate = trip.points.map((p: any) => ({
             lat: Number(p.lat ?? p.latitude),
-            lon: Number(p.lon ?? p.longitude),
+            lng: Number(p.lon ?? p.longitude),
             ele: p.ele ?? p.elevation ?? null,
             time: p.time ?? p.timestamp ?? null,
             speed: p.speed ?? null
@@ -364,7 +364,7 @@ export function TripDashboard() {
           if (pointsToSave.length > 0) {
             const formattedPointsToSave = pointsToSave.map((p: any) => ({
               lat: Number(p.lat ?? p.latitude),
-              lon: Number(p.lon ?? p.longitude),
+              lng: Number(p.lon ?? p.longitude),
               ele: p.ele ?? p.elevation ?? null,
               time: p.time ?? p.timestamp ?? null,
               speed: p.speed ?? null
