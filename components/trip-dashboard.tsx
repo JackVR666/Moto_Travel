@@ -89,12 +89,17 @@ export function TripDashboard() {
     }
   }
 
-  const fetchAllTrips = async () => {
-    const { data } = await supabase
+const fetchAllTrips = async () => {
+    const { data, error } = await supabase
       .from('trips')
       .select('id, title, trip_date, trip_end_date, total_km, notes')
       .order('trip_date', { ascending: false })
     
+    if (error) {
+      console.error("Errore Supabase:", error)
+      return
+    }
+
     if (data) {
       setAllTrips(data)
     }
