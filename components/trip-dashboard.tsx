@@ -173,14 +173,16 @@ const fetchAllTrips = async () => {
 
     const savedKm = currentTripData ? currentTripData.total_km : 0
 
-    if (pointsData && pointsData.length > 0) {
+if (pointsData && pointsData.length > 0) {
       setTrip({
         name: title,
         date: dateStr,
         totalKm: savedKm,
         points: pointsData.map(p => ({ lat: p.latitude, lng: p.longitude })),
         maxSpeedKmh: 0,
-        maxElevation: null
+        maxElevation: null,
+        minElevation: null,
+        avgElevation: null
       })
     }
 
@@ -290,8 +292,18 @@ const fetchAllTrips = async () => {
 
         await updateTripExpenses(editingTripId, expenses)
         
+        // Se l'utente ha caricato un nuovo GPX dall'interno, salviamo i track_points sul DB
         if (hasNewGpxLoaded && trip && trip.points.length > 0) {
-          await updateTripWithGpx(editingTripId, finalKm, trip.points)
+          // Mappiamo esplicitamente i punti per garantire la perfetta compatibilità dei tipi
+          const pointsToUpdate = trip.points.map(p => ({
+            lat: p.lat,
+            lng: p.lng,
+            ele: p.ele ?? null,
+            time: p.time ?? null,
+            speed: p.speed ?? null
+          }))
+          
+          await updateTripWithGpx(editingTripId, finalKm, pointsToUpdate)
         }
 
         setExpenses([])
@@ -325,8 +337,17 @@ const fetchAllTrips = async () => {
 
         if (tripError) throw tripError
 
-        if (pointsToSave.length > 0 && tripData) {
-          await updateTripWithGpx(tripData.id, kmToSave, pointsToSave)
+          if (pointsToSave.length > 0 && tripData) {
+          // Mappiamo esplicitamente i punti per uniformare il tipo richiesto con 'lng'
+          const formattedPointsToSave = pointsToSave.map(p => ({
+            lat: p.lat,
+            lng: p.lng,
+            ele: p.ele ?? null,
+            time: p.time ?? null,
+            speed: p.speed ?? null
+          }))
+
+          await updateTripWithGpx(tripData.id, kmToSave, formattedPointsToSave)
         }
         if (expenses.length > 0 && tripData) {
           await updateTripExpenses(tripData.id, expenses)
