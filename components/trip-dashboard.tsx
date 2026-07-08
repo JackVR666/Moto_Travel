@@ -643,15 +643,10 @@ const fetchAllTrips = async () => {
                     </div>
                   )}
 
-                  <div className="relative h-[380px] sm:h-[450px] overflow-hidden rounded-xl border border-border bg-secondary/10 shadow-inner flex flex-col justify-between">
+                  {/* Contenitore della Mappa: rimosso l'uploader fluttuante dall'interno */}
+                  <div className="relative h-[380px] sm:h-[450px] overflow-hidden rounded-xl border border-border bg-secondary/10 shadow-inner">
                     {trip ? (
-                      <>
-                        <TripMap points={trip.points} />
-                        <div className="absolute top-2 right-2规则 z-[1000] bg-background/95 backdrop-blur p-2.5 rounded-xl border border-border shadow-md max-w-[190px]">
-                          <p className="text-[10px] text-muted-foreground font-medium mb-1.5 leading-snug">Aggiorna o sovrascrivi file GPX:</p>
-                          <GpxUploader onFile={handleFile} loading={loading} error={error} />
-                        </div>
-                      </>
+                      <TripMap points={trip.points} />
                     ) : (
                       <div className="flex h-full flex-col items-center justify-center gap-3 px-4 text-center bg-card/20 py-8">
                         <MapIcon className="size-6 text-primary animate-pulse" />
@@ -661,12 +656,26 @@ const fetchAllTrips = async () => {
                             Trascina o seleziona il file esportato dal navigatore qui sotto per mappare l'itinerario e calcolare i km.
                           </p>
                         </div>
-                        <div className="w-full max-w-xs bg-background p-2 rounded-xl border border-border shadow-sm">
-                          <GpxUploader onFile={handleFile} loading={loading} error={error} />
-                        </div>
                       </div>
                     )}
                   </div>
+
+                  {/* Uploader spostato ordinatamente SOTTO la mappa (visibile sia se la mappa c'è, sia se manca) */}
+                  <div className="rounded-xl border border-border bg-card p-4 shadow-sm space-y-2">
+                    <div className="flex items-center gap-1.5 text-muted-foreground">
+                      <CloudUpload className="size-4 text-primary" />
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">
+                        {trip ? 'Aggiorna / Sostituisci Traccia GPX' : 'Carica Traccia GPX'}
+                      </h4>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground leading-snug">
+                      Puoi sovrascrivere o inserire la traccia del tuo Garmin/TomTom in qualsiasi momento. I chilometri totali verranno ricalcolati automaticamente.
+                    </p>
+                    <div className="bg-background p-2 rounded-lg border border-border/60">
+                      <GpxUploader onFile={handleFile} loading={loading} error={error} />
+                    </div>
+                  </div>
+
                 </div>
               )}
 
