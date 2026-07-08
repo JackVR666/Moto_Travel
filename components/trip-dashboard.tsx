@@ -25,6 +25,7 @@ import { StatCard } from '@/components/stat-card'
 import { parseGpx, type ParsedTrip } from '@/lib/gpx-parser'
 import { updateTripWithGpx, updateTripExpenses, type ExpenseInput } from '@/lib/save-trip'
 import { supabase } from '@/lib/supabase'
+import { MAX_PLAUSIBLE_SPEED_KMH } from '@/lib/gpx-parser'
 
 const TripMap = dynamic(() => import('@/components/trip-map'), {
   ssr: false,
@@ -167,7 +168,7 @@ export function TripDashboard() {
         .from('track_points')
         .select('latitude, longitude, elevation, timestamp, speed')
         .eq('trip_id', tripId)
-        .order('id', { ascending: true })
+        .order('timestamp', { ascending: true })
 
       if (pointsError) throw pointsError
 
@@ -185,13 +186,21 @@ export function TripDashboard() {
             speed: p.speed !== null ? p.speed : null
           }))
 
+          let recomputedMaxSpeed = 0
+for (const p of pointsData ?? []) {
+  const kmh = p.speed !== null && p.speed !== undefined ? Number(p.speed) : null
+  if (kmh !== null && !Number.isNaN(kmh) && kmh > 0 && kmh <= MAX_PLAUSIBLE_SPEED_KMH) {
+    if (kmh > recomputedMaxSpeed) recomputedMaxSpeed = kmh
+  }
+}
+
         if (validPoints.length > 0) {
           setTrip({
             name: title,
             date: dateStr,
             totalKm: Number(savedKm),
             points: validPoints,
-            maxSpeedKmh: 0,
+            maxSpeedKmh: recomputedMaxSpeed,
             maxElevation: null,
             minElevation: null,
             avgElevation: null
