@@ -297,6 +297,7 @@ export function TripDashboard() {
       if (mode === 'edit_expenses' && editingTripId) {
         const finalKm = hasNewGpxLoaded && trip ? trip.totalKm : (allTrips.find(t => t.id === editingTripId)?.total_km || 0)
 
+        // 1. Aggiorna i dati generali del viaggio
         const { error: updateTripError } = await supabase
           .from('trips')
           .update({
@@ -310,16 +311,19 @@ export function TripDashboard() {
 
         if (updateTripError) throw updateTripError
 
+        // 2. Aggiorna le spese
         await updateTripExpenses(editingTripId, expenses)
         
-        if (hasNewGpxLoaded && trip && trip.points.length > 0) {
+        // 3. Se c'è una mappa (nuova o vecchia), normalizziamo i punti per il DB
+        if (trip && trip.points && trip.points.length > 0) {
           const pointsToUpdate = trip.points.map((p: any) => ({
             lat: p.lat ?? p.latitude,
             lng: p.lng ?? p.longitude ?? p.lon,
-            ele: p.ele ?? null,
-            time: p.time ?? null,
+            ele: p.ele ?? p.elevation ?? null,
+            time: p.time ?? p.timestamp || null,
             speed: p.speed ?? null
-          }))
+          })).filter(p => p.lat !== undefined && p.lng !== undefined)
+          
           await updateTripWithGpx(editingTripId, finalKm, pointsToUpdate)
         }
 
@@ -333,6 +337,7 @@ export function TripDashboard() {
         await fetchAllTrips()
         alert('Viaggio aggiornato correttamente nel cloud!')
       } else {
+        // NUOVO VIAGGIO DA ZERO
         const titleToSave = customName.trim() || 'Giro Goldwing'
         const startToSave = customDate || new Date().toISOString().slice(0, 10)
         const endToSave = customEndDate || startToSave
@@ -358,10 +363,11 @@ export function TripDashboard() {
             const formattedPointsToSave = pointsToSave.map((p: any) => ({
               lat: p.lat ?? p.latitude,
               lng: p.lng ?? p.longitude ?? p.lon,
-              ele: p.ele ?? null,
-              time: p.time ?? null,
+              ele: p.ele ?? p.elevation ?? null,
+              time: p.time ?? p.timestamp || null,
               speed: p.speed ?? null
-            }))
+            })).filter(p => p.lat !== undefined && p.lng !== undefined)
+
             await updateTripWithGpx(tripData.id, kmToSave, formattedPointsToSave)
           }
           if (expenses.length > 0) {
