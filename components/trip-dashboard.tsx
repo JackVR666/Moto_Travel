@@ -164,13 +164,24 @@ export function TripDashboard() {
 
     // 2. Scarica la mappa basandosi sui campi reali: latitude, longitude
     try {
-      const { data: pointsData, error: pointsError } = await supabase
-        .from('track_points')
-        .select('latitude, longitude, elevation, timestamp, speed')
-        .eq('trip_id', tripId)
-        .order('timestamp', { ascending: true })
+      let pointsData: any[] = []
+const pageSize = 1000
+let from = 0
+while (true) {
+  const { data: page, error: pageError } = await supabase
+    .from('track_points')
+    .select('latitude, longitude, elevation, timestamp, speed')
+    .eq('trip_id', tripId)
+    .order('timestamp', { ascending: true })
+    .range(from, from + pageSize - 1)
 
-      if (pointsError) throw pointsError
+  if (pageError) throw pageError
+  if (!page || page.length === 0) break
+
+  pointsData = pointsData.concat(page)
+  if (page.length < pageSize) break // ultima pagina raggiunta
+  from += pageSize
+}
 
       const currentTripData = allTrips.find(t => t.id === tripId)
       const savedKm = currentTripData ? currentTripData.total_km : 0
