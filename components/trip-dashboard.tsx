@@ -163,7 +163,7 @@ export function TripDashboard() {
       })))
     }
 
-     // 1. Interroghiamo i campi esatti presenti sul tuo DB: latitude, longitude, elevation, timestamp, speed
+    // Scarica la mappa associata basandosi sui campi reali del DB
     const { data: pointsData, error: pointsError } = await supabase
       .from('track_points')
       .select('latitude, longitude, elevation, timestamp, speed')
@@ -177,7 +177,6 @@ export function TripDashboard() {
     const savedKm = currentTripData ? currentTripData.total_km : 0
 
     if (pointsData && pointsData.length > 0) {
-      // 2. Filtriamo e convertiamo i campi del DB mappandoli nell'oggetto { lat, lng } che vuole Leaflet
       const validPoints = pointsData
         .filter(p => p.latitude !== null && p.longitude !== null)
         .map(p => ({
@@ -297,7 +296,6 @@ export function TripDashboard() {
       if (mode === 'edit_expenses' && editingTripId) {
         const finalKm = hasNewGpxLoaded && trip ? trip.totalKm : (allTrips.find(t => t.id === editingTripId)?.total_km || 0)
 
-        // 1. Aggiorna i dati generali del viaggio
         const { error: updateTripError } = await supabase
           .from('trips')
           .update({
@@ -311,10 +309,8 @@ export function TripDashboard() {
 
         if (updateTripError) throw updateTripError
 
-        // 2. Aggiorna le spese
         await updateTripExpenses(editingTripId, expenses)
         
-        // 3. Se c'è una mappa (nuova o vecchia), normalizziamo i punti per il DB
         if (trip && trip.points && trip.points.length > 0) {
           const pointsToUpdate = trip.points.map((p: any) => ({
             lat: p.lat ?? p.latitude,
@@ -337,7 +333,6 @@ export function TripDashboard() {
         await fetchAllTrips()
         alert('Viaggio aggiornato correttamente nel cloud!')
       } else {
-        // NUOVO VIAGGIO DA ZERO
         const titleToSave = customName.trim() || 'Giro Goldwing'
         const startToSave = customDate || new Date().toISOString().slice(0, 10)
         const endToSave = customEndDate || startToSave
@@ -680,7 +675,6 @@ export function TripDashboard() {
 
                   <div className="relative h-[380px] sm:h-[450px] overflow-hidden rounded-xl border border-border bg-secondary/10 shadow-inner">
                     {trip && trip.points && Array.isArray(trip.points) && trip.points.length > 0 ? (
-                      // Forziamo una chiave dinamica basata sul numero di punti per resettare il ciclo di vita del componente Leaflet in caso di cambio traccia
                       <TripMap key={trip.points.length} points={trip.points} />
                     ) : (
                       <div className="flex h-full flex-col items-center justify-center gap-3 px-4 text-center bg-card/20 py-8">
