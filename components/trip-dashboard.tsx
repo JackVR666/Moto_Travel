@@ -316,11 +316,11 @@ export function TripDashboard() {
         if (trip && trip.points && trip.points.length > 0) {
           const pointsToUpdate = trip.points.map((p: any) => ({
             lat: Number(p.lat ?? p.latitude),
-            lng: Number(p.lng ?? p.longitude),
+            lng: Number(p.lon ?? p.longitude),
             ele: p.ele ?? p.elevation ?? null,
             time: p.time ?? p.timestamp ?? null,
             speed: p.speed ?? null
-          })).filter(p => p.lat !== undefined && p.lng !== undefined && !isNaN(p.lat) && !isNaN(p.lng))
+          })).filter(p => p.lat !== undefined && p.lon !== undefined && !isNaN(p.lat) && !isNaN(p.lon))
           
           if (pointsToUpdate.length > 0) {
             await updateTripWithGpx(editingTripId, finalKm, pointsToUpdate)
@@ -364,11 +364,11 @@ export function TripDashboard() {
           if (pointsToSave.length > 0) {
             const formattedPointsToSave = pointsToSave.map((p: any) => ({
               lat: Number(p.lat ?? p.latitude),
-              lng: Number(p.lng ?? p.longitude),
+              lng: Number(p.lon ?? p.longitude),
               ele: p.ele ?? p.elevation ?? null,
               time: p.time ?? p.timestamp ?? null,
               speed: p.speed ?? null
-            })).filter(p => p.lat !== undefined && p.lng !== undefined && !isNaN(p.lat) && !isNaN(p.lng))
+            })).filter(p => p.lat !== undefined && p.lon !== undefined && !isNaN(p.lat) && !isNaN(p.lon))
 
             if (formattedPointsToSave.length > 0) {
               await updateTripWithGpx(tripData.id, kmToSave, formattedPointsToSave)
