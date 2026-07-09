@@ -49,6 +49,7 @@ function formatDate(iso: string | null): string {
   return d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
+//Stati 
 export function TripDashboard() {
   const [mode, setMode] = useState<AppMode>('select')
   const [activeTab, setActiveTab] = useState<ActiveTab>('expenses')
@@ -89,6 +90,7 @@ export function TripDashboard() {
   const [accommodationPrice, setAccommodationPrice] = useState('')
   const [accommodationParking, setAccommodationParking] = useState(false)
   const [accommodationNotes, setAccommodationNotes] = useState('')
+  const [editingAccommodationId, setEditingAccommodationId] = useState<string | null>(null)
 
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -216,6 +218,71 @@ const addAccommodation = async () => {
   if (editingTripId) {
     await fetchAccommodations(editingTripId)
   }
+}
+
+//Modifica albergo
+const startEditAccommodation = (acc: any) => {
+  setEditingAccommodationId(acc.id)
+  setSelectedDayForAccommodation(acc.trip_day_id)
+  setAccommodationName(acc.name || '')
+  setAccommodationBookingUrl(acc.booking_url || '')
+  setAccommodationAirbnbUrl(acc.airbnb_url || '')
+  setAccommodationPrice(acc.price ? String(acc.price) : '')
+  setAccommodationParking(!!acc.parking_available)
+  setAccommodationNotes(acc.notes || '')
+}
+
+//Salva modifica albergo
+const updateAccommodation = async () => {
+  if (!editingAccommodationId || !editingTripId) return
+
+  const { error } = await supabase
+    .from('accommodations')
+    .update({
+      name: accommodationName.trim(),
+      booking_url: accommodationBookingUrl.trim() || null,
+      airbnb_url: accommodationAirbnbUrl.trim() || null,
+      price: accommodationPrice ? Number(accommodationPrice) : null,
+      parking_available: accommodationParking,
+      notes: accommodationNotes.trim() || null,
+    })
+    .eq('id', editingAccommodationId)
+
+  if (error) {
+    alert(`Errore aggiornamento pernottamento: ${error.message}`)
+    return
+  }
+
+  setEditingAccommodationId(null)
+  setSelectedDayForAccommodation(null)
+  setAccommodationName('')
+  setAccommodationBookingUrl('')
+  setAccommodationAirbnbUrl('')
+  setAccommodationPrice('')
+  setAccommodationParking(false)
+  setAccommodationNotes('')
+
+  await fetchAccommodations(editingTripId)
+}
+
+//Cancella record albergo
+const deleteAccommodation = async (id: string) => {
+  if (!editingTripId) return
+
+  const confirmed = confirm('Vuoi eliminare questo pernottamento?')
+  if (!confirmed) return
+
+  const { error } = await supabase
+    .from('accommodations')
+    .delete()
+    .eq('id', id)
+
+  if (error) {
+    alert(`Errore eliminazione pernottamento: ${error.message}`)
+    return
+  }
+
+  await fetchAccommodations(editingTripId)
 }
 
 const addTripDay = async () => {
@@ -874,6 +941,10 @@ for (const p of pointsData ?? []) {
                   accommodationNotes={accommodationNotes}
                   setAccommodationNotes={setAccommodationNotes}
                   addAccommodation={addAccommodation}
+                  editingAccommodationId={editingAccommodationId}
+                  startEditAccommodation={startEditAccommodation}
+                  updateAccommodation={updateAccommodation}
+                  deleteAccommodation={deleteAccommodation}
                 />
              )}
 

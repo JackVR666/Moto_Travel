@@ -20,6 +20,12 @@ type PlanningTabProps = {
     editingTripId: string | null
     tripDays: TripDay[]
     accommodations: Accommodation[]
+    
+    editingAccommodationId: string | null
+    startEditAccommodation: (acc: Accommodation) => void
+    updateAccommodation: () => void
+    deleteAccommodation: (id: string) => void
+
     selectedDayForAccommodation: string | null
     setSelectedDayForAccommodation: (value: string | null) => void
 
@@ -114,6 +120,10 @@ export function PlanningTab({
     editingDayId,
     startEditTripDay,
     updateTripDay,
+    editingAccommodationId,
+    startEditAccommodation,
+    updateAccommodation,
+    deleteAccommodation,
 }: PlanningTabProps) {
   return (
   <div className="space-y-4">
@@ -351,9 +361,31 @@ export function PlanningTab({
                         className="w-full rounded-md border border-border bg-background py-1.5 px-2.5 text-xs resize-none"
                         />
 
+                        <div className="mt-2 flex gap-2">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => startEditAccommodation(a)}
+                                className="h-7 text-[11px]"
+                            >
+                                Modifica
+                            </Button>
+
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => deleteAccommodation(a.id)}
+                                className="h-7 text-[11px]"
+                            >
+                                Elimina
+                            </Button>
+                            </div>
+
                         <div className="flex gap-2">
-                        <Button type="button" size="sm" onClick={addAccommodation} className="h-8 text-xs">
-                            Salva
+                        <Button type="button" size="sm" onClick={editingAccommodationId ? updateAccommodation : addAccommodation} className="h-8 text-xs">
+                            {editingAccommodationId ? 'Aggiorna' : 'Salva'}
                         </Button>
 
                         <Button
