@@ -2,15 +2,20 @@ import { Plus, Route, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 type TripDay = {
-  id: string
-  day_number: number
-  travel_date: string
-  title: string | null
-  notes: string | null
-  start_city: string | null
-  end_city: string | null
-  planned_km: number | null
-  display_order: number | null
+    id: string
+    day_number: number
+    travel_date: string
+    title: string | null
+    notes: string | null
+    start_city: string | null
+    end_city: string | null
+    planned_km: number | null
+    display_order: number | null
+    address: string | null
+    check_in_date: string | null
+    check_out_date: string | null
+    check_in_time: string | null
+    check_out_time: string | null
 }
 
 type PlanningTabProps = {
@@ -46,6 +51,21 @@ type PlanningTabProps = {
 
     accommodationNotes: string
     setAccommodationNotes: (value: string) => void
+
+    accommodationAddress: string
+    setAccommodationAddress: (value: string) => void
+
+    accommodationCheckInDate: string
+    setAccommodationCheckInDate: (value: string) => void
+
+    accommodationCheckOutDate: string
+    setAccommodationCheckOutDate: (value: string) => void
+
+    accommodationCheckInTime: string
+    setAccommodationCheckInTime: (value: string) => void
+
+    accommodationCheckOutTime: string
+    setAccommodationCheckOutTime: (value: string) => void
 
     addAccommodation: () => void
 
@@ -280,6 +300,28 @@ export function PlanningTab({
                         >
                         <p className="font-bold text-foreground">🏨 {a.name}</p>
 
+                        {a.address && (
+                            <p className="text-[11px] text-muted-foreground">
+                                📍 {a.address}
+                            </p>
+                            )}
+
+                            <div className="flex flex-wrap gap-3 text-[11px] text-muted-foreground">
+                            {a.check_in_date && (
+                                <span>
+                                Check-in {formatDate(a.check_in_date)}
+                                {a.check_in_time ? ` ${a.check_in_time}` : ''}
+                                </span>
+                            )}
+
+                            {a.check_out_date && (
+                                <span>
+                                Check-out {formatDate(a.check_out_date)}
+                                {a.check_out_time ? ` ${a.check_out_time}` : ''}
+                                </span>
+                            )}
+                            </div>
+
                         <div className="mt-1 flex flex-wrap gap-2 text-muted-foreground">
                             {a.price !== null && <span>€ {Number(a.price).toFixed(2)}</span>}
                             {a.parking_available && <span>Parcheggio moto</span>}
@@ -334,12 +376,50 @@ export function PlanningTab({
                         </p>
 
                         <input
-                        type="text"
-                        placeholder="Nome struttura"
-                        value={accommodationName}
-                        onChange={(e) => setAccommodationName(e.target.value)}
-                        className="w-full rounded-md border border-border bg-background py-1.5 px-2.5 text-xs"
+                            type="text"
+                            placeholder="Nome struttura"
+                            value={accommodationName}
+                            onChange={(e) => setAccommodationName(e.target.value)}
+                            className="w-full rounded-md border border-border bg-background py-1.5 px-2.5 text-xs"
                         />
+
+                        <input
+                            type="text"
+                            placeholder="Indirizzo"
+                            value={accommodationAddress}
+                            onChange={(e) => setAccommodationAddress(e.target.value)}
+                            className="w-full rounded-md border border-border bg-background py-1.5 px-2.5 text-xs"
+                            />
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <input
+                                type="date"
+                                value={accommodationCheckInDate}
+                                onChange={(e) => setAccommodationCheckInDate(e.target.value)}
+                                className="w-full rounded-md border border-border bg-background py-1.5 px-2.5 text-xs"
+                            />
+
+                            <input
+                                type="date"
+                                value={accommodationCheckOutDate}
+                                onChange={(e) => setAccommodationCheckOutDate(e.target.value)}
+                                className="w-full rounded-md border border-border bg-background py-1.5 px-2.5 text-xs"
+                            />
+
+                            <input
+                                type="time"
+                                value={accommodationCheckInTime}
+                                onChange={(e) => setAccommodationCheckInTime(e.target.value)}
+                                className="w-full rounded-md border border-border bg-background py-1.5 px-2.5 text-xs"
+                            />
+
+                            <input
+                                type="time"
+                                value={accommodationCheckOutTime}
+                                onChange={(e) => setAccommodationCheckOutTime(e.target.value)}
+                                className="w-full rounded-md border border-border bg-background py-1.5 px-2.5 text-xs"
+                            />
+                            </div>
 
                         <input
                         type="url"

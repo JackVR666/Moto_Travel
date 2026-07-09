@@ -93,6 +93,11 @@ export function TripDashboard() {
   const [accommodationParking, setAccommodationParking] = useState(false)
   const [accommodationNotes, setAccommodationNotes] = useState('')
   const [editingAccommodationId, setEditingAccommodationId] = useState<string | null>(null)
+  const [accommodationAddress, setAccommodationAddress] = useState('')
+  const [accommodationCheckInDate, setAccommodationCheckInDate] = useState('')
+  const [accommodationCheckOutDate, setAccommodationCheckOutDate] = useState('')
+  const [accommodationCheckInTime, setAccommodationCheckInTime] = useState('')
+  const [accommodationCheckOutTime, setAccommodationCheckOutTime] = useState('')
 
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -200,6 +205,11 @@ const addAccommodation = async () => {
         price: accommodationPrice ? Number(accommodationPrice) : null,
         parking_available: accommodationParking,
         notes: accommodationNotes.trim() || null,
+        address: accommodationAddress.trim() || null,
+        check_in_date: accommodationCheckInDate || null,
+        check_out_date: accommodationCheckOutDate || null,
+        check_in_time: accommodationCheckInTime || null,
+        check_out_time: accommodationCheckOutTime || null,
       },
     ])
 
@@ -216,6 +226,11 @@ const addAccommodation = async () => {
   setAccommodationParking(false)
   setAccommodationNotes('')
   setSelectedDayForAccommodation(null)
+  setAccommodationAddress('')
+  setAccommodationCheckInDate('')
+  setAccommodationCheckOutDate('')
+  setAccommodationCheckInTime('')
+  setAccommodationCheckOutTime('')
 
   if (editingTripId) {
     await fetchAccommodations(editingTripId)
@@ -232,6 +247,11 @@ const startEditAccommodation = (acc: any) => {
   setAccommodationPrice(acc.price ? String(acc.price) : '')
   setAccommodationParking(!!acc.parking_available)
   setAccommodationNotes(acc.notes || '')
+  setAccommodationAddress(acc.address || '')
+  setAccommodationCheckInDate(acc.check_in_date || '')
+  setAccommodationCheckOutDate(acc.check_out_date || '')
+  setAccommodationCheckInTime(acc.check_in_time || '')
+  setAccommodationCheckOutTime(acc.check_out_time || '')
 }
 
 //Salva modifica albergo
@@ -247,6 +267,11 @@ const updateAccommodation = async () => {
       price: accommodationPrice ? Number(accommodationPrice) : null,
       parking_available: accommodationParking,
       notes: accommodationNotes.trim() || null,
+      address: accommodationAddress.trim() || null,
+      check_in_date: accommodationCheckInDate || null,
+      check_out_date: accommodationCheckOutDate || null,
+      check_in_time: accommodationCheckInTime || null,
+      check_out_time: accommodationCheckOutTime || null,
     })
     .eq('id', editingAccommodationId)
 
@@ -254,7 +279,8 @@ const updateAccommodation = async () => {
     alert(`Errore aggiornamento pernottamento: ${error.message}`)
     return
   }
-
+ 
+  //Pulizia degli stati
   setEditingAccommodationId(null)
   setSelectedDayForAccommodation(null)
   setAccommodationName('')
@@ -263,6 +289,11 @@ const updateAccommodation = async () => {
   setAccommodationPrice('')
   setAccommodationParking(false)
   setAccommodationNotes('')
+  setAccommodationAddress('')
+  setAccommodationCheckInDate('')
+  setAccommodationCheckOutDate('')
+  setAccommodationCheckInTime('')
+  setAccommodationCheckOutTime('')
 
   await fetchAccommodations(editingTripId)
 }
@@ -957,6 +988,16 @@ for (const p of pointsData ?? []) {
                   startEditAccommodation={startEditAccommodation}
                   updateAccommodation={updateAccommodation}
                   deleteAccommodation={deleteAccommodation}
+                  accommodationAddress={accommodationAddress}
+                  setAccommodationAddress={setAccommodationAddress}
+                  accommodationCheckInDate={accommodationCheckInDate}
+                  setAccommodationCheckInDate={setAccommodationCheckInDate}
+                  accommodationCheckOutDate={accommodationCheckOutDate}
+                  setAccommodationCheckOutDate={setAccommodationCheckOutDate}
+                  accommodationCheckInTime={accommodationCheckInTime}
+                  setAccommodationCheckInTime={setAccommodationCheckInTime}
+                  accommodationCheckOutTime={accommodationCheckOutTime}
+                  setAccommodationCheckOutTime={setAccommodationCheckOutTime}
                 />
              )}
                  
