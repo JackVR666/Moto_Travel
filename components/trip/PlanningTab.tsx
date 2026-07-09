@@ -14,31 +14,53 @@ type TripDay = {
 }
 
 type PlanningTabProps = {
-  editingTripId: string | null
-  tripDays: TripDay[]
-  accommodations: Accommodation[]
+    editingTripId: string | null
+    tripDays: TripDay[]
+    accommodations: Accommodation[]
+    selectedDayForAccommodation: string | null
+    setSelectedDayForAccommodation: (value: string | null) => void
 
-  dayDate: string
-  setDayDate: (value: string) => void
+    accommodationName: string
+    setAccommodationName: (value: string) => void
 
-  dayStartCity: string
-  setDayStartCity: (value: string) => void
+    accommodationBookingUrl: string
+    setAccommodationBookingUrl: (value: string) => void
 
-  dayEndCity: string
-  setDayEndCity: (value: string) => void
+    accommodationAirbnbUrl: string
+    setAccommodationAirbnbUrl: (value: string) => void
 
-  dayPlannedKm: string
-  setDayPlannedKm: (value: string) => void
+    accommodationPrice: string
+    setAccommodationPrice: (value: string) => void
 
-  dayTitle: string
-  setDayTitle: (value: string) => void
+    accommodationParking: boolean
+    setAccommodationParking: (value: boolean) => void
 
-  dayNotes: string
-  setDayNotes: (value: string) => void
+    accommodationNotes: string
+    setAccommodationNotes: (value: string) => void
 
-  addTripDay: () => void
-  removeTripDay: (dayId: string) => void
-  formatDate: (iso: string | null) => string
+    addAccommodation: () => void
+
+    dayDate: string
+    setDayDate: (value: string) => void
+
+    dayStartCity: string
+    setDayStartCity: (value: string) => void
+
+    dayEndCity: string
+    setDayEndCity: (value: string) => void
+
+    dayPlannedKm: string
+    setDayPlannedKm: (value: string) => void
+
+    dayTitle: string
+    setDayTitle: (value: string) => void
+
+    dayNotes: string
+    setDayNotes: (value: string) => void
+
+    addTripDay: () => void
+    removeTripDay: (dayId: string) => void
+    formatDate: (iso: string | null) => string
 }
 
 type Accommodation = {
@@ -53,24 +75,39 @@ type Accommodation = {
 }
 
 export function PlanningTab({
-  editingTripId,
-  tripDays,
-  accommodations,
-  dayDate,
-  setDayDate,
-  dayStartCity,
-  setDayStartCity,
-  dayEndCity,
-  setDayEndCity,
-  dayPlannedKm,
-  setDayPlannedKm,
-  dayTitle,
-  setDayTitle,
-  dayNotes,
-  setDayNotes,
-  addTripDay,
-  removeTripDay,
-  formatDate,
+    editingTripId,
+    tripDays,
+    accommodations,
+    selectedDayForAccommodation,
+    setSelectedDayForAccommodation,
+    accommodationName,
+    setAccommodationName,
+    accommodationBookingUrl,
+    setAccommodationBookingUrl,
+    accommodationAirbnbUrl,
+    setAccommodationAirbnbUrl,
+    accommodationPrice,
+    setAccommodationPrice,
+    accommodationParking,
+    setAccommodationParking,
+    accommodationNotes,
+    setAccommodationNotes,
+    addAccommodation,
+    dayDate,
+    setDayDate,
+    dayStartCity,
+    setDayStartCity,
+    dayEndCity,
+    setDayEndCity,
+    dayPlannedKm,
+    setDayPlannedKm,
+    dayTitle,
+    setDayTitle,
+    dayNotes,
+    setDayNotes,
+    addTripDay,
+    removeTripDay,
+    formatDate,
 }: PlanningTabProps) {
   return (
   <div className="space-y-4">
@@ -217,6 +254,91 @@ export function PlanningTab({
                       {day.notes}
                     </p>
                   )}
+
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSelectedDayForAccommodation(day.id)}
+                        className="mt-2 h-8 rounded-md text-[11px]"
+                        >
+                        + Pernottamento
+                    </Button>
+
+                    {selectedDayForAccommodation === day.id && (
+                    <div className="mt-3 rounded-lg border border-border bg-secondary/10 p-3 space-y-2">
+                        <p className="text-[11px] font-bold uppercase text-muted-foreground">
+                        Nuovo pernottamento
+                        </p>
+
+                        <input
+                        type="text"
+                        placeholder="Nome struttura"
+                        value={accommodationName}
+                        onChange={(e) => setAccommodationName(e.target.value)}
+                        className="w-full rounded-md border border-border bg-background py-1.5 px-2.5 text-xs"
+                        />
+
+                        <input
+                        type="url"
+                        placeholder="Link Booking"
+                        value={accommodationBookingUrl}
+                        onChange={(e) => setAccommodationBookingUrl(e.target.value)}
+                        className="w-full rounded-md border border-border bg-background py-1.5 px-2.5 text-xs"
+                        />
+
+                        <input
+                        type="url"
+                        placeholder="Link Airbnb"
+                        value={accommodationAirbnbUrl}
+                        onChange={(e) => setAccommodationAirbnbUrl(e.target.value)}
+                        className="w-full rounded-md border border-border bg-background py-1.5 px-2.5 text-xs"
+                        />
+
+                        <input
+                        type="number"
+                        step="0.01"
+                        placeholder="Prezzo"
+                        value={accommodationPrice}
+                        onChange={(e) => setAccommodationPrice(e.target.value)}
+                        className="w-full rounded-md border border-border bg-background py-1.5 px-2.5 text-xs"
+                        />
+
+                        <label className="flex items-center gap-2 text-xs">
+                        <input
+                            type="checkbox"
+                            checked={accommodationParking}
+                            onChange={(e) => setAccommodationParking(e.target.checked)}
+                        />
+                        Parcheggio moto
+                        </label>
+
+                        <textarea
+                        placeholder="Note"
+                        value={accommodationNotes}
+                        onChange={(e) => setAccommodationNotes(e.target.value)}
+                        rows={3}
+                        className="w-full rounded-md border border-border bg-background py-1.5 px-2.5 text-xs resize-none"
+                        />
+
+                        <div className="flex gap-2">
+                        <Button type="button" size="sm" onClick={addAccommodation} className="h-8 text-xs">
+                            Salva
+                        </Button>
+
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setSelectedDayForAccommodation(null)}
+                            className="h-8 text-xs"
+                        >
+                            Annulla
+                        </Button>
+                        </div>
+                    </div>
+                    )}
+
                 </div>
 
                 <button

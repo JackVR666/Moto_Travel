@@ -80,6 +80,13 @@ export function TripDashboard() {
 
   //Stati x alberghi
   const [accommodations, setAccommodations] = useState<any[]>([])
+  const [selectedDayForAccommodation, setSelectedDayForAccommodation] = useState<string | null>(null)
+  const [accommodationName, setAccommodationName] = useState('')
+  const [accommodationBookingUrl, setAccommodationBookingUrl] = useState('')
+  const [accommodationAirbnbUrl, setAccommodationAirbnbUrl] = useState('')
+  const [accommodationPrice, setAccommodationPrice] = useState('')
+  const [accommodationParking, setAccommodationParking] = useState(false)
+  const [accommodationNotes, setAccommodationNotes] = useState('')
 
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -163,6 +170,50 @@ const fetchAccommodations = async (tripId: string) => {
   }
 
   setAccommodations(data || [])
+}
+
+const addAccommodation = async () => {
+  if (!selectedDayForAccommodation) {
+    alert('Seleziona una giornata.')
+    return
+  }
+
+  if (!accommodationName.trim()) {
+    alert('Inserisci il nome della struttura.')
+    return
+  }
+
+  const { error } = await supabase
+    .from('accommodations')
+    .insert([
+      {
+        trip_day_id: selectedDayForAccommodation,
+        name: accommodationName.trim(),
+        booking_url: accommodationBookingUrl.trim() || null,
+        airbnb_url: accommodationAirbnbUrl.trim() || null,
+        price: accommodationPrice ? Number(accommodationPrice) : null,
+        parking_available: accommodationParking,
+        notes: accommodationNotes.trim() || null,
+      },
+    ])
+
+  if (error) {
+    console.error('Errore inserimento pernottamento:', error)
+    alert(`Errore inserimento pernottamento: ${error.message}`)
+    return
+  }
+
+  setAccommodationName('')
+  setAccommodationBookingUrl('')
+  setAccommodationAirbnbUrl('')
+  setAccommodationPrice('')
+  setAccommodationParking(false)
+  setAccommodationNotes('')
+  setSelectedDayForAccommodation(null)
+
+  if (editingTripId) {
+    await fetchAccommodations(editingTripId)
+  }
 }
 
 const addTripDay = async () => {
@@ -735,6 +786,21 @@ for (const p of pointsData ?? []) {
                   setDayPlannedKm={setDayPlannedKm}
 
                   accommodations={accommodations}
+                  selectedDayForAccommodation={selectedDayForAccommodation}
+                  setSelectedDayForAccommodation={setSelectedDayForAccommodation}
+                  accommodationName={accommodationName}
+                  setAccommodationName={setAccommodationName}
+                  accommodationBookingUrl={accommodationBookingUrl}
+                  setAccommodationBookingUrl={setAccommodationBookingUrl}
+                  accommodationAirbnbUrl={accommodationAirbnbUrl}
+                  setAccommodationAirbnbUrl={setAccommodationAirbnbUrl}
+                  accommodationPrice={accommodationPrice}
+                  setAccommodationPrice={setAccommodationPrice}
+                  accommodationParking={accommodationParking}
+                  setAccommodationParking={setAccommodationParking}
+                  accommodationNotes={accommodationNotes}
+                  setAccommodationNotes={setAccommodationNotes}
+                  addAccommodation={addAccommodation}
                 />
              )}
 
