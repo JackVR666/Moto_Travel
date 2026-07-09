@@ -28,6 +28,8 @@ import { supabase } from '@/lib/supabase'
 import { MAX_PLAUSIBLE_SPEED_KMH } from '@/lib/gpx-parser'
 import { PlanningTab } from '@/components/trip/PlanningTab'
 import { TripOverview } from '@/components/trip/TripOverview'
+import { RoadbookView } from '@/components/trip/RoadbookView'
+
 
 const TripMap = dynamic(() => import('@/components/trip-map'), {
   ssr: false,
@@ -40,7 +42,7 @@ const TripMap = dynamic(() => import('@/components/trip-map'), {
 
 type SaveState = 'idle' | 'saving' | 'saved'
 type AppMode = 'select' | 'live' | 'gpx' | 'edit_expenses'
-type ActiveTab = 'overview' | 'planning' | 'expenses' | 'map' | 'notes'
+type ActiveTab = 'overview' | 'planning' | 'roadbook' | 'expenses' | 'map' | 'notes'
 
 function formatDate(iso: string | null): string {
   if (!iso) return '—'
@@ -860,6 +862,16 @@ for (const p of pointsData ?? []) {
               <Route className="size-4" />
               Pianificazione
             </button>
+               
+               <button
+                type="button"
+                onClick={() => setActiveTab('roadbook')}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'roadbook' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-secondary/30'}`}
+              >
+                <FileText className="size-4" />
+                Roadbook
+              </button>
+               
 
               <button
                 type="button"
@@ -947,6 +959,15 @@ for (const p of pointsData ?? []) {
                   deleteAccommodation={deleteAccommodation}
                 />
              )}
+                 
+                 {activeTab === 'roadbook' && (
+                    <RoadbookView
+                      tripDays={tripDays}
+                      accommodations={accommodations}
+                      formatDate={formatDate}
+                    />
+                  )}
+
 
               {activeTab === 'expenses' && (
                 <div className="space-y-4 grid lg:grid-cols-[1fr_320px] gap-4 lg:space-y-0">
