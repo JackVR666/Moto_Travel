@@ -38,7 +38,7 @@ const TripMap = dynamic(() => import('@/components/trip-map'), {
 
 type SaveState = 'idle' | 'saving' | 'saved'
 type AppMode = 'select' | 'live' | 'gpx' | 'edit_expenses'
-type ActiveTab = 'expenses' | 'map' | 'notes'
+type ActiveTab = 'planning' |'expenses' | 'map' | 'notes'
 
 function formatDate(iso: string | null): string {
   if (!iso) return '—'
@@ -69,6 +69,10 @@ export function TripDashboard() {
 
   // Note viaggio testuali libere
   const [tripNotes, setTripNotes] = useState<string>('')
+  const [tripDays, setTripDays] = useState<any[]>([])
+  const [dayTitle, setDayTitle] = useState<string>('')
+  const [dayDate, setDayDate] = useState<string>('')
+  const [dayNotes, setDayNotes] = useState<string>('')
 
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -107,6 +111,81 @@ export function TripDashboard() {
     }
   }
 
+  const fetchTripDays = async (tripId: string) => {
+   const { data, error } = await supabase
+     .from('trip_days')
+     .select('id, trip_id, day_number, travel_date, title, notes')
+     .eq('trip_id', tripId)
+     .order('day_number', { ascending: true })
+
+   if (error) {
+     console.error('Errore caricamento pianificazione:', error)
+     return
+   }
+
+  setTripDays(data || [])
+}
+
+const addTripDay = async () => {
+  if (!editingTripId) {
+    alert('Prima salva il viaggio, poi potrai aggiungere le giornate.')
+    return
+  }
+
+  if (!dayDate) {
+    alert('Inserisci la data della giornata.')
+    return
+  }
+
+  const nextDayNumber =
+    tripDays.length > 0
+      ? Math.max(...tripDays.map((d) => Number(d.day_number))) + 1
+      : 1
+
+  const { error } = await supabase
+    .from('trip_days')
+    .insert([
+      {
+        trip_id: editingTripId,
+        day_number: nextDayNumber,
+        travel_date: dayDate,
+        title: dayTitle.trim() || `Giorno ${nextDayNumber}`,
+        notes: dayNotes.trim() || null,
+      },
+    ])
+
+  if (error) {
+    console.error('Errore inserimento giornata:', error)
+    alert(`Errore inserimento giornata: ${error.message}`)
+    return
+  }
+
+  setDayTitle('')
+  setDayDate('')
+  setDayNotes('')
+  await fetchTripDays(editingTripId)
+}
+
+const removeTripDay = async (dayId: string) => {
+  if (!editingTripId) return
+
+  const confirmed = confirm('Vuoi eliminare questa giornata?')
+  if (!confirmed) return
+
+  const { error } = await supabase
+    .from('trip_days')
+    .delete()
+    .eq('id', dayId)
+
+  if (error) {
+    console.error('Errore eliminazione giornata:', error)
+    alert(`Errore eliminazione giornata: ${error.message}`)
+    return
+  }
+
+  await fetchTripDays(editingTripId)
+}
+
   useEffect(() => {
     if (mode === 'select') {
       fetchCategories()
@@ -117,7 +196,7 @@ export function TripDashboard() {
   const startLiveTrip = () => {
     const today = new Date().toISOString().slice(0, 10)
     setMode('live')
-    setActiveTab('expenses')
+    setActiveTab('planning')
     setCustomName('Nuovo Giro Goldwing')
     setCustomDate(today)
     setCustomEndDate(today)
@@ -134,7 +213,7 @@ export function TripDashboard() {
     setEditingTripId(tripId)
     setCustomName(title)
     setHasNewGpxLoaded(false)
-    setActiveTab('expenses')
+    setActiveTab('planning')
     
     const start = dateStr ? dateStr.slice(0, 10) : ''
     setCustomDate(start)
@@ -181,6 +260,7 @@ while (true) {
   pointsData = pointsData.concat(page)
   if (page.length < pageSize) break // ultima pagina raggiunta
   from += pageSize
+
 }
 
       const currentTripData = allTrips.find(t => t.id === tripId)
@@ -221,6 +301,7 @@ for (const p of pointsData ?? []) {
     } catch (err) {
       console.error("Errore recupero punti:", err)
     }
+    await fetchTripDays(tripId)
 
     setMode('edit_expenses')
     setLoading(false)
@@ -547,6 +628,14 @@ for (const p of pointsData ?? []) {
             </section>
 
             <div className="flex border border-border bg-card p-1 rounded-xl shadow-sm">
+            <button
+              type="button"
+              onClick={() => setActiveTab('planning')}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'planning' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-secondary/30'}`}
+            >
+              <Route className="size-4" />
+              Pianificazione
+            </button>
               <button
                 type="button"
                 onClick={() => setActiveTab('expenses')}
@@ -574,7 +663,127 @@ for (const p of pointsData ?? []) {
             </div>
 
             <div className="grid gap-4">
-              
+              {activeTab === 'planning' && (
+  <div className="space-y-4">
+    <div className="rounded-xl border border-border bg-card p-4 shadow-sm space-y-3">
+      <div className="flex items-center gap-1.5 text-muted-foreground">
+        <Route className="size-4 text-primary" />
+        <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">
+          Pianificazione viaggio
+        </h4>
+      </div>
+
+      <p className="text-[11px] text-muted-foreground leading-snug">
+        Inserisci le giornate del viaggio: data, tappa prevista, hotel o appunti generali.
+      </p>
+
+      {!editingTripId && (
+        <div className="rounded-lg border border-dashed border-border bg-secondary/10 p-3 text-xs text-muted-foreground">
+          Per aggiungere le giornate devi prima salvare il viaggio nel cloud.
+        </div>
+      )}
+
+      <div className="grid gap-2.5 grid-cols-1 sm:grid-cols-3 bg-secondary/10 p-3 rounded-lg border border-border/40">
+        <div className="space-y-0.5">
+          <span className="text-[10px] uppercase font-bold text-muted-foreground">Data</span>
+          <input
+            type="date"
+            value={dayDate}
+            onChange={(e) => setDayDate(e.target.value)}
+            className="w-full rounded-md border border-border bg-background p-1.5 text-xs text-foreground focus:outline-none"
+          />
+        </div>
+
+        <div className="space-y-0.5 sm:col-span-2">
+          <span className="text-[10px] uppercase font-bold text-muted-foreground">Titolo tappa</span>
+          <input
+            type="text"
+            placeholder="Es. Verona → Lienz"
+            value={dayTitle}
+            onChange={(e) => setDayTitle(e.target.value)}
+            className="w-full rounded-md border border-border bg-background py-1.5 px-2.5 text-xs text-foreground focus:outline-none"
+          />
+        </div>
+
+        <div className="space-y-0.5 sm:col-span-3">
+          <span className="text-[10px] uppercase font-bold text-muted-foreground">Note</span>
+          <textarea
+            value={dayNotes}
+            onChange={(e) => setDayNotes(e.target.value)}
+            placeholder="Hotel previsto, strade da fare, cose da vedere..."
+            rows={3}
+            className="w-full rounded-md border border-border bg-background py-1.5 px-2.5 text-xs text-foreground focus:outline-none resize-none"
+          />
+        </div>
+
+        <div className="sm:col-span-3">
+          <Button
+            type="button"
+            onClick={addTripDay}
+            disabled={!editingTripId}
+            size="sm"
+            className="h-8 px-3 font-bold text-xs gap-1 rounded-md"
+          >
+            <Plus className="size-3.5" />
+            Aggiungi giornata
+          </Button>
+        </div>
+      </div>
+    </div>
+
+    <div className="rounded-xl border border-border bg-card p-4 shadow-sm space-y-2">
+      <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+        Giornate pianificate ({tripDays.length})
+      </h4>
+
+      {tripDays.length === 0 ? (
+        <p className="text-xs text-muted-foreground italic text-center py-6 bg-secondary/5 rounded-lg border border-dashed border-border">
+          Nessuna giornata pianificata.
+        </p>
+      ) : (
+        <div className="space-y-2">
+          {tripDays.map((day) => (
+            <div
+              key={day.id}
+              className="rounded-lg bg-background border border-border/50 p-3 text-xs shadow-sm"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-[10px] bg-secondary px-1.5 py-0.5 rounded border border-border/30">
+                      Giorno {day.day_number}
+                    </span>
+                    <span className="font-mono text-[10px] bg-secondary px-1.5 py-0.5 rounded border border-border/30">
+                      {formatDate(day.travel_date)}
+                    </span>
+                  </div>
+
+                  <p className="font-bold text-sm text-foreground">
+                    {day.title || 'Giornata senza titolo'}
+                  </p>
+
+                  {day.notes && (
+                    <p className="text-[11px] text-muted-foreground leading-relaxed whitespace-pre-line">
+                      {day.notes}
+                    </p>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => removeTripDay(day.id)}
+                  className="text-muted-foreground hover:text-destructive p-1 transition-colors"
+                >
+                  <Trash2 className="size-3.5" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  </div>
+)}
               {activeTab === 'expenses' && (
                 <div className="space-y-4 grid lg:grid-cols-[1fr_320px] gap-4 lg:space-y-0">
                   
