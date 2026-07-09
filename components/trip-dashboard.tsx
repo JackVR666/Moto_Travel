@@ -27,6 +27,7 @@ import { updateTripWithGpx, updateTripExpenses, type ExpenseInput } from '@/lib/
 import { supabase } from '@/lib/supabase'
 import { MAX_PLAUSIBLE_SPEED_KMH } from '@/lib/gpx-parser'
 import { PlanningTab } from '@/components/trip/PlanningTab'
+import { TripOverview } from '@/components/trip/TripOverview'
 
 const TripMap = dynamic(() => import('@/components/trip-map'), {
   ssr: false,
@@ -39,7 +40,7 @@ const TripMap = dynamic(() => import('@/components/trip-map'), {
 
 type SaveState = 'idle' | 'saving' | 'saved'
 type AppMode = 'select' | 'live' | 'gpx' | 'edit_expenses'
-type ActiveTab = 'planning' |'expenses' | 'map' | 'notes'
+type ActiveTab = 'overview' | 'planning' | 'expenses' | 'map' | 'notes'
 
 function formatDate(iso: string | null): string {
   if (!iso) return '—'
@@ -313,7 +314,7 @@ const removeTripDay = async (dayId: string) => {
     setEditingTripId(tripId)
     setCustomName(title)
     setHasNewGpxLoaded(false)
-    setActiveTab('planning')
+    setActiveTab('overview')
     
     const start = dateStr ? dateStr.slice(0, 10) : ''
     setCustomDate(start)
@@ -730,6 +731,16 @@ for (const p of pointsData ?? []) {
             </section>
 
             <div className="flex border border-border bg-card p-1 rounded-xl shadow-sm">
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('overview')}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'overview' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-secondary/30'}`}
+              >
+                <FileText className="size-4" />
+                Overview
+              </button>
+
             <button
               type="button"
               onClick={() => setActiveTab('planning')}
@@ -738,6 +749,7 @@ for (const p of pointsData ?? []) {
               <Route className="size-4" />
               Pianificazione
             </button>
+
               <button
                 type="button"
                 onClick={() => setActiveTab('expenses')}
@@ -746,6 +758,7 @@ for (const p of pointsData ?? []) {
                 <Receipt className="size-4" />
                 Spese (€)
               </button>
+
               <button
                 type="button"
                 onClick={() => setActiveTab('map')}
@@ -754,6 +767,7 @@ for (const p of pointsData ?? []) {
                 <MapIcon className="size-4" />
                 Mappa & GPX
               </button>
+
               <button
                 type="button"
                 onClick={() => setActiveTab('notes')}
@@ -765,6 +779,17 @@ for (const p of pointsData ?? []) {
             </div>
 
             <div className="grid gap-4">
+              {activeTab === 'overview' && (
+                <TripOverview
+                  title={customName}
+                  startDate={customDate}
+                  endDate={customEndDate}
+                  tripDays={tripDays}
+                  accommodations={accommodations}
+                  expenses={expenses}
+                />
+              )}
+
               {activeTab === 'planning' && (
                 <PlanningTab
                   editingTripId={editingTripId}
