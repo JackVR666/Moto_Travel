@@ -14,6 +14,9 @@ type TripDay = {
 }
 
 type PlanningTabProps = {
+    editingDayId: string | null
+    startEditTripDay: (day: TripDay) => void
+    updateTripDay: () => void
     editingTripId: string | null
     tripDays: TripDay[]
     accommodations: Accommodation[]
@@ -108,6 +111,9 @@ export function PlanningTab({
     addTripDay,
     removeTripDay,
     formatDate,
+    editingDayId,
+    startEditTripDay,
+    updateTripDay,
 }: PlanningTabProps) {
   return (
   <div className="space-y-4">
@@ -199,13 +205,13 @@ export function PlanningTab({
         <div className="sm:col-span-3">
           <Button
             type="button"
-            onClick={addTripDay}
+            onClick={editingDayId ? updateTripDay : addTripDay}
             disabled={!editingTripId}
             size="sm"
             className="h-8 px-3 font-bold text-xs gap-1 rounded-md"
           >
             <Plus className="size-3.5" />
-            Aggiungi giornata
+            {editingDayId ? 'Aggiorna giornata' : 'Aggiungi giornata'}
           </Button>
         </div>
       </div>
@@ -364,6 +370,14 @@ export function PlanningTab({
                     )}
 
                 </div>
+
+                <button
+                    type="button"
+                    onClick={() => startEditTripDay(day)}
+                    className="text-muted-foreground hover:text-primary p-1 transition-colors"
+                    >
+                    Modifica
+                </button>
 
                 <button
                   type="button"

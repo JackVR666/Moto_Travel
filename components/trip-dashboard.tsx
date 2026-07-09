@@ -78,6 +78,7 @@ export function TripDashboard() {
   const [dayStartCity, setDayStartCity] = useState<string>('')
   const [dayEndCity, setDayEndCity] = useState<string>('')
   const [dayPlannedKm, setDayPlannedKm] = useState<string>('')
+  const [editingDayId, setEditingDayId] = useState<string | null>(null)
 
   //Stati x alberghi
   const [accommodations, setAccommodations] = useState<any[]>([])
@@ -263,6 +264,49 @@ const addTripDay = async () => {
   setDayStartCity('')
   setDayEndCity('')
   setDayPlannedKm('')
+
+  await fetchTripDays(editingTripId)
+}
+
+const startEditTripDay = (day: any) => {
+  setEditingDayId(day.id)
+  setDayDate(day.travel_date || '')
+  setDayStartCity(day.start_city || '')
+  setDayEndCity(day.end_city || '')
+  setDayPlannedKm(day.planned_km ? String(day.planned_km) : '')
+  setDayTitle(day.title || '')
+  setDayNotes(day.notes || '')
+}
+
+const updateTripDay = async () => {
+  if (!editingDayId || !editingTripId) return
+
+  const { error } = await supabase
+    .from('trip_days')
+    .update({
+      travel_date: dayDate,
+      start_city: dayStartCity.trim() || null,
+      end_city: dayEndCity.trim() || null,
+      planned_km: dayPlannedKm ? Number(dayPlannedKm) : null,
+      title:
+        dayTitle.trim() ||
+        `${dayStartCity.trim() || 'Partenza'} → ${dayEndCity.trim() || 'Arrivo'}`,
+      notes: dayNotes.trim() || null,
+    })
+    .eq('id', editingDayId)
+
+  if (error) {
+    alert(`Errore aggiornamento giornata: ${error.message}`)
+    return
+  }
+
+  setEditingDayId(null)
+  setDayDate('')
+  setDayStartCity('')
+  setDayEndCity('')
+  setDayPlannedKm('')
+  setDayTitle('')
+  setDayNotes('')
 
   await fetchTripDays(editingTripId)
 }
@@ -809,6 +853,10 @@ for (const p of pointsData ?? []) {
                   setDayEndCity={setDayEndCity}
                   dayPlannedKm={dayPlannedKm}
                   setDayPlannedKm={setDayPlannedKm}
+
+                  editingDayId={editingDayId}
+                  startEditTripDay={startEditTripDay}
+                  updateTripDay={updateTripDay}
 
                   accommodations={accommodations}
                   selectedDayForAccommodation={selectedDayForAccommodation}
