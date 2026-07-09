@@ -74,6 +74,9 @@ export function TripDashboard() {
   const [dayTitle, setDayTitle] = useState<string>('')
   const [dayDate, setDayDate] = useState<string>('')
   const [dayNotes, setDayNotes] = useState<string>('')
+  const [dayStartCity, setDayStartCity] = useState<string>('')
+  const [dayEndCity, setDayEndCity] = useState<string>('')
+  const [dayPlannedKm, setDayPlannedKm] = useState<string>('')
 
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -115,9 +118,9 @@ export function TripDashboard() {
   const fetchTripDays = async (tripId: string) => {
    const { data, error } = await supabase
      .from('trip_days')
-     .select('id, trip_id, day_number, travel_date, title, notes')
+     .select('id, trip_id, day_number, travel_date, title, notes, start_city, end_city, planned_km, display_order')
      .eq('trip_id', tripId)
-     .order('day_number', { ascending: true })
+     .order('display_order', { ascending: true })
 
    if (error) {
      console.error('Errore caricamento pianificazione:', error)
@@ -149,8 +152,14 @@ const addTripDay = async () => {
       {
         trip_id: editingTripId,
         day_number: nextDayNumber,
+        display_order: nextDayNumber,
         travel_date: dayDate,
-        title: dayTitle.trim() || `Giorno ${nextDayNumber}`,
+        title:
+          dayTitle.trim() ||
+          `${dayStartCity.trim() || 'Partenza'} → ${dayEndCity.trim() || 'Arrivo'}`,
+        start_city: dayStartCity.trim() || null,
+        end_city: dayEndCity.trim() || null,
+        planned_km: dayPlannedKm ? Number(dayPlannedKm) : null,
         notes: dayNotes.trim() || null,
       },
     ])
@@ -164,6 +173,10 @@ const addTripDay = async () => {
   setDayTitle('')
   setDayDate('')
   setDayNotes('')
+  setDayStartCity('')
+  setDayEndCity('')
+  setDayPlannedKm('')
+
   await fetchTripDays(editingTripId)
 }
 
@@ -677,6 +690,12 @@ for (const p of pointsData ?? []) {
                   addTripDay={addTripDay}
                   removeTripDay={removeTripDay}
                   formatDate={formatDate}
+                  dayStartCity={dayStartCity}
+                  setDayStartCity={setDayStartCity}
+                  dayEndCity={dayEndCity}
+                  setDayEndCity={setDayEndCity}
+                  dayPlannedKm={dayPlannedKm}
+                  setDayPlannedKm={setDayPlannedKm}
                 />
              )}
 

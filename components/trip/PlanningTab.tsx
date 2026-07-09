@@ -7,17 +7,34 @@ type TripDay = {
   travel_date: string
   title: string | null
   notes: string | null
+  start_city: string | null
+  end_city: string | null
+  planned_km: number | null
+  display_order: number | null
 }
 
 type PlanningTabProps = {
   editingTripId: string | null
   tripDays: TripDay[]
+
   dayDate: string
   setDayDate: (value: string) => void
+
+  dayStartCity: string
+  setDayStartCity: (value: string) => void
+
+  dayEndCity: string
+  setDayEndCity: (value: string) => void
+
+  dayPlannedKm: string
+  setDayPlannedKm: (value: string) => void
+
   dayTitle: string
   setDayTitle: (value: string) => void
+
   dayNotes: string
   setDayNotes: (value: string) => void
+
   addTripDay: () => void
   removeTripDay: (dayId: string) => void
   formatDate: (iso: string | null) => string
@@ -28,6 +45,12 @@ export function PlanningTab({
   tripDays,
   dayDate,
   setDayDate,
+  dayStartCity,
+  setDayStartCity,
+  dayEndCity,
+  setDayEndCity,
+  dayPlannedKm,
+  setDayPlannedKm,
   dayTitle,
   setDayTitle,
   dayNotes,
@@ -66,6 +89,40 @@ export function PlanningTab({
             className="w-full rounded-md border border-border bg-background p-1.5 text-xs text-foreground focus:outline-none"
           />
         </div>
+
+        <div className="space-y-0.5">
+            <span className="text-[10px] uppercase font-bold text-muted-foreground">Partenza</span>
+            <input
+                type="text"
+                placeholder="Verona"
+                value={dayStartCity}
+                onChange={(e) => setDayStartCity(e.target.value)}
+                className="w-full rounded-md border border-border bg-background py-1.5 px-2.5 text-xs text-foreground focus:outline-none"
+            />
+            </div>
+
+            <div className="space-y-0.5">
+            <span className="text-[10px] uppercase font-bold text-muted-foreground">Arrivo</span>
+            <input
+                type="text"
+                placeholder="Lienz"
+                value={dayEndCity}
+                onChange={(e) => setDayEndCity(e.target.value)}
+                className="w-full rounded-md border border-border bg-background py-1.5 px-2.5 text-xs text-foreground focus:outline-none"
+            />
+            </div>
+
+            <div className="space-y-0.5">
+            <span className="text-[10px] uppercase font-bold text-muted-foreground">Km previsti</span>
+            <input
+                type="number"
+                step="0.1"
+                placeholder="248"
+                value={dayPlannedKm}
+                onChange={(e) => setDayPlannedKm(e.target.value)}
+                className="w-full rounded-md border border-border bg-background py-1.5 px-2.5 text-xs text-foreground focus:outline-none"
+            />
+            </div>
 
         <div className="space-y-0.5 sm:col-span-2">
           <span className="text-[10px] uppercase font-bold text-muted-foreground">Titolo tappa</span>
@@ -134,6 +191,13 @@ export function PlanningTab({
                   <p className="font-bold text-sm text-foreground">
                     {day.title || 'Giornata senza titolo'}
                   </p>
+
+                {(day.start_city || day.end_city || day.planned_km) && (
+                <p className="text-[11px] text-muted-foreground">
+                    {day.start_city || '—'} → {day.end_city || '—'}
+                    {day.planned_km ? ` • ${Number(day.planned_km).toFixed(1)} km previsti` : ''}
+                </p>
+                )}
 
                   {day.notes && (
                     <p className="text-[11px] text-muted-foreground leading-relaxed whitespace-pre-line">
