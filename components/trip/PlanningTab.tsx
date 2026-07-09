@@ -254,6 +254,30 @@ export function PlanningTab({
                       {day.notes}
                     </p>
                   )}
+                  
+                  {accommodations
+                    .filter((a) => a.trip_day_id === day.id)
+                    .map((a) => (
+                        <div
+                        key={a.id}
+                        className="mt-2 rounded-lg border border-border/50 bg-secondary/10 p-2 text-[11px]"
+                        >
+                        <p className="font-bold text-foreground">🏨 {a.name}</p>
+
+                        <div className="mt-1 flex flex-wrap gap-2 text-muted-foreground">
+                            {a.price !== null && <span>€ {Number(a.price).toFixed(2)}</span>}
+                            {a.parking_available && <span>Parcheggio moto</span>}
+                            {a.booking_url && <span>Booking</span>}
+                            {a.airbnb_url && <span>Airbnb</span>}
+                        </div>
+
+                        {a.notes && (
+                            <p className="mt-1 text-muted-foreground">
+                            {a.notes}
+                            </p>
+                        )}
+                        </div>
+                    ))}
 
                     <Button
                         type="button"
