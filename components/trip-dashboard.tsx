@@ -26,6 +26,7 @@ import { parseGpx, type ParsedTrip } from '@/lib/gpx-parser'
 import { updateTripWithGpx, updateTripExpenses, type ExpenseInput } from '@/lib/save-trip'
 import { supabase } from '@/lib/supabase'
 import { MAX_PLAUSIBLE_SPEED_KMH } from '@/lib/gpx-parser'
+import { PlanningTab } from '@/components/trip/PlanningTab'
 
 const TripMap = dynamic(() => import('@/components/trip-map'), {
   ssr: false,
@@ -678,7 +679,7 @@ for (const p of pointsData ?? []) {
                   formatDate={formatDate}
                 />
              )}
-             
+
               {activeTab === 'expenses' && (
                 <div className="space-y-4 grid lg:grid-cols-[1fr_320px] gap-4 lg:space-y-0">
                   
