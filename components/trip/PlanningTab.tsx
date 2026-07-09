@@ -292,6 +292,28 @@ export function PlanningTab({
                             {a.notes}
                             </p>
                         )}
+
+                        <div className="mt-2 flex gap-2">
+                            <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => startEditAccommodation(a)}
+                            className="h-7 text-[11px]"
+                            >
+                            Modifica
+                            </Button>
+
+                            <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => deleteAccommodation(a.id)}
+                            className="h-7 text-[11px]"
+                            >
+                            Elimina
+                            </Button>
+                        </div>
                         </div>
                     ))}
 
@@ -361,27 +383,6 @@ export function PlanningTab({
                         className="w-full rounded-md border border-border bg-background py-1.5 px-2.5 text-xs resize-none"
                         />
 
-                        <div className="mt-2 flex gap-2">
-                            <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => startEditAccommodation(a)}
-                                className="h-7 text-[11px]"
-                            >
-                                Modifica
-                            </Button>
-
-                            <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => deleteAccommodation(a.id)}
-                                className="h-7 text-[11px]"
-                            >
-                                Elimina
-                            </Button>
-                            </div>
 
                         <div className="flex gap-2">
                         <Button type="button" size="sm" onClick={editingAccommodationId ? updateAccommodation : addAccommodation} className="h-8 text-xs">
