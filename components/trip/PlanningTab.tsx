@@ -16,6 +16,7 @@ type TripDay = {
 type PlanningTabProps = {
   editingTripId: string | null
   tripDays: TripDay[]
+  accommodations: Accommodation[]
 
   dayDate: string
   setDayDate: (value: string) => void
@@ -40,9 +41,21 @@ type PlanningTabProps = {
   formatDate: (iso: string | null) => string
 }
 
+type Accommodation = {
+  id: string
+  trip_day_id: string
+  name: string
+  booking_url: string | null
+  airbnb_url: string | null
+  price: number | null
+  parking_available: boolean | null
+  notes: string | null
+}
+
 export function PlanningTab({
   editingTripId,
   tripDays,
+  accommodations,
   dayDate,
   setDayDate,
   dayStartCity,

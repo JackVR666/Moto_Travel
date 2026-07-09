@@ -78,6 +78,9 @@ export function TripDashboard() {
   const [dayEndCity, setDayEndCity] = useState<string>('')
   const [dayPlannedKm, setDayPlannedKm] = useState<string>('')
 
+  //Stati x alberghi
+  const [accommodations, setAccommodations] = useState<any[]>([])
+
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [saveState, setSaveState] = useState<SaveState>('idle')
@@ -128,6 +131,38 @@ export function TripDashboard() {
    }
 
   setTripDays(data || [])
+}
+
+const fetchAccommodations = async (tripId: string) => {
+  const { data: days, error: daysError } = await supabase
+    .from('trip_days')
+    .select('id')
+    .eq('trip_id', tripId)
+
+  if (daysError) {
+    console.error('Errore caricamento giorni per hotel:', daysError)
+    return
+  }
+
+  const dayIds = (days || []).map((d) => d.id)
+
+  if (dayIds.length === 0) {
+    setAccommodations([])
+    return
+  }
+
+  const { data, error } = await supabase
+    .from('accommodations')
+    .select('*')
+    .in('trip_day_id', dayIds)
+    .order('check_in_date', { ascending: true })
+
+  if (error) {
+    console.error('Errore caricamento pernottamenti:', error)
+    return
+  }
+
+  setAccommodations(data || [])
 }
 
 const addTripDay = async () => {
@@ -315,7 +350,9 @@ for (const p of pointsData ?? []) {
     } catch (err) {
       console.error("Errore recupero punti:", err)
     }
+    
     await fetchTripDays(tripId)
+    await fetchAccommodations(tripId)
 
     setMode('edit_expenses')
     setLoading(false)
@@ -696,6 +733,8 @@ for (const p of pointsData ?? []) {
                   setDayEndCity={setDayEndCity}
                   dayPlannedKm={dayPlannedKm}
                   setDayPlannedKm={setDayPlannedKm}
+
+                  accommodations={accommodations}
                 />
              )}
 
