@@ -88,7 +88,8 @@ export function TripOverview({
     0
   )
 
-  const missingHotels = Math.max(totalDays - accommodations.length, 0)
+  const expectedNights = Math.max(totalDays - 1, 0)
+  const missingHotels = Math.max(expectedNights - accommodations.length, 0)
 
   const missingBookingLinks = accommodations.filter(
     (acc) => !acc.booking_url && !acc.airbnb_url
@@ -119,7 +120,7 @@ export function TripOverview({
         <StatBox
           icon={<Hotel className="size-4" />}
           label="Pernottamenti"
-          value={`${accommodations.length}/${totalDays || '—'}`}
+          value={`${accommodations.length}/${expectedNights || '—'}`}
           warning={missingHotels > 0}
         />
 
