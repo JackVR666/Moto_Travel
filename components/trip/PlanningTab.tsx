@@ -1,5 +1,10 @@
 import { Plus, Route, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import {
+  AccommodationCard,
+  type Accommodation,
+} from '@/components/trip/AccommodationCard'
+
 
 type TripDay = {
     id: string
@@ -92,16 +97,6 @@ type PlanningTabProps = {
     formatDate: (iso: string | null) => string
 }
 
-type Accommodation = {
-  id: string
-  trip_day_id: string
-  name: string
-  booking_url: string | null
-  airbnb_url: string | null
-  price: number | null
-  parking_available: boolean | null
-  notes: string | null
-}
 
 export function PlanningTab({
     editingTripId,
@@ -292,71 +287,15 @@ export function PlanningTab({
                   )}
                   
                   {accommodations
-                    .filter((a) => a.trip_day_id === day.id)
-                    .map((a) => (
-                        <div
-                        key={a.id}
-                        className="mt-2 rounded-lg border border-border/50 bg-secondary/10 p-2 text-[11px]"
-                        >
-                        <p className="font-bold text-foreground">🏨 {a.name}</p>
-
-                        {a.address && (
-                            <p className="text-[11px] text-muted-foreground">
-                                📍 {a.address}
-                            </p>
-                            )}
-
-                            <div className="flex flex-wrap gap-3 text-[11px] text-muted-foreground">
-                            {a.check_in_date && (
-                                <span>
-                                Check-in {formatDate(a.check_in_date)}
-                                {a.check_in_time ? ` ${a.check_in_time}` : ''}
-                                </span>
-                            )}
-
-                            {a.check_out_date && (
-                                <span>
-                                Check-out {formatDate(a.check_out_date)}
-                                {a.check_out_time ? ` ${a.check_out_time}` : ''}
-                                </span>
-                            )}
-                            </div>
-
-                        <div className="mt-1 flex flex-wrap gap-2 text-muted-foreground">
-                            {a.price !== null && <span>€ {Number(a.price).toFixed(2)}</span>}
-                            {a.parking_available && <span>Parcheggio moto</span>}
-                            {a.booking_url && <span>Booking</span>}
-                            {a.airbnb_url && <span>Airbnb</span>}
-                        </div>
-
-                        {a.notes && (
-                            <p className="mt-1 text-muted-foreground">
-                            {a.notes}
-                            </p>
-                        )}
-
-                        <div className="mt-2 flex gap-2">
-                            <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => startEditAccommodation(a)}
-                            className="h-7 text-[11px]"
-                            >
-                            Modifica
-                            </Button>
-
-                            <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => deleteAccommodation(a.id)}
-                            className="h-7 text-[11px]"
-                            >
-                            Elimina
-                            </Button>
-                        </div>
-                        </div>
+                    .filter((accommodation) => accommodation.trip_day_id === day.id)
+                    .map((accommodation) => (
+                      <AccommodationCard
+                        key={accommodation.id}
+                        accommodation={accommodation}
+                        formatDate={formatDate}
+                        onEdit={startEditAccommodation}
+                        onDelete={deleteAccommodation}
+                      />
                     ))}
 
                     <Button
