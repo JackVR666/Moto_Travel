@@ -614,6 +614,13 @@ for (const p of pointsData ?? []) {
       try {
         const fallback = fileName.replace(/\.(gpx|xml)$/i, '')
         const parsed = parseGpx(content, fallback)
+
+        console.log('Statistiche GPX:', {
+          averageMovingSpeedKmh: parsed.averageMovingSpeedKmh,
+          movingTimeMinutes: parsed.movingTimeMinutes,
+          stops: parsed.stops,
+})
+
         if (parsed.points.length === 0) {
           setError('Nessun punto traccia trovato nel file.')
         } else {

@@ -11,6 +11,14 @@ export interface TrackPoint {
   isWaypoint: boolean
 }
 
+export interface DetectedStop {
+  lat: number
+  lon: number
+  startTime: string
+  endTime: string
+  durationMinutes: number
+}
+
 export interface ParsedTrip {
   /** Trip / track name */
   name: string
@@ -26,6 +34,16 @@ export interface ParsedTrip {
   minElevation: number | null
   /** Average elevation in meters (0/NaN readings ignored) */
   avgElevation: number | null
+
+  /** Effective time spent moving */
+  movingTimeMinutes?: number
+
+  /** Average speed while moving */
+  averageMovingSpeedKmh?: number
+
+  /** Stops lasting at least 30 minutes */
+  stops?: DetectedStop[]
+
   /** All track + waypoints in order */
   points: TrackPoint[]
 }
@@ -43,6 +61,21 @@ export const MAX_PLAUSIBLE_SPEED_KMH = 140
  * anomalous it should be persisted as `null` in the cloud database.
  */
 export const ANOMALOUS_SPEED_KMH = 150
+
+/** Below this speed the motorcycle is considered stationary. */
+export const MOVING_SPEED_THRESHOLD_KMH = 3
+
+/** Minimum duration required to classify a stop. */
+export const STOP_MIN_DURATION_MINUTES = 30
+
+/** Maximum displacement allowed during a stop: 200 meters. */
+export const STOP_RADIUS_KM = 0.2
+
+/**
+ * Avoid counting very large gaps between samples as riding time.
+ * A long gap is usually caused by a stop or missing GPS samples.
+ */
+const MAX_MOVING_SEGMENT_GAP_MINUTES = 10
 
 /**
  * Convert a raw gpxtpx:speed value (meters/second) into a sanitized speed in
@@ -125,6 +158,154 @@ function parsePoint(el: Element, isWaypoint: boolean): TrackPoint | null {
   }
 }
 
+function calculateMovementStats(points: TrackPoint[]): {
+  movingTimeMinutes: number
+  movingDistanceKm: number
+  averageMovingSpeedKmh: number
+} {
+  let movingTimeHours = 0
+  let movingDistanceKm = 0
+
+  for (let i = 1; i < points.length; i++) {
+    const previous = points[i - 1]
+    const current = points[i]
+
+    if (!previous.time || !current.time) continue
+
+    const previousMs = Date.parse(previous.time)
+    const currentMs = Date.parse(current.time)
+
+    if (
+      Number.isNaN(previousMs) ||
+      Number.isNaN(currentMs) ||
+      currentMs <= previousMs
+    ) {
+      continue
+    }
+
+    const elapsedMinutes = (currentMs - previousMs) / 60_000
+
+    // Evita che una pausa lunga venga conteggiata come tempo di guida.
+    if (elapsedMinutes > MAX_MOVING_SEGMENT_GAP_MINUTES) continue
+
+    const segmentKm = haversineKm(
+      previous.lat,
+      previous.lon,
+      current.lat,
+      current.lon,
+    )
+
+    const elapsedHours = elapsedMinutes / 60
+    const calculatedSpeedKmh =
+      elapsedHours > 0 ? segmentKm / elapsedHours : 0
+
+    /*
+     * Quando disponibile usiamo la velocità registrata dal dispositivo.
+     * Il valore GPX è espresso in m/s e viene convertito da sanitizeSpeedKmh.
+     */
+    const recordedSpeedKmh = sanitizeSpeedKmh(current.speed)
+
+    const effectiveSpeedKmh =
+      recordedSpeedKmh ?? calculatedSpeedKmh
+
+    if (
+      effectiveSpeedKmh >= MOVING_SPEED_THRESHOLD_KMH &&
+      effectiveSpeedKmh <= MAX_PLAUSIBLE_SPEED_KMH
+    ) {
+      movingTimeHours += elapsedHours
+      movingDistanceKm += segmentKm
+    }
+  }
+
+  const averageMovingSpeedKmh =
+    movingTimeHours > 0
+      ? movingDistanceKm / movingTimeHours
+      : 0
+
+  return {
+    movingTimeMinutes: movingTimeHours * 60,
+    movingDistanceKm,
+    averageMovingSpeedKmh,
+  }
+}
+
+function detectStops(points: TrackPoint[]): DetectedStop[] {
+  const timedPoints = points.filter(
+    (point): point is TrackPoint & { time: string } =>
+      Boolean(point.time) && !Number.isNaN(Date.parse(point.time as string)),
+  )
+
+  const stops: DetectedStop[] = []
+
+  let i = 0
+
+  while (i < timedPoints.length - 1) {
+    const startPoint = timedPoints[i]
+    const startMs = Date.parse(startPoint.time)
+
+    let lastPointInsideRadius = i
+    let j = i + 1
+
+    /*
+     * Continuiamo finché i punti restano entro 200 metri
+     * dal punto iniziale della possibile sosta.
+     */
+    while (j < timedPoints.length) {
+      const distanceFromStartKm = haversineKm(
+        startPoint.lat,
+        startPoint.lon,
+        timedPoints[j].lat,
+        timedPoints[j].lon,
+      )
+
+      if (distanceFromStartKm > STOP_RADIUS_KM) break
+
+      lastPointInsideRadius = j
+      j++
+    }
+
+    if (lastPointInsideRadius > i) {
+      const endPoint = timedPoints[lastPointInsideRadius]
+      const endMs = Date.parse(endPoint.time)
+      const durationMinutes = (endMs - startMs) / 60_000
+
+      if (durationMinutes >= STOP_MIN_DURATION_MINUTES) {
+        const stopPoints = timedPoints.slice(
+          i,
+          lastPointInsideRadius + 1,
+        )
+
+        const averageLat =
+          stopPoints.reduce((sum, point) => sum + point.lat, 0) /
+          stopPoints.length
+
+        const averageLon =
+          stopPoints.reduce((sum, point) => sum + point.lon, 0) /
+          stopPoints.length
+
+        stops.push({
+          lat: averageLat,
+          lon: averageLon,
+          startTime: startPoint.time,
+          endTime: endPoint.time,
+          durationMinutes,
+        })
+
+        /*
+         * Saltiamo i punti già utilizzati nella sosta,
+         * evitando di rilevare più volte la stessa pausa.
+         */
+        i = lastPointInsideRadius + 1
+        continue
+      }
+    }
+
+    i++
+  }
+
+  return stops
+}
+
 /**
  * Parse a PAJ / standard GPX (or XML) string into a ParsedTrip.
  * - Ignores any HTML/CDATA content inside <desc> tags.
@@ -197,6 +378,13 @@ export function parseGpx(xmlString: string, fallbackName = 'Viaggio senza nome')
     if (kmh !== null && kmh > maxSpeedKmh) maxSpeedKmh = kmh
   }
 
+  const {
+    movingTimeMinutes,
+    averageMovingSpeedKmh,
+  } = calculateMovementStats(trackOnly)
+
+const stops = detectStops(trackOnly)
+
   // --- Elevation min / max / avg: ignore 0, NaN and null (signal-loss fallbacks) ---
   let maxElevation: number | null = null
   let minElevation: number | null = null
@@ -220,5 +408,8 @@ export function parseGpx(xmlString: string, fallbackName = 'Viaggio senza nome')
     minElevation,
     avgElevation,
     points,
+    movingTimeMinutes,
+    averageMovingSpeedKmh,
+    stops,
   }
 }
