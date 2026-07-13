@@ -31,6 +31,7 @@ import { MAX_PLAUSIBLE_SPEED_KMH } from '@/lib/gpx-parser'
 import { PlanningTab } from '@/components/trip/PlanningTab'
 import { TripOverview } from '@/components/trip/TripOverview'
 import { RoadbookView } from '@/components/trip/RoadbookView'
+import { TripTabs, type TripTab } from '@/components/trip/TripTabs'
 
 
 const TripMap = dynamic(() => import('@/components/trip-map'), {
@@ -44,7 +45,7 @@ const TripMap = dynamic(() => import('@/components/trip-map'), {
 
 type SaveState = 'idle' | 'saving' | 'saved'
 type AppMode = 'select' | 'live' | 'gpx' | 'edit_expenses'
-type ActiveTab = 'overview' | 'planning' | 'roadbook' | 'expenses' | 'map' | 'notes'
+type ActiveTab = TripTab
 
 function formatDate(iso: string | null): string {
   if (!iso) return '—'
@@ -863,7 +864,7 @@ for (const p of pointsData ?? []) {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b border-border bg-card/60 backdrop-blur sticky top-0 z-50">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-3 py-3 sm:px-4 sm:py-4">
           <div className="flex items-center gap-2.5">
             <div className="flex size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
               <Bike className="size-5.5" />
@@ -881,7 +882,7 @@ for (const p of pointsData ?? []) {
         </div>
       </header>
 
-      <main className="mx-auto max-w-5xl px-3 py-4 sm:px-6 sm:py-6">
+      <main className="mx-auto max-w-5xl px-3 py-4 pb-24 sm:px-6 sm:py-6 sm:pb-6">
         {mode === 'select' && (
           <div className="space-y-6">
             <div className="grid gap-4 sm:grid-cols-2">
@@ -979,63 +980,7 @@ for (const p of pointsData ?? []) {
               </div>
             </section>
 
-            <div className="flex border border-border bg-card p-1 rounded-xl shadow-sm">
-
-              <button
-                type="button"
-                onClick={() => setActiveTab('overview')}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'overview' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-secondary/30'}`}
-              >
-                <FileText className="size-4" />
-                Overview
-              </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab('planning')}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'planning' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-secondary/30'}`}
-            >
-              <Route className="size-4" />
-              Pianificazione
-            </button>
-               
-               <button
-                type="button"
-                onClick={() => setActiveTab('roadbook')}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'roadbook' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-secondary/30'}`}
-              >
-                <FileText className="size-4" />
-                Roadbook
-              </button>
-               
-
-              <button
-                type="button"
-                onClick={() => setActiveTab('expenses')}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'expenses' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-secondary/30'}`}
-              >
-                <Receipt className="size-4" />
-                Spese (€)
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveTab('map')}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'map' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-secondary/30'}`}
-              >
-                <MapIcon className="size-4" />
-                Mappa & GPX
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveTab('notes')}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'notes' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-secondary/30'}`}
-              >
-                <FileText className="size-4" />
-                Note Diario
-              </button>
-            </div>
+            <TripTabs activeTab={activeTab} onChange={setActiveTab} />
 
             <div className="grid gap-4">
               {activeTab === 'overview' && (
@@ -1406,7 +1351,7 @@ for (const p of pointsData ?? []) {
 
             </div>
 
-            <Button onClick={handleSave} disabled={saveState === 'saving'} size="lg" className="w-full gap-2 font-bold py-5 text-sm rounded-xl shadow-md mt-2">
+            <Button onClick={handleSave} disabled={saveState === 'saving'} size="lg" className="mb-2 w-full gap-2 rounded-xl py-5 text-sm font-bold shadow-md sm:mb-0">
               {saveState === 'saving' && <Loader2 className="size-4 animate-spin" />}
               {saveState === 'saved' && <CheckCircle2 className="size-4" />}
               {saveState === 'idle' && <CloudUpload className="size-4" />}

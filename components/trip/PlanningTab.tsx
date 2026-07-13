@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button'
 import {
   AccommodationCard,
   type Accommodation,
-} from '@/components/trip/accommodation-card'
+} from '@/components/trip/AccommodationCard'
 
 
 type TripDay = {
@@ -111,22 +111,16 @@ export function PlanningTab({
     setAccommodationParking,
     accommodationNotes,
     setAccommodationNotes,
-
     accommodationAddress,
     setAccommodationAddress,
-
     accommodationCheckInDate,
     setAccommodationCheckInDate,
-
     accommodationCheckOutDate,
     setAccommodationCheckOutDate,
-
     accommodationCheckInTime,
     setAccommodationCheckInTime,
-
     accommodationCheckOutTime,
     setAccommodationCheckOutTime,
-
     addAccommodation,
     dayDate,
     setDayDate,
@@ -171,7 +165,7 @@ export function PlanningTab({
         </div>
       )}
 
-      <div className="grid gap-2.5 grid-cols-1 sm:grid-cols-3 bg-secondary/10 p-3 rounded-lg border border-border/40">
+      <div className="grid grid-cols-1 gap-3 rounded-xl border border-border/40 bg-secondary/10 p-3 sm:grid-cols-3">
         <div className="space-y-0.5">
           <span className="text-[10px] uppercase font-bold text-muted-foreground">Data</span>
           <input
@@ -269,9 +263,9 @@ export function PlanningTab({
               key={day.id}
               className="rounded-lg bg-background border border-border/50 p-3 text-xs shadow-sm"
             >
-              <div className="flex items-start justify-between gap-3">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0 flex-1 space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
                     <span className="font-mono text-[10px] bg-secondary px-1.5 py-0.5 rounded border border-border/30">
                       Giorno {day.day_number}
                     </span>
@@ -314,7 +308,7 @@ export function PlanningTab({
                         variant="outline"
                         size="sm"
                         onClick={() => setSelectedDayForAccommodation(day.id)}
-                        className="mt-2 h-8 rounded-md text-[11px]"
+                        className="mt-2 h-10 w-full rounded-md text-xs sm:h-8 sm:w-auto sm:text-[11px]"
                         >
                         + Pernottamento
                     </Button>
@@ -434,21 +428,24 @@ export function PlanningTab({
 
                 </div>
 
-                <button
+                <div className="flex shrink-0 items-center gap-2">
+                  <button
                     type="button"
                     onClick={() => startEditTripDay(day)}
-                    className="text-muted-foreground hover:text-primary p-1 transition-colors"
-                    >
+                    className="rounded-md border border-border px-3 py-2 text-[11px] text-muted-foreground transition-colors hover:text-primary"
+                  >
                     Modifica
-                </button>
+                  </button>
 
-                <button
-                  type="button"
-                  onClick={() => removeTripDay(day.id)}
-                  className="text-muted-foreground hover:text-destructive p-1 transition-colors"
-                >
-                  <Trash2 className="size-3.5" />
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => removeTripDay(day.id)}
+                    className="rounded-md border border-border p-2 text-muted-foreground transition-colors hover:text-destructive"
+                    aria-label="Elimina giornata"
+                  >
+                    <Trash2 className="size-3.5" />
+                  </button>
+                </div>
               </div>
             </div>
           ))}
