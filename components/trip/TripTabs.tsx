@@ -65,8 +65,8 @@ const tabs: Array<{
 
 export function TripTabs({ activeTab, onChange }: TripTabsProps) {
   return (
-    <div className="sticky bottom-2 z-40 rounded-2xl border border-border bg-card/95 p-1 shadow-lg backdrop-blur sm:static sm:rounded-xl sm:shadow-sm">
-      <div className="flex gap-1 overflow-x-auto pb-0.5 sm:overflow-visible sm:pb-0">
+    <div className="sticky bottom-2 z-40 w-full min-w-0 max-w-full overflow-hidden rounded-2xl border border-border bg-card/95 p-1 shadow-lg backdrop-blur sm:static sm:rounded-xl sm:shadow-sm">
+      <div className="flex w-full min-w-0 gap-1 overflow-x-auto pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:overflow-visible sm:pb-0">
         {tabs.map((tab) => {
           const Icon = tab.icon
           const selected = activeTab === tab.value

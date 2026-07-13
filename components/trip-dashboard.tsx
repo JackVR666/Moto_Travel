@@ -862,21 +862,22 @@ for (const p of pointsData ?? []) {
   }, [trip])
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-background text-foreground">
       <header className="border-b border-border bg-card/60 backdrop-blur sticky top-0 z-50">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-3 py-3 sm:px-4 sm:py-4">
-          <div className="flex items-center gap-2.5">
-            <div className="flex size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm sm:size-10">
               <Bike className="size-5.5" />
             </div>
             <div>
-              <h1 className="text-base font-bold leading-tight">GoldWing Rides</h1>
+              <h1 className="whitespace-nowrap text-sm font-bold leading-tight sm:text-base">GoldWing Rides</h1>
               <p className="text-xs text-muted-foreground hidden sm:block">Logbook & Contabilità Goldwing</p>
             </div>
           </div>
           {mode !== 'select' && (
-            <Button variant="outline" size="sm" className="rounded-xl text-xs h-8" onClick={() => { setMode('select'); setTrip(null); setEditingTripId(null); setExpenses([]); setSaveState('idle'); setHasNewGpxLoaded(false); }}>
-              Torna al Menu
+            <Button variant="outline" size="sm" className="h-9 shrink-0 whitespace-nowrap rounded-xl px-3 text-[11px] sm:text-xs" onClick={() => { setMode('select'); setTrip(null); setEditingTripId(null); setExpenses([]); setSaveState('idle'); setHasNewGpxLoaded(false); }}>
+              <span className="sm:hidden">Menu</span>
+              <span className="hidden sm:inline">Torna al Menu</span>
             </Button>
           )}
         </div>
@@ -947,34 +948,36 @@ for (const p of pointsData ?? []) {
         {(mode === 'live' || mode === 'gpx' || mode === 'edit_expenses') && (
           <div className="space-y-4">
             
-            <section className="rounded-xl border border-border bg-card p-4 shadow-sm space-y-3">
-              <div className="grid gap-3 grid-cols-1 sm:grid-cols-3">
-                <div className="space-y-1">
-                  <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Titolo Viaggio</span>
+            <section className="w-full min-w-0 max-w-full overflow-hidden rounded-xl border border-border bg-card p-4 shadow-sm">
+              <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-3">
+                <div className="min-w-0 space-y-1">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Titolo viaggio</span>
                   <input
                     type="text"
                     value={customName}
                     onChange={(e) => setCustomName(e.target.value)}
                     placeholder="Es. Weekend in Trentino"
-                    className="w-full rounded-lg border border-border bg-secondary/10 py-2 px-3 text-sm font-bold text-foreground focus:outline-none focus:border-primary"
+                    className="block w-full min-w-0 max-w-full rounded-lg border border-border bg-secondary/10 px-3 py-2 text-sm font-bold text-foreground focus:border-primary focus:outline-none"
                   />
                 </div>
-                <div className="space-y-1">
-                  <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Data Inizio</span>
+
+                <div className="min-w-0 space-y-1">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Data inizio</span>
                   <input
                     type="date"
                     value={customDate}
                     onChange={(e) => setCustomDate(e.target.value)}
-                    className="w-full rounded-lg border border-border bg-secondary/10 py-2 px-3 text-xs text-foreground focus:outline-none"
+                    className="block h-10 w-full min-w-0 max-w-full appearance-none rounded-lg border border-border bg-secondary/10 px-3 text-xs text-foreground focus:border-primary focus:outline-none"
                   />
                 </div>
-                <div className="space-y-1">
-                  <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Data Fine</span>
+
+                <div className="min-w-0 space-y-1">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Data fine</span>
                   <input
                     type="date"
                     value={customEndDate}
                     onChange={(e) => setCustomEndDate(e.target.value)}
-                    className="w-full rounded-lg border border-border bg-secondary/10 py-2 px-3 text-xs text-foreground focus:outline-none"
+                    className="block h-10 w-full min-w-0 max-w-full appearance-none rounded-lg border border-border bg-secondary/10 px-3 text-xs text-foreground focus:border-primary focus:outline-none"
                   />
                 </div>
               </div>
@@ -1365,6 +1368,38 @@ for (const p of pointsData ?? []) {
           </div>
         )}
       </main>
+
+      <style jsx global>{`
+        html,
+        body {
+          max-width: 100%;
+          overflow-x: hidden;
+        }
+
+        *,
+        *::before,
+        *::after {
+          box-sizing: border-box;
+        }
+
+        input,
+        select,
+        textarea,
+        button {
+          max-width: 100%;
+        }
+
+        input[type='date'],
+        input[type='time'],
+        input[type='datetime-local'] {
+          display: block;
+          width: 100%;
+          min-width: 0;
+          max-width: 100%;
+          -webkit-appearance: none;
+          appearance: none;
+        }
+      `}</style>
     </div>
   )
 }
