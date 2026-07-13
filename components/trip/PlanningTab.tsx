@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button'
 import {
   AccommodationCard,
   type Accommodation,
-} from '@/components/trip/AccommodationCard'
+} from '@/components/trip/accommodation-card'
 
 
 type TripDay = {
