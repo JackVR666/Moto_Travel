@@ -121,7 +121,17 @@ export function TripDashboard() {
   const fetchAllTrips = async () => {
     const { data, error: dbError } = await supabase
       .from('trips')
-      .select('id, title, trip_date, trip_end_date, total_km, notes')
+      .select(`
+        id,
+        title,
+        trip_date,
+        trip_end_date,
+        total_km,
+        notes,
+        moving_time_minutes,
+        average_moving_speed_kmh,
+        stops_count
+      `)
       .order('trip_date', { ascending: false })
     
     if (dbError) {
@@ -214,6 +224,36 @@ const addAccommodation = async () => {
         check_out_time: accommodationCheckOutTime || null,
       },
     ])
+
+    const saveTripStops = async (
+      tripId: string,
+      stops: ParsedTrip['stops'] = [],
+    ) => {
+      const { error: deleteError } = await supabase
+        .from('trip_stops')
+        .delete()
+        .eq('trip_id', tripId)
+
+      if (deleteError) throw deleteError
+
+      if (!stops || stops.length === 0) return
+
+      const rows = stops.map((stop) => ({
+        trip_id: tripId,
+        latitude: stop.lat,
+        longitude: stop.lon,
+        start_time: stop.startTime,
+        end_time: stop.endTime,
+        duration_minutes: stop.durationMinutes,
+      }))
+
+      const { error: insertError } = await supabase
+        .from('trip_stops')
+        .insert(rows)
+
+      if (insertError) throw insertError
+    }
+
 
   if (error) {
     console.error('Errore inserimento pernottamento:', error)
@@ -478,6 +518,16 @@ const removeTripDay = async (dayId: string) => {
     const currentTripData = allTrips.find(t => t.id === tripId)
     setTripNotes(currentTripData?.notes || '')
 
+    const { data: stopsData, error: stopsError } = await supabase
+      .from('trip_stops')
+      .select('latitude, longitude, start_time, end_time, duration_minutes')
+      .eq('trip_id', tripId)
+      .order('start_time', { ascending: true })
+
+    if (stopsError) {
+      console.error('Errore caricamento soste:', stopsError)
+    }
+
     // 1. Scarica le spese esistenti
     const { data: expData, error: expError } = await supabase
       .from('expenses')
@@ -544,12 +594,21 @@ for (const p of pointsData ?? []) {
             totalKm: Number(savedKm),
             points: validPoints,
             maxSpeedKmh: recomputedMaxSpeed,
+            movingTimeMinutes: Number(currentTripData?.moving_time_minutes || 0),
+            averageMovingSpeedKmh: Number(
+              currentTripData?.average_moving_speed_kmh || 0
+            ),
+            stops: (stopsData || []).map((stop) => ({
+              lat: Number(stop.latitude),
+              lon: Number(stop.longitude),
+              startTime: stop.start_time,
+              endTime: stop.end_time,
+              durationMinutes: Number(stop.duration_minutes),
+            })),
             maxElevation: null,
             minElevation: null,
-            avgElevation: null
+            avgElevation: null,
           })
-        }
-      }
     } catch (err) {
       console.error("Errore recupero punti:", err)
     }
@@ -660,8 +719,15 @@ for (const p of pointsData ?? []) {
             trip_end_date: customEndDate,
             total_km: finalKm,
             notes: tripNotes.trim() || null
+            moving_time_minutes: trip?.movingTimeMinutes ?? null,
+            average_moving_speed_kmh: trip?.averageMovingSpeedKmh ?? null,
+            stops_count: trip?.stops?.length ?? 0,
           })
           .eq('id', editingTripId)
+          
+          if (trip?.stops) {
+            await saveTripStops(editingTripId, trip.stops)
+          }
 
         if (updateTripError) throw updateTripError
 
@@ -704,12 +770,15 @@ for (const p of pointsData ?? []) {
 
         const { data: tripData, error: tripError } = await supabase
           .from('trips')
-          .insert([{ 
-            title: titleToSave, 
-            trip_date: startToSave, 
+          .insert([{
+            title: titleToSave,
+            trip_date: startToSave,
             trip_end_date: endToSave,
             total_km: kmToSave,
-            notes: tripNotes.trim() || null
+            notes: tripNotes.trim() || null,
+            moving_time_minutes: trip?.movingTimeMinutes ?? null,
+            average_moving_speed_kmh: trip?.averageMovingSpeedKmh ?? null,
+            stops_count: trip?.stops?.length ?? 0,
           }])
           .select()
           .single()
@@ -728,6 +797,10 @@ for (const p of pointsData ?? []) {
 
             if (formattedPointsToSave.length > 0) {
               await updateTripWithGpx(tripData.id, kmToSave, formattedPointsToSave)
+            }
+
+            if (trip?.stops) {
+              await saveTripStops(tripData.id, trip.stops)
             }
           }
           if (expenses.length > 0) {
