@@ -195,6 +195,35 @@ const fetchAccommodations = async (tripId: string) => {
   setAccommodations(data || [])
 }
 
+const saveTripStops = async (
+  tripId: string,
+  stops: NonNullable<ParsedTrip['stops']> = [],
+) => {
+  const { error: deleteError } = await supabase
+    .from('trip_stops')
+    .delete()
+    .eq('trip_id', tripId)
+
+  if (deleteError) throw deleteError
+
+  if (!stops || stops.length === 0) return
+
+  const rows = stops.map((stop) => ({
+    trip_id: tripId,
+    latitude: stop.lat,
+    longitude: stop.lon,
+    start_time: stop.startTime,
+    end_time: stop.endTime,
+    duration_minutes: stop.durationMinutes,
+  }))
+
+  const { error: insertError } = await supabase
+    .from('trip_stops')
+    .insert(rows)
+
+  if (insertError) throw insertError
+}
+
 const addAccommodation = async () => {
   if (!selectedDayForAccommodation) {
     alert('Seleziona una giornata.')
@@ -225,34 +254,7 @@ const addAccommodation = async () => {
       },
     ])
 
-    const saveTripStops = async (
-      tripId: string,
-      stops: ParsedTrip['stops'] = [],
-    ) => {
-      const { error: deleteError } = await supabase
-        .from('trip_stops')
-        .delete()
-        .eq('trip_id', tripId)
 
-      if (deleteError) throw deleteError
-
-      if (!stops || stops.length === 0) return
-
-      const rows = stops.map((stop) => ({
-        trip_id: tripId,
-        latitude: stop.lat,
-        longitude: stop.lon,
-        start_time: stop.startTime,
-        end_time: stop.endTime,
-        duration_minutes: stop.durationMinutes,
-      }))
-
-      const { error: insertError } = await supabase
-        .from('trip_stops')
-        .insert(rows)
-
-      if (insertError) throw insertError
-    }
 
 
   if (error) {
@@ -609,10 +611,12 @@ for (const p of pointsData ?? []) {
             minElevation: null,
             avgElevation: null,
           })
-        } catch (err) {
-          console.error("Errore recupero punti:", err)
         }
-    
+      }
+    } catch (err) {
+      console.error('Errore recupero punti:', err)
+    }
+
     await fetchTripDays(tripId)
     await fetchAccommodations(tripId)
 
@@ -718,18 +722,18 @@ for (const p of pointsData ?? []) {
             trip_date: customDate,
             trip_end_date: customEndDate,
             total_km: finalKm,
-            notes: tripNotes.trim() || null
+            notes: tripNotes.trim() || null,
             moving_time_minutes: trip?.movingTimeMinutes ?? null,
             average_moving_speed_kmh: trip?.averageMovingSpeedKmh ?? null,
             stops_count: trip?.stops?.length ?? 0,
           })
           .eq('id', editingTripId)
-          
-          if (trip?.stops) {
-            await saveTripStops(editingTripId, trip.stops)
-          }
 
         if (updateTripError) throw updateTripError
+
+        if (trip?.stops) {
+          await saveTripStops(editingTripId, trip.stops)
+        }
 
         // 3. Sincronizza le spese (eseguito sempre)
         await updateTripExpenses(editingTripId, expenses)
@@ -798,11 +802,12 @@ for (const p of pointsData ?? []) {
             if (formattedPointsToSave.length > 0) {
               await updateTripWithGpx(tripData.id, kmToSave, formattedPointsToSave)
             }
-
-            if (trip?.stops) {
-              await saveTripStops(tripData.id, trip.stops)
-            }
           }
+
+          if (trip?.stops) {
+            await saveTripStops(tripData.id, trip.stops)
+          }
+
           if (expenses.length > 0) {
             await updateTripExpenses(tripData.id, expenses)
           }
