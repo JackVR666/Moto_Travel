@@ -609,9 +609,9 @@ for (const p of pointsData ?? []) {
             minElevation: null,
             avgElevation: null,
           })
-    } catch (err) {
-      console.error("Errore recupero punti:", err)
-    }
+        } catch (err) {
+          console.error("Errore recupero punti:", err)
+        }
     
     await fetchTripDays(tripId)
     await fetchAccommodations(tripId)
