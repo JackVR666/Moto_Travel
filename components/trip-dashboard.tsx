@@ -20,7 +20,7 @@ import {
   FileText,
   Clock3,
   Coffee,
-} {stats && (from 'lucide-react'
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { GpxUploader } from '@/components/gpx-uploader'
 import { StatCard } from '@/components/stat-card'
