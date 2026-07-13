@@ -250,8 +250,13 @@ const startEditAccommodation = (acc: any) => {
   setAccommodationAddress(acc.address || '')
   setAccommodationCheckInDate(acc.check_in_date || '')
   setAccommodationCheckOutDate(acc.check_out_date || '')
-  setAccommodationCheckInTime(acc.check_in_time || '')
-  setAccommodationCheckOutTime(acc.check_out_time || '')
+  setAccommodationCheckInTime(
+    acc.check_in_time ? String(acc.check_in_time).slice(0, 5) : ''
+  )
+
+  setAccommodationCheckOutTime(
+    acc.check_out_time ? String(acc.check_out_time).slice(0, 5) : ''
+  )
 }
 
 //Salva modifica albergo

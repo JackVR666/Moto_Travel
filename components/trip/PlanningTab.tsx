@@ -16,12 +16,7 @@ type TripDay = {
     end_city: string | null
     planned_km: number | null
     display_order: number | null
-    address: string | null
-    check_in_date: string | null
-    check_out_date: string | null
-    check_in_time: string | null
-    check_out_time: string | null
-}
+
 
 type PlanningTabProps = {
     editingDayId: string | null
@@ -116,6 +111,22 @@ export function PlanningTab({
     setAccommodationParking,
     accommodationNotes,
     setAccommodationNotes,
+
+    accommodationAddress,
+    setAccommodationAddress,
+
+    accommodationCheckInDate,
+    setAccommodationCheckInDate,
+
+    accommodationCheckOutDate,
+    setAccommodationCheckOutDate,
+
+    accommodationCheckInTime,
+    setAccommodationCheckInTime,
+
+    accommodationCheckOutTime,
+    setAccommodationCheckOutTime,
+
     addAccommodation,
     dayDate,
     setDayDate,
