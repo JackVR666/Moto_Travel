@@ -18,7 +18,9 @@ import {
   Pencil,
   Receipt,
   FileText,
-} from 'lucide-react'
+  Clock3,
+  Coffee,
+} {stats && (from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { GpxUploader } from '@/components/gpx-uploader'
 import { StatCard } from '@/components/stat-card'
@@ -615,12 +617,6 @@ for (const p of pointsData ?? []) {
         const fallback = fileName.replace(/\.(gpx|xml)$/i, '')
         const parsed = parseGpx(content, fallback)
 
-        console.log('Statistiche GPX:', {
-          averageMovingSpeedKmh: parsed.averageMovingSpeedKmh,
-          movingTimeMinutes: parsed.movingTimeMinutes,
-          stops: parsed.stops,
-})
-
         if (parsed.points.length === 0) {
           setError('Nessun punto traccia trovato nel file.')
         } else {
@@ -756,10 +752,29 @@ for (const p of pointsData ?? []) {
   }
 
   const stats = useMemo(() => {
-    if (!trip) return null
+  if (!trip) return null
+
+    const movingMinutes = Math.round(trip.movingTimeMinutes ?? 0)
+    const movingHours = Math.floor(movingMinutes / 60)
+    const remainingMinutes = movingMinutes % 60
+
+    const movingTimeLabel =
+      movingHours > 0
+        ? `${movingHours}h ${remainingMinutes}m`
+        : `${remainingMinutes}m`
+
     return {
       km: trip.totalKm.toFixed(1),
-      maxSpeed: trip.maxSpeedKmh > 0 ? trip.maxSpeedKmh.toFixed(0) : '—',
+      maxSpeed:
+        trip.maxSpeedKmh > 0
+          ? trip.maxSpeedKmh.toFixed(0)
+          : '—',
+      averageSpeed:
+        (trip.averageMovingSpeedKmh ?? 0) > 0
+          ? Number(trip.averageMovingSpeedKmh).toFixed(1)
+          : '—',
+      movingTime: movingTimeLabel,
+      stopsCount: trip.stops?.length ?? 0,
     }
   }, [trip])
 
@@ -1148,9 +1163,113 @@ for (const p of pointsData ?? []) {
               {activeTab === 'map' && (
                 <div className="space-y-4">
                   {stats && (
-                    <div className="grid gap-3 grid-cols-2">
-                      <StatCard icon={Route} label="Km totali" value={stats.km} unit="km" />
-                      <StatCard icon={Gauge} label="Velocità max rilevata" value={stats.maxSpeed} unit="km/h" />
+                    <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+                      <StatCard
+                        icon={Route}
+                        label="Km totali"
+                        value={stats.km}
+                        unit="km"
+                      />
+
+                      <StatCard
+                        icon={Gauge}
+                        label="Velocità max"
+                        value={stats.maxSpeed}
+                        unit="km/h"
+                      />
+
+                      <StatCard
+                        icon={Gauge}
+                        label="Velocità media"
+                        value={stats.averageSpeed}
+                        unit="km/h"
+                      />
+
+                      <StatCard
+                        icon={Clock3}
+                        label="Tempo in movimento"
+                        value={stats.movingTime}
+                        unit=""
+                      />
+                    </div>
+                  )}
+
+                  {trip?.stops && (
+                    <div className="rounded-xl border border-border bg-card p-4 shadow-sm space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Coffee className="size-4 text-primary" />
+
+                        <div>
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">
+                            Soste oltre 30 minuti
+                          </h4>
+
+                          <p className="text-[11px] text-muted-foreground">
+                            {trip.stops.length === 0
+                              ? 'Nessuna sosta lunga rilevata.'
+                              : `${trip.stops.length} soste rilevate.`}
+                          </p>
+                        </div>
+                      </div>
+
+                      {trip.stops.length > 0 && (
+                        <div className="space-y-2">
+                          {trip.stops.map((stop, index) => {
+                            const start = new Date(stop.startTime)
+                            const end = new Date(stop.endTime)
+
+                            const startTime = start.toLocaleTimeString('it-IT', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })
+
+                            const endTime = end.toLocaleTimeString('it-IT', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })
+
+                            const minutes = Math.round(stop.durationMinutes)
+                            const hours = Math.floor(minutes / 60)
+                            const remainingMinutes = minutes % 60
+
+                            const duration =
+                              hours > 0
+                                ? `${hours}h ${remainingMinutes}m`
+                                : `${remainingMinutes}m`
+
+                            const mapsUrl =
+                              `https://www.google.com/maps/search/?api=1&query=${stop.lat},${stop.lon}`
+
+                            return (
+                              <div
+                                key={`${stop.startTime}-${index}`}
+                                className="rounded-lg border border-border/50 bg-secondary/10 p-3 text-xs"
+                              >
+                                <div className="flex items-start justify-between gap-3">
+                                  <div>
+                                    <p className="font-bold text-foreground">
+                                      Sosta {index + 1}
+                                    </p>
+
+                                    <p className="mt-1 text-[11px] text-muted-foreground">
+                                      {startTime} → {endTime} · {duration}
+                                    </p>
+                                  </div>
+
+                                  <a
+                                    href={mapsUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="shrink-0 rounded-md border border-border bg-background px-2 py-1 text-[11px] font-medium hover:bg-secondary"
+                                  >
+                                    Apri Maps
+                                  </a>
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
                     </div>
                   )}
 
