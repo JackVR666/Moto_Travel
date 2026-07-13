@@ -16,7 +16,7 @@ type TripDay = {
     end_city: string | null
     planned_km: number | null
     display_order: number | null
-
+}
 
 type PlanningTabProps = {
     editingDayId: string | null
