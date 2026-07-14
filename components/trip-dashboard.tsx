@@ -864,18 +864,18 @@ for (const p of pointsData ?? []) {
   return (
     <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-background text-foreground">
       <header className="border-b border-border bg-card/60 backdrop-blur sticky top-0 z-50">
-        <div className="mx-auto flex w-full max-w-[1600px] items-center justify-between px-3 py-3 sm:px-6 sm:py-4 lg:px-8">
+        <div className="mx-auto flex w-full max-w-[1600px] items-center justify-between px-3 py-2.5 sm:px-6 sm:py-4 lg:px-8">
           <div className="flex min-w-0 items-center gap-2.5">
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm sm:size-10">
-              <Bike className="size-5.5" />
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm sm:size-10 sm:rounded-xl">
+              <Bike className="size-4.5 sm:size-5.5" />
             </div>
             <div>
-              <h1 className="whitespace-nowrap text-sm font-bold leading-tight sm:text-base">GoldWing Rides</h1>
+              <h1 className="whitespace-nowrap text-xs font-bold leading-tight sm:text-base">GoldWing Rides</h1>
               <p className="text-xs text-muted-foreground hidden sm:block">Logbook & Contabilità Goldwing</p>
             </div>
           </div>
           {mode !== 'select' && (
-            <Button variant="outline" size="sm" className="h-9 shrink-0 whitespace-nowrap rounded-xl px-3 text-[11px] sm:text-xs" onClick={() => { setMode('select'); setTrip(null); setEditingTripId(null); setExpenses([]); setSaveState('idle'); setHasNewGpxLoaded(false); }}>
+            <Button variant="outline" size="sm" className="h-8 shrink-0 whitespace-nowrap rounded-lg px-2.5 text-[10px] sm:h-9 sm:rounded-xl sm:px-3 sm:text-xs" onClick={() => { setMode('select'); setTrip(null); setEditingTripId(null); setExpenses([]); setSaveState('idle'); setHasNewGpxLoaded(false); }}>
               <span className="sm:hidden">Menu</span>
               <span className="hidden sm:inline">Torna al Menu</span>
             </Button>
@@ -885,44 +885,51 @@ for (const p of pointsData ?? []) {
 
       <main className="mx-auto w-full max-w-[1600px] px-3 py-4 pb-24 sm:px-6 sm:py-6 sm:pb-6 lg:px-8">
         {mode === 'select' && (
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             <div className="grid gap-4">
-              <div className="rounded-xl border border-border bg-card p-5 flex flex-col justify-between space-y-4 shadow-sm">
+              <div className="flex flex-col justify-between space-y-3 rounded-xl border border-border bg-card p-3 shadow-sm sm:space-y-4 sm:p-5">
                 <div className="space-y-2">
-                  <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                    <Play className="size-5" />
+                  <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary sm:size-10">
+                    <Play className="size-4 sm:size-5" />
                   </div>
-                  <h3 className="text-base font-bold">Viaggio Live (In sella)</h3>
-                  <p className="text-xs text-muted-foreground">
+                  <h3 className="text-sm font-bold sm:text-base">Viaggio Live (In sella)</h3>
+                  <p className="text-[10px] leading-relaxed text-muted-foreground sm:text-xs">
                     Inserisci spese, note e percorsi in tempo reale dal telefono. Potrai caricare la traccia GPX anche in un secondo momento.
                   </p>
                 </div>
-                <Button onClick={startLiveTrip} className="w-full gap-2 text-xs font-bold rounded-xl h-10">
-                  Nuovo Viaggio 🏍️
+                <Button onClick={startLiveTrip} className="h-9 w-full gap-1.5 rounded-lg text-[11px] font-bold sm:h-10 sm:gap-2 sm:rounded-xl sm:text-xs">
+                  Nuovo viaggio 🏍️
                 </Button>
               </div>
             </div>
 
-            <div className="rounded-xl border border-border bg-card p-4 space-y-3 shadow-sm">
-              <div className="flex items-center gap-2 text-muted-foreground pb-2 border-b border-border/60">
-                <FolderHeart className="size-4.5 text-primary" />
-                <h3 className="font-bold text-sm text-foreground">Diario delle Avventure</h3>
+            <div className="space-y-2.5 rounded-xl border border-border bg-card p-3 shadow-sm sm:space-y-3 sm:p-4">
+              <div className="flex items-center gap-1.5 border-b border-border/60 pb-2 text-muted-foreground sm:gap-2">
+                <FolderHeart className="size-4 text-primary sm:size-4.5" />
+                <h3 className="text-xs font-bold text-foreground sm:text-sm">Diario delle Avventure</h3>
               </div>
               
               {allTrips.length === 0 ? (
                 <p className="text-xs text-muted-foreground italic text-center py-4">Nessun viaggio salvato nel database.</p>
               ) : (
-                <div className="divide-y divide-border/50 max-h-[350px] overflow-y-auto pr-1">
+                <div className="max-h-[420px] divide-y divide-border/50 overflow-y-auto pr-0.5 sm:max-h-[350px] sm:pr-1">
                   {allTrips.map((t) => (
-                    <div key={t.id} className="flex items-center justify-between py-2.5 text-xs first:pt-0 last:pb-0">
-                      <div className="space-y-0.5 max-w-[70%]">
-                        <p className="font-bold text-foreground truncate text-sm">{t.title}</p>
-                        <p className="text-[11px] text-muted-foreground">
-                          {formatDate(t.trip_date)} • <span className="font-mono font-medium text-foreground bg-secondary/60 px-1 rounded">{t.total_km > 0 ? `${t.total_km.toFixed(1)} km` : 'Solo Spese'}</span>
+                    <div key={t.id} className="flex min-w-0 items-center gap-2 py-2 text-xs first:pt-0 last:pb-0 sm:gap-3 sm:py-2.5">
+                      <div className="min-w-0 flex-1 space-y-0.5">
+                        <p className="truncate text-xs font-bold text-foreground sm:text-sm">{t.title}</p>
+                        <p className="flex min-w-0 flex-wrap items-center gap-1 text-[9px] text-muted-foreground sm:text-[11px]">
+                          {formatDate(t.trip_date)} • <span className="max-w-full truncate rounded bg-secondary/60 px-1 py-0.5 font-mono font-medium text-foreground">{t.total_km > 0 ? `${t.total_km.toFixed(1)} km` : 'Solo Spese'}</span>
                         </p>
                       </div>
-                      <Button size="sm" variant="outline" className="h-8 rounded-lg text-[11px] gap-1 shrink-0" onClick={() => startEditingExpenses(t.id, t.title, t.trip_date, t.trip_end_date)}>
-                        <Pencil className="size-3" /> Gestisci
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 shrink-0 gap-1 rounded-md px-2 text-[9px] sm:h-8 sm:rounded-lg sm:px-3 sm:text-[11px]"
+                        onClick={() => startEditingExpenses(t.id, t.title, t.trip_date, t.trip_end_date)}
+                      >
+                        <Pencil className="size-2.5 shrink-0 sm:size-3" />
+                        <span className="sm:hidden">Apri</span>
+                        <span className="hidden sm:inline">Gestisci</span>
                       </Button>
                     </div>
                   ))}
@@ -935,36 +942,36 @@ for (const p of pointsData ?? []) {
         {(mode === 'live' || mode === 'gpx' || mode === 'edit_expenses') && (
           <div className="space-y-4">
             
-            <section className="w-full min-w-0 max-w-full overflow-hidden rounded-xl border border-border bg-card p-4 shadow-sm">
+            <section className="w-full min-w-0 max-w-full overflow-hidden rounded-xl border border-border bg-card p-3 shadow-sm sm:p-4">
               <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-3">
                 <div className="min-w-0 space-y-1">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Titolo viaggio</span>
+                  <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground sm:text-[11px]">Titolo viaggio</span>
                   <input
                     type="text"
                     value={customName}
                     onChange={(e) => setCustomName(e.target.value)}
                     placeholder="Es. Weekend in Trentino"
-                    className="block w-full min-w-0 max-w-full rounded-lg border border-border bg-secondary/10 px-3 py-2 text-sm font-bold text-foreground focus:border-primary focus:outline-none"
+                    className="block w-full min-w-0 max-w-full rounded-lg border border-border bg-secondary/10 px-2.5 py-2 text-xs font-bold text-foreground focus:border-primary focus:outline-none sm:px-3 sm:text-sm"
                   />
                 </div>
 
                 <div className="min-w-0 space-y-1">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Data inizio</span>
+                  <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground sm:text-[11px]">Data inizio</span>
                   <input
                     type="date"
                     value={customDate}
                     onChange={(e) => setCustomDate(e.target.value)}
-                    className="block h-10 w-full min-w-0 max-w-full appearance-none rounded-lg border border-border bg-secondary/10 px-3 text-xs text-foreground focus:border-primary focus:outline-none"
+                    className="block h-9 w-full min-w-0 max-w-full appearance-none rounded-lg border border-border bg-secondary/10 px-2.5 text-[11px] text-foreground focus:border-primary focus:outline-none sm:h-10 sm:px-3 sm:text-xs"
                   />
                 </div>
 
                 <div className="min-w-0 space-y-1">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Data fine</span>
+                  <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground sm:text-[11px]">Data fine</span>
                   <input
                     type="date"
                     value={customEndDate}
                     onChange={(e) => setCustomEndDate(e.target.value)}
-                    className="block h-10 w-full min-w-0 max-w-full appearance-none rounded-lg border border-border bg-secondary/10 px-3 text-xs text-foreground focus:border-primary focus:outline-none"
+                    className="block h-9 w-full min-w-0 max-w-full appearance-none rounded-lg border border-border bg-secondary/10 px-2.5 text-[11px] text-foreground focus:border-primary focus:outline-none sm:h-10 sm:px-3 sm:text-xs"
                   />
                 </div>
               </div>
@@ -1217,7 +1224,7 @@ for (const p of pointsData ?? []) {
                             Soste oltre 30 minuti
                           </h4>
 
-                          <p className="text-[11px] text-muted-foreground">
+                          <p className="flex min-w-0 flex-wrap items-center gap-1 text-[9px] text-muted-foreground sm:text-[11px]">
                             {trip.stops.length === 0
                               ? 'Nessuna sosta lunga rilevata.'
                               : `${trip.stops.length} soste rilevate.`}
@@ -1341,7 +1348,7 @@ for (const p of pointsData ?? []) {
 
             </div>
 
-            <Button onClick={handleSave} disabled={saveState === 'saving'} size="lg" className="mb-2 w-full gap-2 rounded-xl py-5 text-sm font-bold shadow-md sm:mb-0">
+            <Button onClick={handleSave} disabled={saveState === 'saving'} size="lg" className="mb-2 h-10 w-full gap-1.5 rounded-lg px-3 text-[11px] font-bold shadow-md sm:mb-0 sm:h-auto sm:gap-2 sm:rounded-xl sm:py-5 sm:text-sm">
               {saveState === 'saving' && <Loader2 className="size-4 animate-spin" />}
               {saveState === 'saved' && <CheckCircle2 className="size-4" />}
               {saveState === 'idle' && <CloudUpload className="size-4" />}
@@ -1385,6 +1392,13 @@ for (const p of pointsData ?? []) {
           max-width: 100%;
           -webkit-appearance: none;
           appearance: none;
+        }
+
+        @media (max-width: 639px) {
+          .mobile-compact-text {
+            font-size: 0.75rem;
+            line-height: 1.15rem;
+          }
         }
       `}</style>
     </div>
