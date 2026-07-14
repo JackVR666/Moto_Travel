@@ -67,6 +67,15 @@ type PlanningTabProps = {
     accommodationCheckOutTime: string
     setAccommodationCheckOutTime: (value: string) => void
 
+    accommodationCancellationDate: string
+    setAccommodationCancellationDate: (value: string) => void
+
+    accommodationPaymentDate: string
+    setAccommodationPaymentDate: (value: string) => void
+
+    accommodationPayAtProperty: boolean
+    setAccommodationPayAtProperty: (value: boolean) => void
+
     addAccommodation: () => void
 
     dayDate: string
@@ -121,6 +130,12 @@ export function PlanningTab({
     setAccommodationCheckInTime,
     accommodationCheckOutTime,
     setAccommodationCheckOutTime,
+    accommodationCancellationDate,
+    setAccommodationCancellationDate,
+    accommodationPaymentDate,
+    setAccommodationPaymentDate,
+    accommodationPayAtProperty,
+    setAccommodationPayAtProperty,
     addAccommodation,
     dayDate,
     setDayDate,
@@ -165,7 +180,7 @@ export function PlanningTab({
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-3 rounded-xl border border-border/40 bg-secondary/10 p-3 sm:grid-cols-3 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 rounded-xl border border-border/40 bg-secondary/10 p-3 sm:grid-cols-3">
         <div className="space-y-0.5">
           <span className="text-[10px] uppercase font-bold text-muted-foreground">Data</span>
           <input
@@ -210,7 +225,7 @@ export function PlanningTab({
             />
             </div>
 
-        <div className="space-y-0.5 sm:col-span-2 xl:col-span-3">
+        <div className="space-y-0.5 sm:col-span-2">
           <span className="text-[10px] uppercase font-bold text-muted-foreground">Titolo tappa</span>
           <input
             type="text"
@@ -221,7 +236,7 @@ export function PlanningTab({
           />
         </div>
 
-        <div className="space-y-0.5 sm:col-span-3 xl:col-span-4">
+        <div className="space-y-0.5 sm:col-span-3">
           <span className="text-[10px] uppercase font-bold text-muted-foreground">Note</span>
           <textarea
             value={dayNotes}
@@ -232,7 +247,7 @@ export function PlanningTab({
           />
         </div>
 
-        <div className="sm:col-span-3 xl:col-span-4">
+        <div className="sm:col-span-3">
           <Button
             type="button"
             onClick={editingDayId ? updateTripDay : addTripDay}
@@ -364,6 +379,46 @@ export function PlanningTab({
                                 className="w-full rounded-md border border-border bg-background py-1.5 px-2.5 text-xs"
                             />
                             </div>
+
+                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                          <div className="space-y-0.5">
+                            <span className="text-[9px] font-bold uppercase text-muted-foreground sm:text-[10px]">
+                              Disdetta gratuita entro
+                            </span>
+                            <input
+                              type="date"
+                              value={accommodationCancellationDate}
+                              onChange={(e) => setAccommodationCancellationDate(e.target.value)}
+                              className="w-full rounded-md border border-border bg-background p-1.5 text-[10px] text-foreground sm:text-xs"
+                            />
+                          </div>
+
+                          <div className="space-y-0.5">
+                            <span className="text-[9px] font-bold uppercase text-muted-foreground sm:text-[10px]">
+                              Data addebito
+                            </span>
+                            <input
+                              type="date"
+                              value={accommodationPaymentDate}
+                              onChange={(e) => setAccommodationPaymentDate(e.target.value)}
+                              disabled={accommodationPayAtProperty}
+                              className="w-full rounded-md border border-border bg-background p-1.5 text-[10px] text-foreground disabled:cursor-not-allowed disabled:opacity-40 sm:text-xs"
+                            />
+                          </div>
+                        </div>
+
+                        <label className="flex items-center gap-2 text-[10px] text-foreground sm:text-xs">
+                          <input
+                            type="checkbox"
+                            checked={accommodationPayAtProperty}
+                            onChange={(e) => {
+                              const checked = e.target.checked
+                              setAccommodationPayAtProperty(checked)
+                              if (checked) setAccommodationPaymentDate('')
+                            }}
+                          />
+                          Pagamento in struttura
+                        </label>
 
                         <input
                         type="url"

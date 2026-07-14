@@ -15,6 +15,9 @@ export type Accommodation = {
   price: number | null
   parking_available: boolean | null
   notes: string | null
+  free_cancellation_until: string | null
+  payment_date: string | null
+  pay_at_property: boolean | null
 }
 
 type AccommodationCardProps = {
@@ -60,9 +63,7 @@ export function AccommodationCard({
           {accommodation.address && (
             <p className="mt-1 flex items-start gap-1 text-[9px] leading-snug text-muted-foreground sm:text-[11px]">
               <MapPin className="mt-0.5 size-2.5 shrink-0 sm:size-3" />
-              <span className="break-words">
-                {accommodation.address}
-              </span>
+              <span className="break-words">{accommodation.address}</span>
             </p>
           )}
         </div>
@@ -83,12 +84,10 @@ export function AccommodationCard({
             <p className="text-[7px] font-bold uppercase tracking-wide text-muted-foreground sm:text-[9px]">
               Check-in
             </p>
-
             <p className="mt-0.5 break-words text-[9px] font-medium leading-tight text-foreground sm:mt-1 sm:text-xs">
               {accommodation.check_in_date
                 ? formatDate(accommodation.check_in_date)
                 : '—'}
-
               {accommodation.check_in_time && (
                 <>
                   <br />
@@ -102,12 +101,10 @@ export function AccommodationCard({
             <p className="text-[7px] font-bold uppercase tracking-wide text-muted-foreground sm:text-[9px]">
               Check-out
             </p>
-
             <p className="mt-0.5 break-words text-[9px] font-medium leading-tight text-foreground sm:mt-1 sm:text-xs">
               {accommodation.check_out_date
                 ? formatDate(accommodation.check_out_date)
                 : '—'}
-
               {accommodation.check_out_time && (
                 <>
                   <br />
@@ -118,6 +115,32 @@ export function AccommodationCard({
           </div>
         </div>
       )}
+
+      <div className="mt-2 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+        {accommodation.free_cancellation_until && (
+          <div className="rounded-md border border-border/30 bg-background/60 p-1.5 sm:rounded-lg sm:p-2">
+            <p className="text-[7px] font-bold uppercase tracking-wide text-muted-foreground sm:text-[9px]">
+              Disdetta gratuita
+            </p>
+            <p className="mt-0.5 text-[9px] font-medium leading-tight text-foreground sm:text-xs">
+              Entro {formatDate(accommodation.free_cancellation_until)}
+            </p>
+          </div>
+        )}
+
+        <div className="rounded-md border border-border/30 bg-background/60 p-1.5 sm:rounded-lg sm:p-2">
+          <p className="text-[7px] font-bold uppercase tracking-wide text-muted-foreground sm:text-[9px]">
+            Pagamento
+          </p>
+          <p className="mt-0.5 text-[9px] font-medium leading-tight text-foreground sm:text-xs">
+            {accommodation.pay_at_property
+              ? 'In struttura'
+              : accommodation.payment_date
+                ? `Addebito ${formatDate(accommodation.payment_date)}`
+                : 'Non indicato'}
+          </p>
+        </div>
+      </div>
 
       {accommodation.parking_available && (
         <div className="mt-2">
@@ -142,11 +165,7 @@ export function AccommodationCard({
             className="h-7 min-w-0 gap-1 rounded-md px-2 text-[9px] sm:h-8 sm:text-[11px]"
             asChild
           >
-            <a
-              href={bookingLink}
-              //target="_blank"
-              //rel="noreferrer"
-            >
+            <a href={bookingLink}>
               {bookingLabel}
               <ExternalLink className="size-2.5 sm:size-3" />
             </a>
@@ -161,11 +180,7 @@ export function AccommodationCard({
             className="h-7 min-w-0 gap-1 rounded-md px-2 text-[9px] sm:h-8 sm:text-[11px]"
             asChild
           >
-            <a
-              href={mapsUrl}
-              target="_blank"
-              rel="noreferrer"
-            >
+            <a href={mapsUrl} target="_blank" rel="noreferrer">
               Maps
               <MapPin className="size-2.5 sm:size-3" />
             </a>

@@ -9,6 +9,9 @@ export type RoadbookTripDay = {
   end_city: string | null
   planned_km: number | null
   notes: string | null
+  free_cancellation_until: string | null
+  payment_date: string | null
+  pay_at_property: boolean | null
 }
 
 export type RoadbookAccommodation = {
@@ -130,6 +133,32 @@ export function RoadbookView({
                       </div>
                     </div>
 
+                    <div className="grid grid-cols-1 gap-2 text-xs sm:grid-cols-2">
+                      {accommodation.free_cancellation_until && (
+                        <div className="rounded-lg bg-background p-2">
+                          <p className="text-[9px] font-bold uppercase text-muted-foreground">
+                            Disdetta gratuita
+                          </p>
+                          <p className="mt-1 font-medium">
+                            Entro {formatDate(accommodation.free_cancellation_until)}
+                          </p>
+                        </div>
+                      )}
+
+                      <div className="rounded-lg bg-background p-2">
+                        <p className="text-[9px] font-bold uppercase text-muted-foreground">
+                          Pagamento
+                        </p>
+                        <p className="mt-1 font-medium">
+                          {accommodation.pay_at_property
+                            ? 'In struttura'
+                            : accommodation.payment_date
+                              ? `Addebito ${formatDate(accommodation.payment_date)}`
+                              : 'Non indicato'}
+                        </p>
+                      </div>
+                    </div>
+
                     <div className="flex flex-wrap items-center gap-2 text-xs">
                       {accommodation.price !== null && (
                         <span className="rounded-md bg-background px-2 py-1 font-mono font-bold">
@@ -196,6 +225,8 @@ export function RoadbookView({
               <th className="px-3 py-3 text-left">Check-in</th>
               <th className="px-3 py-3 text-right">Costo</th>
               <th className="px-3 py-3 text-left">Link</th>
+              <th className="px-3 py-3 text-left">Disdetta</th>
+              <th className="px-3 py-3 text-left">Pagamento</th>
               <th className="px-3 py-3 text-left">Note</th>
             </tr>
           </thead>
@@ -255,6 +286,18 @@ export function RoadbookView({
                     ) : (
                       '—'
                     )}
+                  </td>
+                  <td className="px-3 py-3 text-muted-foreground">
+                    {accommodation?.free_cancellation_until
+                      ? formatDate(accommodation.free_cancellation_until)
+                      : '—'}
+                  </td>
+                  <td className="px-3 py-3 text-muted-foreground">
+                    {accommodation?.pay_at_property
+                      ? 'In struttura'
+                      : accommodation?.payment_date
+                        ? formatDate(accommodation.payment_date)
+                        : '—'}
                   </td>
                   <td className="max-w-[260px] truncate px-3 py-3 text-muted-foreground">
                     {day.notes || accommodation?.notes || '—'}

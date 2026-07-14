@@ -101,6 +101,9 @@ export function TripDashboard() {
   const [accommodationCheckOutDate, setAccommodationCheckOutDate] = useState('')
   const [accommodationCheckInTime, setAccommodationCheckInTime] = useState('')
   const [accommodationCheckOutTime, setAccommodationCheckOutTime] = useState('')
+  const [accommodationCancellationDate, setAccommodationCancellationDate] = useState('')
+  const [accommodationPaymentDate, setAccommodationPaymentDate] = useState('')
+  const [accommodationPayAtProperty, setAccommodationPayAtProperty] = useState(false)
 
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -252,6 +255,11 @@ const addAccommodation = async () => {
         check_out_date: accommodationCheckOutDate || null,
         check_in_time: accommodationCheckInTime || null,
         check_out_time: accommodationCheckOutTime || null,
+        free_cancellation_until: accommodationCancellationDate || null,
+        payment_date: accommodationPayAtProperty
+          ? null
+          : accommodationPaymentDate || null,
+        pay_at_property: accommodationPayAtProperty,
       },
     ])
 
@@ -276,6 +284,9 @@ const addAccommodation = async () => {
   setAccommodationCheckOutDate('')
   setAccommodationCheckInTime('')
   setAccommodationCheckOutTime('')
+  setAccommodationCancellationDate('')
+  setAccommodationPaymentDate('')
+  setAccommodationPayAtProperty(false)
 
   if (editingTripId) {
     await fetchAccommodations(editingTripId)
@@ -302,6 +313,9 @@ const startEditAccommodation = (acc: any) => {
   setAccommodationCheckOutTime(
     acc.check_out_time ? String(acc.check_out_time).slice(0, 5) : ''
   )
+  setAccommodationCancellationDate(acc.free_cancellation_until || '')
+  setAccommodationPaymentDate(acc.payment_date || '')
+  setAccommodationPayAtProperty(!!acc.pay_at_property)
 }
 
 //Salva modifica albergo
@@ -322,6 +336,11 @@ const updateAccommodation = async () => {
       check_out_date: accommodationCheckOutDate || null,
       check_in_time: accommodationCheckInTime || null,
       check_out_time: accommodationCheckOutTime || null,
+      free_cancellation_until: accommodationCancellationDate || null,
+      payment_date: accommodationPayAtProperty
+        ? null
+        : accommodationPaymentDate || null,
+      pay_at_property: accommodationPayAtProperty,
     })
     .eq('id', editingAccommodationId)
 
@@ -344,6 +363,9 @@ const updateAccommodation = async () => {
   setAccommodationCheckOutDate('')
   setAccommodationCheckInTime('')
   setAccommodationCheckOutTime('')
+  setAccommodationCancellationDate('')
+  setAccommodationPaymentDate('')
+  setAccommodationPayAtProperty(false)
 
   await fetchAccommodations(editingTripId)
 }
@@ -1045,6 +1067,12 @@ for (const p of pointsData ?? []) {
                   setAccommodationCheckInTime={setAccommodationCheckInTime}
                   accommodationCheckOutTime={accommodationCheckOutTime}
                   setAccommodationCheckOutTime={setAccommodationCheckOutTime}
+                  accommodationCancellationDate={accommodationCancellationDate}
+                  setAccommodationCancellationDate={setAccommodationCancellationDate}
+                  accommodationPaymentDate={accommodationPaymentDate}
+                  setAccommodationPaymentDate={setAccommodationPaymentDate}
+                  accommodationPayAtProperty={accommodationPayAtProperty}
+                  setAccommodationPayAtProperty={setAccommodationPayAtProperty}
                 />
              )}
                  
