@@ -144,8 +144,8 @@ export function AccommodationCard({
           >
             <a
               href={bookingLink}
-              target="_blank"
-              rel="noreferrer"
+              //target="_blank"
+              //rel="noreferrer"
             >
               {bookingLabel}
               <ExternalLink className="size-2.5 sm:size-3" />
