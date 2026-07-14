@@ -34,94 +34,164 @@ export function AccommodationCard({
   onEdit,
   onDelete,
 }: AccommodationCardProps) {
-  const bookingLink = accommodation.booking_url || accommodation.airbnb_url
+  const bookingLink =
+    accommodation.booking_url || accommodation.airbnb_url
+
   const bookingLabel = accommodation.booking_url
-    ? 'Apri Booking'
+    ? 'Booking'
     : accommodation.airbnb_url
-      ? 'Apri Airbnb'
+      ? 'Airbnb'
       : null
+
   const mapsUrl = accommodation.address
-    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(accommodation.address)}`
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+        accommodation.address
+      )}`
     : null
 
   return (
-    <div className="mt-3 rounded-xl border border-border/60 bg-secondary/10 p-3 text-xs shadow-sm">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <div className="mt-2 rounded-lg border border-border/60 bg-secondary/10 p-2 text-[9px] shadow-sm sm:mt-3 sm:rounded-xl sm:p-3 sm:text-xs">
+      <div className="flex min-w-0 items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <p className="font-bold text-foreground">🏨 {accommodation.name}</p>
+          <p className="break-words text-[11px] font-bold leading-tight text-foreground sm:text-sm">
+            🏨 {accommodation.name}
+          </p>
+
           {accommodation.address && (
-            <p className="mt-1 flex items-start gap-1 text-[11px] text-muted-foreground">
-              <MapPin className="mt-0.5 size-3 shrink-0" />
-              <span>{accommodation.address}</span>
+            <p className="mt-1 flex items-start gap-1 text-[9px] leading-snug text-muted-foreground sm:text-[11px]">
+              <MapPin className="mt-0.5 size-2.5 shrink-0 sm:size-3" />
+              <span className="break-words">
+                {accommodation.address}
+              </span>
             </p>
           )}
         </div>
+
         {accommodation.price !== null && (
-          <span className="w-fit shrink-0 rounded-md border border-border/40 bg-background px-2 py-1 font-mono font-bold">
+          <span className="shrink-0 rounded border border-border/40 bg-background px-1.5 py-1 font-mono text-[10px] font-bold sm:rounded-md sm:px-2 sm:text-xs">
             € {Number(accommodation.price).toFixed(2)}
           </span>
         )}
       </div>
 
-      {(accommodation.check_in_date || accommodation.check_out_date || accommodation.check_in_time || accommodation.check_out_time) && (
-        <div className="mt-3 grid grid-cols-2 gap-2">
-          <div className="rounded-lg border border-border/30 bg-background/60 p-2">
-            <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Check-in</p>
-            <p className="mt-1 font-medium text-foreground">
-              {accommodation.check_in_date ? formatDate(accommodation.check_in_date) : 'Non inserito'}
-              {accommodation.check_in_time && ` · ${formatTime(accommodation.check_in_time)}`}
+      {(accommodation.check_in_date ||
+        accommodation.check_out_date ||
+        accommodation.check_in_time ||
+        accommodation.check_out_time) && (
+        <div className="mt-2 grid grid-cols-2 gap-1.5 sm:mt-3 sm:gap-2">
+          <div className="min-w-0 rounded-md border border-border/30 bg-background/60 p-1.5 sm:rounded-lg sm:p-2">
+            <p className="text-[7px] font-bold uppercase tracking-wide text-muted-foreground sm:text-[9px]">
+              Check-in
+            </p>
+
+            <p className="mt-0.5 break-words text-[9px] font-medium leading-tight text-foreground sm:mt-1 sm:text-xs">
+              {accommodation.check_in_date
+                ? formatDate(accommodation.check_in_date)
+                : '—'}
+
+              {accommodation.check_in_time && (
+                <>
+                  <br />
+                  {formatTime(accommodation.check_in_time)}
+                </>
+              )}
             </p>
           </div>
-          <div className="rounded-lg border border-border/30 bg-background/60 p-2">
-            <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Check-out</p>
-            <p className="mt-1 font-medium text-foreground">
-              {accommodation.check_out_date ? formatDate(accommodation.check_out_date) : 'Non inserito'}
-              {accommodation.check_out_time && ` · ${formatTime(accommodation.check_out_time)}`}
+
+          <div className="min-w-0 rounded-md border border-border/30 bg-background/60 p-1.5 sm:rounded-lg sm:p-2">
+            <p className="text-[7px] font-bold uppercase tracking-wide text-muted-foreground sm:text-[9px]">
+              Check-out
+            </p>
+
+            <p className="mt-0.5 break-words text-[9px] font-medium leading-tight text-foreground sm:mt-1 sm:text-xs">
+              {accommodation.check_out_date
+                ? formatDate(accommodation.check_out_date)
+                : '—'}
+
+              {accommodation.check_out_time && (
+                <>
+                  <br />
+                  {formatTime(accommodation.check_out_time)}
+                </>
+              )}
             </p>
           </div>
         </div>
       )}
 
-      <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
-        {accommodation.parking_available && (
-          <span className="rounded-md bg-background px-2 py-1">🅿️ Parcheggio moto</span>
-        )}
-      </div>
+      {accommodation.parking_available && (
+        <div className="mt-2">
+          <span className="inline-flex rounded bg-background px-1.5 py-1 text-[9px] text-muted-foreground sm:rounded-md sm:px-2 sm:text-[11px]">
+            🅿️ Parcheggio moto
+          </span>
+        </div>
+      )}
 
       {accommodation.notes && (
-        <p className="mt-2 whitespace-pre-line rounded-lg bg-background/60 p-2 text-[11px] leading-relaxed text-muted-foreground">
+        <p className="mt-2 whitespace-pre-line rounded-md bg-background/60 p-1.5 text-[9px] leading-snug text-muted-foreground sm:rounded-lg sm:p-2 sm:text-[11px] sm:leading-relaxed">
           {accommodation.notes}
         </p>
       )}
 
-      <div className="mt-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+      <div className="mt-2 grid grid-cols-2 gap-1.5 sm:mt-3 sm:flex sm:flex-wrap sm:gap-2">
         {bookingLink && bookingLabel && (
-          <a
-            href={bookingLink}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex h-10 items-center justify-center gap-1 rounded-md border border-border bg-background px-3 text-[11px] font-medium hover:bg-secondary/40"
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-7 min-w-0 gap-1 rounded-md px-2 text-[9px] sm:h-8 sm:text-[11px]"
+            asChild
           >
-            {bookingLabel}
-            <ExternalLink className="size-3" />
-          </a>
+            <a
+              href={bookingLink}
+              target="_blank"
+              rel="noreferrer"
+            >
+              {bookingLabel}
+              <ExternalLink className="size-2.5 sm:size-3" />
+            </a>
+          </Button>
         )}
+
         {mapsUrl && (
-          <a
-            href={mapsUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex h-10 items-center justify-center gap-1 rounded-md border border-border bg-background px-3 text-[11px] font-medium hover:bg-secondary/40"
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-7 min-w-0 gap-1 rounded-md px-2 text-[9px] sm:h-8 sm:text-[11px]"
+            asChild
           >
-            Maps
-            <MapPin className="size-3" />
-          </a>
+            <a
+              href={mapsUrl}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Maps
+              <MapPin className="size-2.5 sm:size-3" />
+            </a>
+          </Button>
         )}
-        <Button type="button" variant="outline" size="sm" onClick={() => onEdit(accommodation)} className="h-10 gap-1 text-[11px]">
-          <Pencil className="size-3" /> Modifica
+
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => onEdit(accommodation)}
+          className="h-7 min-w-0 gap-1 rounded-md px-2 text-[9px] sm:h-8 sm:text-[11px]"
+        >
+          <Pencil className="size-2.5 sm:size-3" />
+          Modifica
         </Button>
-        <Button type="button" variant="outline" size="sm" onClick={() => onDelete(accommodation.id)} className="h-10 gap-1 text-[11px] text-destructive hover:text-destructive">
-          <Trash2 className="size-3" /> Elimina
+
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => onDelete(accommodation.id)}
+          className="h-7 min-w-0 gap-1 rounded-md px-2 text-[9px] text-destructive hover:text-destructive sm:h-8 sm:text-[11px]"
+        >
+          <Trash2 className="size-2.5 sm:size-3" />
+          Elimina
         </Button>
       </div>
     </div>
