@@ -864,7 +864,7 @@ for (const p of pointsData ?? []) {
   return (
     <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-background text-foreground">
       <header className="border-b border-border bg-card/60 backdrop-blur sticky top-0 z-50">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-3 py-3 sm:px-4 sm:py-4">
+        <div className="mx-auto flex w-full max-w-[1600px] items-center justify-between px-3 py-3 sm:px-6 sm:py-4 lg:px-8">
           <div className="flex min-w-0 items-center gap-2.5">
             <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm sm:size-10">
               <Bike className="size-5.5" />
@@ -883,7 +883,7 @@ for (const p of pointsData ?? []) {
         </div>
       </header>
 
-      <main className="mx-auto max-w-5xl px-3 py-4 pb-24 sm:px-6 sm:py-6 sm:pb-6">
+      <main className="mx-auto w-full max-w-[1600px] px-3 py-4 pb-24 sm:px-6 sm:py-6 sm:pb-6 lg:px-8">
         {mode === 'select' && (
           <div className="space-y-6">
             <div className="grid gap-4 sm:grid-cols-2">
@@ -1064,7 +1064,7 @@ for (const p of pointsData ?? []) {
 
 
               {activeTab === 'expenses' && (
-                <div className="space-y-4 grid lg:grid-cols-[1fr_320px] gap-4 lg:space-y-0">
+                <div className="grid gap-4 space-y-4 lg:grid-cols-[minmax(0,1fr)_380px] lg:space-y-0 xl:grid-cols-[minmax(0,1fr)_420px]">
                   
                   <div className="space-y-4">
                     <div className="rounded-xl border border-border bg-card p-4 shadow-sm space-y-3">

@@ -165,7 +165,7 @@ export function PlanningTab({
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-3 rounded-xl border border-border/40 bg-secondary/10 p-3 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 rounded-xl border border-border/40 bg-secondary/10 p-3 sm:grid-cols-3 xl:grid-cols-4">
         <div className="space-y-0.5">
           <span className="text-[10px] uppercase font-bold text-muted-foreground">Data</span>
           <input
@@ -210,7 +210,7 @@ export function PlanningTab({
             />
             </div>
 
-        <div className="space-y-0.5 sm:col-span-2">
+        <div className="space-y-0.5 sm:col-span-2 xl:col-span-3">
           <span className="text-[10px] uppercase font-bold text-muted-foreground">Titolo tappa</span>
           <input
             type="text"
@@ -221,7 +221,7 @@ export function PlanningTab({
           />
         </div>
 
-        <div className="space-y-0.5 sm:col-span-3">
+        <div className="space-y-0.5 sm:col-span-3 xl:col-span-4">
           <span className="text-[10px] uppercase font-bold text-muted-foreground">Note</span>
           <textarea
             value={dayNotes}
@@ -232,7 +232,7 @@ export function PlanningTab({
           />
         </div>
 
-        <div className="sm:col-span-3">
+        <div className="sm:col-span-3 xl:col-span-4">
           <Button
             type="button"
             onClick={editingDayId ? updateTripDay : addTripDay}
