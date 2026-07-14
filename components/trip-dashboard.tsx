@@ -886,7 +886,7 @@ for (const p of pointsData ?? []) {
       <main className="mx-auto w-full max-w-[1600px] px-3 py-4 pb-24 sm:px-6 sm:py-6 sm:pb-6 lg:px-8">
         {mode === 'select' && (
           <div className="space-y-6">
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4">
               <div className="rounded-xl border border-border bg-card p-5 flex flex-col justify-between space-y-4 shadow-sm">
                 <div className="space-y-2">
                   <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
@@ -898,21 +898,8 @@ for (const p of pointsData ?? []) {
                   </p>
                 </div>
                 <Button onClick={startLiveTrip} className="w-full gap-2 text-xs font-bold rounded-xl h-10">
-                  Avvia Viaggio Live 🏍️
+                  Nuovo Viaggio 🏍️
                 </Button>
-              </div>
-
-              <div className="rounded-xl border border-border bg-card p-5 flex flex-col justify-between space-y-4 shadow-sm">
-                <div className="space-y-2">
-                  <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                    <MapIcon className="size-5" />
-                  </div>
-                  <h3 className="text-base font-bold">Importa File GPX</h3>
-                  <p className="text-xs text-muted-foreground">
-                    Crea un nuovo viaggio importando direttamente il file del navigatore per estrarre la mappa, i chilometri e configurare i costi.
-                  </p>
-                </div>
-                <GpxUploader onFile={handleFile} loading={loading} error={error} />
               </div>
             </div>
 

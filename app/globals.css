@@ -162,4 +162,22 @@
   body {
     @apply bg-background text-foreground;
   }
+
+}
+button,
+a,
+input,
+select,
+textarea {
+  min-width: 0;
+}
+
+button {
+  max-width: 100%;
+}
+
+@media (max-width: 639px) {
+  button {
+    font-size: 0.75rem;
+  }
 }
