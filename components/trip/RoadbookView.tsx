@@ -1,4 +1,5 @@
 import { ExternalLink, MapPin } from 'lucide-react'
+import { ExportTripPdfButton } from '@/components/trip/ExportTripPdfButton'
 
 export type RoadbookTripDay = {
   id: string
@@ -9,9 +10,6 @@ export type RoadbookTripDay = {
   end_city: string | null
   planned_km: number | null
   notes: string | null
-  free_cancellation_until: string | null
-  payment_date: string | null
-  pay_at_property: boolean | null
 }
 
 export type RoadbookAccommodation = {
@@ -28,11 +26,32 @@ export type RoadbookAccommodation = {
   price: number | null
   parking_available: boolean | null
   notes: string | null
+  free_cancellation_until: string | null
+  payment_date: string | null
+  pay_at_property: boolean | null
+}
+
+export type RoadbookExpense = {
+  category_id: number
+  amount: number
+  notes?: string
+  expense_date?: string
+}
+
+export type RoadbookExpenseCategory = {
+  id: number
+  name: string
 }
 
 type RoadbookViewProps = {
+  title: string
+  startDate: string
+  endDate: string
+  tripNotes: string
   tripDays: RoadbookTripDay[]
   accommodations: RoadbookAccommodation[]
+  expenses: RoadbookExpense[]
+  expenseCategories: RoadbookExpenseCategory[]
   formatDate: (iso: string | null) => string
 }
 
@@ -42,169 +61,260 @@ function formatTime(value: string | null): string {
 
 function bookingInfo(accommodation?: RoadbookAccommodation) {
   if (!accommodation) return null
+
   if (accommodation.booking_url) {
     return { label: 'Booking', href: accommodation.booking_url }
   }
+
   if (accommodation.airbnb_url) {
     return { label: 'Airbnb', href: accommodation.airbnb_url }
   }
+
   return null
 }
 
 export function RoadbookView({
+  title,
+  startDate,
+  endDate,
+  tripNotes,
   tripDays,
   accommodations,
+  expenses,
+  expenseCategories,
   formatDate,
 }: RoadbookViewProps) {
+  const totalHotelCost = accommodations.reduce(
+    (sum, accommodation) => sum + Number(accommodation.price || 0),
+    0,
+  )
+
+  const totalExpenses = expenses.reduce(
+    (sum, expense) => sum + Number(expense.amount || 0),
+    0,
+  )
+
   return (
     <div className="space-y-4">
-      <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
-        <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-          Roadbook viaggio
-        </p>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Panoramica completa di tappe, pernottamenti, costi e note.
-        </p>
+      <div className="rounded-xl border border-border bg-card p-3 shadow-sm sm:p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-[8px] font-bold uppercase tracking-wider text-muted-foreground sm:text-[11px]">
+              Roadbook viaggio
+            </p>
+            <p className="mt-1 text-[9px] text-muted-foreground sm:text-xs">
+              Panoramica completa di tappe, pernottamenti, costi e note.
+            </p>
+          </div>
+
+          <ExportTripPdfButton
+            title={title}
+            startDate={startDate}
+            endDate={endDate}
+            tripNotes={tripNotes}
+            tripDays={tripDays}
+            accommodations={accommodations}
+            expenses={expenses}
+            expenseCategories={expenseCategories}
+          />
+        </div>
+
+        <div className="mt-3 grid grid-cols-3 gap-2">
+          <div className="rounded-lg bg-secondary/10 p-2 text-center">
+            <p className="text-[7px] font-bold uppercase text-muted-foreground sm:text-[9px]">
+              Km previsti
+            </p>
+            <p className="mt-1 text-[10px] font-black sm:text-sm">
+              {tripDays
+                .reduce(
+                  (sum, day) => sum + Number(day.planned_km || 0),
+                  0,
+                )
+                .toFixed(1)}
+            </p>
+          </div>
+
+          <div className="rounded-lg bg-secondary/10 p-2 text-center">
+            <p className="text-[7px] font-bold uppercase text-muted-foreground sm:text-[9px]">
+              Hotel
+            </p>
+            <p className="mt-1 text-[10px] font-black sm:text-sm">
+              € {totalHotelCost.toFixed(2)}
+            </p>
+          </div>
+
+          <div className="rounded-lg bg-secondary/10 p-2 text-center">
+            <p className="text-[7px] font-bold uppercase text-muted-foreground sm:text-[9px]">
+              Spese
+            </p>
+            <p className="mt-1 text-[10px] font-black sm:text-sm">
+              € {totalExpenses.toFixed(2)}
+            </p>
+          </div>
+        </div>
       </div>
 
       <div className="space-y-3 sm:hidden">
         {tripDays.map((day) => {
-          const accommodation = accommodations.find(
+          const dayAccommodations = accommodations.filter(
             (item) => item.trip_day_id === day.id,
           )
-          const booking = bookingInfo(accommodation)
-          const mapsUrl = accommodation?.address
-            ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(accommodation.address)}`
-            : null
 
           return (
             <article
               key={day.id}
-              className="rounded-2xl border border-border bg-card p-4 shadow-sm"
+              className="rounded-xl border border-border bg-card p-2.5 shadow-sm"
             >
-              <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  <p className="text-[7px] font-bold uppercase tracking-wider text-muted-foreground">
                     Giorno {day.day_number} · {formatDate(day.travel_date)}
                   </p>
-                  <h3 className="mt-1 text-base font-black text-foreground">
+                  <h3 className="mt-1 text-[11px] font-black leading-tight text-foreground">
                     {day.start_city || '—'} → {day.end_city || '—'}
                   </h3>
                   {day.title && (
-                    <p className="mt-1 text-xs text-muted-foreground">{day.title}</p>
+                    <p className="mt-1 text-[8px] text-muted-foreground">
+                      {day.title}
+                    </p>
                   )}
                 </div>
 
                 {day.planned_km !== null && (
-                  <span className="shrink-0 rounded-lg border border-border bg-secondary/30 px-2 py-1 font-mono text-xs font-bold">
+                  <span className="shrink-0 rounded border border-border bg-secondary/30 px-1.5 py-1 font-mono text-[8px] font-bold">
                     {Number(day.planned_km).toFixed(0)} km
                   </span>
                 )}
               </div>
 
-              <div className="mt-4 rounded-xl border border-border/60 bg-secondary/10 p-3">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                  Pernottamento
-                </p>
-
-                {accommodation ? (
-                  <div className="mt-2 space-y-2">
-                    <p className="font-bold text-foreground">🏨 {accommodation.name}</p>
-
-                    {accommodation.address && (
-                      <p className="flex items-start gap-1 text-xs text-muted-foreground">
-                        <MapPin className="mt-0.5 size-3.5 shrink-0" />
-                        <span>{accommodation.address}</span>
-                      </p>
-                    )}
-
-                    <div className="grid grid-cols-2 gap-2 text-xs">
-                      <div className="rounded-lg bg-background p-2">
-                        <p className="text-[9px] font-bold uppercase text-muted-foreground">Check-in</p>
-                        <p className="mt-1 font-medium">
-                          {formatDate(accommodation.check_in_date)} · {formatTime(accommodation.check_in_time)}
-                        </p>
-                      </div>
-                      <div className="rounded-lg bg-background p-2">
-                        <p className="text-[9px] font-bold uppercase text-muted-foreground">Check-out</p>
-                        <p className="mt-1 font-medium">
-                          {formatDate(accommodation.check_out_date)} · {formatTime(accommodation.check_out_time)}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-2 text-xs sm:grid-cols-2">
-                      {accommodation.free_cancellation_until && (
-                        <div className="rounded-lg bg-background p-2">
-                          <p className="text-[9px] font-bold uppercase text-muted-foreground">
-                            Disdetta gratuita
-                          </p>
-                          <p className="mt-1 font-medium">
-                            Entro {formatDate(accommodation.free_cancellation_until)}
-                          </p>
-                        </div>
-                      )}
-
-                      <div className="rounded-lg bg-background p-2">
-                        <p className="text-[9px] font-bold uppercase text-muted-foreground">
-                          Pagamento
-                        </p>
-                        <p className="mt-1 font-medium">
-                          {accommodation.pay_at_property
-                            ? 'In struttura'
-                            : accommodation.payment_date
-                              ? `Addebito ${formatDate(accommodation.payment_date)}`
-                              : 'Non indicato'}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-2 text-xs">
-                      {accommodation.price !== null && (
-                        <span className="rounded-md bg-background px-2 py-1 font-mono font-bold">
-                          € {Number(accommodation.price).toFixed(2)}
-                        </span>
-                      )}
-                      {accommodation.parking_available && (
-                        <span className="rounded-md bg-background px-2 py-1">🅿️ Moto</span>
-                      )}
-                    </div>
-
-                    <div className="flex flex-wrap gap-2 pt-1">
-                      {booking && (
-                        <a
-                          href={booking.href}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex h-10 items-center gap-1 rounded-lg border border-border bg-background px-3 text-xs font-bold"
-                        >
-                          {booking.label}
-                          <ExternalLink className="size-3" />
-                        </a>
-                      )}
-                      {mapsUrl && (
-                        <a
-                          href={mapsUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex h-10 items-center gap-1 rounded-lg border border-border bg-background px-3 text-xs font-bold"
-                        >
-                          Maps
-                          <MapPin className="size-3" />
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <p className="mt-2 text-xs italic text-muted-foreground">
+              {dayAccommodations.length === 0 ? (
+                <div className="mt-2 rounded-lg border border-dashed border-border p-2">
+                  <p className="text-[8px] italic text-muted-foreground">
                     Nessun pernottamento previsto.
                   </p>
-                )}
-              </div>
+                </div>
+              ) : (
+                dayAccommodations.map((accommodation) => {
+                  const booking = bookingInfo(accommodation)
+                  const mapsUrl = accommodation.address
+                    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                        accommodation.address,
+                      )}`
+                    : null
 
-              {(day.notes || accommodation?.notes) && (
-                <div className="mt-3 rounded-xl bg-secondary/10 p-3 text-xs text-muted-foreground">
-                  {day.notes || accommodation?.notes}
+                  return (
+                    <div
+                      key={accommodation.id}
+                      className="mt-2 rounded-lg border border-border/60 bg-secondary/10 p-2"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="min-w-0 break-words text-[9px] font-bold">
+                          🏨 {accommodation.name}
+                        </p>
+
+                        {accommodation.price !== null && (
+                          <span className="shrink-0 rounded bg-background px-1.5 py-0.5 font-mono text-[8px] font-bold">
+                            € {Number(accommodation.price).toFixed(2)}
+                          </span>
+                        )}
+                      </div>
+
+                      {accommodation.address && (
+                        <p className="mt-1 flex items-start gap-1 text-[8px] text-muted-foreground">
+                          <MapPin className="mt-0.5 size-2.5 shrink-0" />
+                          <span>{accommodation.address}</span>
+                        </p>
+                      )}
+
+                      <div className="mt-2 grid grid-cols-2 gap-1.5">
+                        <div className="rounded bg-background p-1.5">
+                          <p className="text-[6px] font-bold uppercase text-muted-foreground">
+                            Check-in
+                          </p>
+                          <p className="mt-0.5 text-[8px] font-medium">
+                            {formatDate(accommodation.check_in_date)}
+                            <br />
+                            {formatTime(accommodation.check_in_time)}
+                          </p>
+                        </div>
+
+                        <div className="rounded bg-background p-1.5">
+                          <p className="text-[6px] font-bold uppercase text-muted-foreground">
+                            Check-out
+                          </p>
+                          <p className="mt-0.5 text-[8px] font-medium">
+                            {formatDate(accommodation.check_out_date)}
+                            <br />
+                            {formatTime(accommodation.check_out_time)}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="mt-1.5 grid grid-cols-1 gap-1.5">
+                        {accommodation.free_cancellation_until && (
+                          <div className="rounded bg-background p-1.5">
+                            <p className="text-[6px] font-bold uppercase text-muted-foreground">
+                              Disdetta gratuita
+                            </p>
+                            <p className="mt-0.5 text-[8px] font-medium">
+                              Entro{' '}
+                              {formatDate(
+                                accommodation.free_cancellation_until,
+                              )}
+                            </p>
+                          </div>
+                        )}
+
+                        <div className="rounded bg-background p-1.5">
+                          <p className="text-[6px] font-bold uppercase text-muted-foreground">
+                            Pagamento
+                          </p>
+                          <p className="mt-0.5 text-[8px] font-medium">
+                            {accommodation.pay_at_property
+                              ? 'In struttura'
+                              : accommodation.payment_date
+                                ? `Addebito ${formatDate(
+                                    accommodation.payment_date,
+                                  )}`
+                                : 'Non indicato'}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {booking && (
+                          <a
+                            href={booking.href}
+                            className="inline-flex h-7 items-center gap-1 rounded border border-border bg-background px-2 text-[8px] font-bold"
+                          >
+                            {booking.label}
+                            <ExternalLink className="size-2.5" />
+                          </a>
+                        )}
+
+                        {mapsUrl && (
+                          <a
+                            href={mapsUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex h-7 items-center gap-1 rounded border border-border bg-background px-2 text-[8px] font-bold"
+                          >
+                            Maps
+                            <MapPin className="size-2.5" />
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })
+              )}
+
+              {(day.notes ||
+                dayAccommodations.some((item) => item.notes)) && (
+                <div className="mt-2 rounded-lg bg-secondary/10 p-2 text-[8px] text-muted-foreground">
+                  {[day.notes, ...dayAccommodations.map((item) => item.notes)]
+                    .filter(Boolean)
+                    .join('\n')}
                 </div>
               )}
             </article>
@@ -213,9 +323,10 @@ export function RoadbookView({
       </div>
 
       <div className="hidden overflow-x-auto rounded-xl border border-border bg-card shadow-sm sm:block">
-        <table className="min-w-[1100px] w-full text-xs">
-          <thead className="bg-secondary/40 text-[10px] uppercase text-muted-foreground">
+        <table className="min-w-[1450px] w-full text-[10px]">
+          <thead className="bg-secondary/40 text-[9px] uppercase text-muted-foreground">
             <tr>
+              <th className="px-3 py-3 text-left">Giorno</th>
               <th className="px-3 py-3 text-left">Tappa</th>
               <th className="px-3 py-3 text-left">Arrivo</th>
               <th className="px-3 py-3 text-left">Partenza</th>
@@ -223,87 +334,122 @@ export function RoadbookView({
               <th className="px-3 py-3 text-left">Pernotto</th>
               <th className="px-3 py-3 text-left">Indirizzo</th>
               <th className="px-3 py-3 text-left">Check-in</th>
+              <th className="px-3 py-3 text-left">Check-out</th>
               <th className="px-3 py-3 text-right">Costo</th>
-              <th className="px-3 py-3 text-left">Link</th>
               <th className="px-3 py-3 text-left">Disdetta</th>
               <th className="px-3 py-3 text-left">Pagamento</th>
+              <th className="px-3 py-3 text-left">Link</th>
               <th className="px-3 py-3 text-left">Note</th>
             </tr>
           </thead>
+
           <tbody>
-            {tripDays.map((day) => {
-              const accommodation = accommodations.find(
+            {tripDays.flatMap((day) => {
+              const dayAccommodations = accommodations.filter(
                 (item) => item.trip_day_id === day.id,
               )
-              const booking = bookingInfo(accommodation)
 
-              return (
-                <tr
-                  key={day.id}
-                  className="border-t border-border/50 odd:bg-background even:bg-secondary/10"
-                >
-                  <td className="px-3 py-3 font-bold text-foreground">
-                    {day.start_city || '—'} → {day.end_city || '—'}
-                  </td>
-                  <td className="px-3 py-3 text-muted-foreground">
-                    {formatDate(day.travel_date)}
-                  </td>
-                  <td className="px-3 py-3 text-muted-foreground">
-                    {accommodation?.check_out_date
-                      ? formatDate(accommodation.check_out_date)
-                      : formatDate(day.travel_date)}
-                  </td>
-                  <td className="px-3 py-3 text-right font-mono">
-                    {day.planned_km !== null
-                      ? Number(day.planned_km).toFixed(0)
-                      : '—'}
-                  </td>
-                  <td className="px-3 py-3">{accommodation?.name || '—'}</td>
-                  <td className="max-w-[220px] truncate px-3 py-3 text-muted-foreground">
-                    {accommodation?.address || '—'}
-                  </td>
-                  <td className="px-3 py-3">
-                    {accommodation
-                      ? `${formatDate(accommodation.check_in_date)} ${formatTime(accommodation.check_in_time)}`
-                      : '—'}
-                  </td>
-                  <td className="px-3 py-3 text-right font-mono">
-                    {accommodation?.price !== null && accommodation?.price !== undefined
-                      ? `€ ${Number(accommodation.price).toFixed(2)}`
-                      : '—'}
-                  </td>
-                  <td className="px-3 py-3">
-                    {booking ? (
-                      <a
-                        href={booking.href}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-1 text-primary hover:underline"
-                      >
-                        {booking.label}
-                        <ExternalLink className="size-3" />
-                      </a>
-                    ) : (
-                      '—'
-                    )}
-                  </td>
-                  <td className="px-3 py-3 text-muted-foreground">
-                    {accommodation?.free_cancellation_until
-                      ? formatDate(accommodation.free_cancellation_until)
-                      : '—'}
-                  </td>
-                  <td className="px-3 py-3 text-muted-foreground">
-                    {accommodation?.pay_at_property
-                      ? 'In struttura'
-                      : accommodation?.payment_date
-                        ? formatDate(accommodation.payment_date)
+              const rows =
+                dayAccommodations.length > 0
+                  ? dayAccommodations
+                  : [null]
+
+              return rows.map((accommodation, index) => {
+                const booking = accommodation
+                  ? bookingInfo(accommodation)
+                  : null
+
+                return (
+                  <tr
+                    key={`${day.id}-${accommodation?.id || 'no-hotel'}`}
+                    className="border-t border-border/50 odd:bg-background even:bg-secondary/10"
+                  >
+                    <td className="px-3 py-3 font-mono">
+                      {index === 0 ? day.day_number : ''}
+                    </td>
+                    <td className="px-3 py-3 font-bold text-foreground">
+                      {index === 0
+                        ? `${day.start_city || '—'} → ${
+                            day.end_city || '—'
+                          }`
+                        : '↳ altro pernottamento'}
+                    </td>
+                    <td className="px-3 py-3 text-muted-foreground">
+                      {index === 0 ? formatDate(day.travel_date) : ''}
+                    </td>
+                    <td className="px-3 py-3 text-muted-foreground">
+                      {accommodation?.check_out_date
+                        ? formatDate(accommodation.check_out_date)
+                        : index === 0
+                          ? formatDate(day.travel_date)
+                          : ''}
+                    </td>
+                    <td className="px-3 py-3 text-right font-mono">
+                      {index === 0 && day.planned_km !== null
+                        ? Number(day.planned_km).toFixed(0)
+                        : ''}
+                    </td>
+                    <td className="px-3 py-3">
+                      {accommodation?.name || '—'}
+                    </td>
+                    <td className="max-w-[220px] px-3 py-3 text-muted-foreground">
+                      {accommodation?.address || '—'}
+                    </td>
+                    <td className="px-3 py-3">
+                      {accommodation
+                        ? `${formatDate(
+                            accommodation.check_in_date,
+                          )} ${formatTime(accommodation.check_in_time)}`
                         : '—'}
-                  </td>
-                  <td className="max-w-[260px] truncate px-3 py-3 text-muted-foreground">
-                    {day.notes || accommodation?.notes || '—'}
-                  </td>
-                </tr>
-              )
+                    </td>
+                    <td className="px-3 py-3">
+                      {accommodation
+                        ? `${formatDate(
+                            accommodation.check_out_date,
+                          )} ${formatTime(accommodation.check_out_time)}`
+                        : '—'}
+                    </td>
+                    <td className="px-3 py-3 text-right font-mono">
+                      {accommodation?.price !== null &&
+                      accommodation?.price !== undefined
+                        ? `€ ${Number(accommodation.price).toFixed(2)}`
+                        : '—'}
+                    </td>
+                    <td className="px-3 py-3 text-muted-foreground">
+                      {accommodation?.free_cancellation_until
+                        ? formatDate(
+                            accommodation.free_cancellation_until,
+                          )
+                        : '—'}
+                    </td>
+                    <td className="px-3 py-3 text-muted-foreground">
+                      {accommodation?.pay_at_property
+                        ? 'In struttura'
+                        : accommodation?.payment_date
+                          ? formatDate(accommodation.payment_date)
+                          : '—'}
+                    </td>
+                    <td className="px-3 py-3">
+                      {booking ? (
+                        <a
+                          href={booking.href}
+                          className="inline-flex items-center gap-1 text-primary hover:underline"
+                        >
+                          {booking.label}
+                          <ExternalLink className="size-3" />
+                        </a>
+                      ) : (
+                        '—'
+                      )}
+                    </td>
+                    <td className="max-w-[260px] px-3 py-3 text-muted-foreground">
+                      {[day.notes, accommodation?.notes]
+                        .filter(Boolean)
+                        .join(' · ') || '—'}
+                    </td>
+                  </tr>
+                )
+              })
             })}
           </tbody>
         </table>

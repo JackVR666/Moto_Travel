@@ -1078,8 +1078,14 @@ for (const p of pointsData ?? []) {
                  
                  {activeTab === 'roadbook' && (
                     <RoadbookView
+                      title={customName}
+                      startDate={customDate}
+                      endDate={customEndDate}
+                      tripNotes={tripNotes}
                       tripDays={tripDays}
                       accommodations={accommodations}
+                      expenses={expenses}
+                      expenseCategories={expenseCategories}
                       formatDate={formatDate}
                     />
                   )}
