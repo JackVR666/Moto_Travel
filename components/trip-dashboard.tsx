@@ -2170,8 +2170,7 @@ for (const p of pointsData ?? []) {
           }
         }
       `}</style>
-          </main>
-        </div>
+          </div>
       </div>
     </>
   )
