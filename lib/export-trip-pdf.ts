@@ -128,6 +128,13 @@ function stayDayLabel(
     : `Giorni ${numbers.join('/')}`
 }
 
+function routeLabel(
+  startCity: string | null,
+  endCity: string | null,
+): string {
+  return `${startCity || '—'} - ${endCity || '—'}`
+}
+
 function paymentLabel(accommodation: PdfAccommodation): string {
   if (accommodation.pay_at_property) return 'In struttura'
   if (accommodation.payment_date) {
@@ -461,8 +468,8 @@ export async function exportTripPdf({
 
     if (dayAccommodations.length === 0) {
       summaryRows.push([
-        String(day.day_number),
-        `${day.start_city || '—'} → ${day.end_city || '—'}`,
+        `Giorno ${day.day_number}`,
+        routeLabel(day.start_city, day.end_city),
         formatDate(day.travel_date),
         day.planned_km !== null
           ? Number(day.planned_km).toFixed(0)
@@ -477,10 +484,10 @@ export async function exportTripPdf({
 
     dayAccommodations.forEach((accommodation, index) => {
       summaryRows.push([
-        index === 0 ? stayDayLabel(accommodation, sortedDays) : '',
+        index === 0 ? `Giorno ${day.day_number}` : '',
         index === 0
-          ? `${day.start_city || '—'} → ${day.end_city || '—'}`
-          : '↳ stesso soggiorno',
+          ? routeLabel(day.start_city, day.end_city)
+          : 'Stesso soggiorno',
         index === 0 ? formatDate(day.travel_date) : '',
         index === 0 && day.planned_km !== null
           ? Number(day.planned_km).toFixed(0)
@@ -500,7 +507,7 @@ export async function exportTripPdf({
     margin: { left: margin, right: margin, bottom: 12 },
     theme: 'grid',
     head: [[
-      'Giorno/i',
+      'Giorno',
       'Tappa',
       'Data',
       'Km',
@@ -533,14 +540,61 @@ export async function exportTripPdf({
       fillColor: [246, 248, 250],
     },
     columnStyles: {
-      0: { cellWidth: 23, halign: 'center' },
-      1: { cellWidth: 55, font: 'helvetica', fontStyle: 'normal' },
-      2: { cellWidth: 24, halign: 'center' },
-      3: { cellWidth: 14, halign: 'right' },
-      4: { cellWidth: 63, font: 'helvetica', fontStyle: 'normal' },
-      5: { cellWidth: 24, halign: 'right' },
-      6: { cellWidth: 42 },
-      7: { cellWidth: 22, halign: 'center' },
+      0: {
+        cellWidth: 24,
+        halign: 'center',
+        font: 'helvetica',
+        fontStyle: 'normal',
+      },
+      1: {
+        cellWidth: 68,
+        font: 'helvetica',
+        fontStyle: 'normal',
+        overflow: 'linebreak',
+      },
+      2: {
+        cellWidth: 24,
+        halign: 'center',
+        font: 'helvetica',
+        fontStyle: 'normal',
+      },
+      3: {
+        cellWidth: 14,
+        halign: 'right',
+        font: 'helvetica',
+        fontStyle: 'normal',
+      },
+      4: {
+        cellWidth: 54,
+        font: 'helvetica',
+        fontStyle: 'normal',
+        overflow: 'linebreak',
+      },
+      5: {
+        cellWidth: 23,
+        halign: 'right',
+        font: 'helvetica',
+        fontStyle: 'normal',
+      },
+      6: {
+        cellWidth: 39,
+        font: 'helvetica',
+        fontStyle: 'normal',
+        overflow: 'linebreak',
+      },
+      7: {
+        cellWidth: 20,
+        halign: 'center',
+        font: 'helvetica',
+        fontStyle: 'normal',
+      },
+    },
+    didParseCell: (data) => {
+      if (data.section === 'body') {
+        data.cell.styles.font = 'helvetica'
+        data.cell.styles.fontStyle = 'normal'
+        data.cell.styles.charSpace = 0
+      }
     },
     didDrawPage: footer,
   })
@@ -561,7 +615,7 @@ export async function exportTripPdf({
       : `Giorno ${day.day_number}`
 
     sectionHeader(
-      `${pageLabel} · ${day.start_city || '—'} → ${day.end_city || '—'}`,
+      `${pageLabel} · ${routeLabel(day.start_city, day.end_city)}`,
       `${formatDate(day.travel_date)} · ${
         day.planned_km !== null
           ? `${Number(day.planned_km).toFixed(0)} km`
@@ -581,7 +635,7 @@ export async function exportTripPdf({
     doc.setFont('helvetica', 'normal')
     doc.setFontSize(9)
     const routeLines = doc.splitTextToSize(
-      `${day.start_city || '—'} → ${day.end_city || '—'}`,
+      routeLabel(day.start_city, day.end_city),
       76,
     )
     doc.text(routeLines, 15, 53)
@@ -648,7 +702,7 @@ export async function exportTripPdf({
         doc.addPage('a4', 'landscape')
         sectionHeader(
           `${pageLabel} · Pernottamenti`,
-          `${day.start_city || '—'} → ${day.end_city || '—'}`,
+          routeLabel(day.start_city, day.end_city),
         )
         hotelY = 36
       }
