@@ -840,7 +840,7 @@ export async function exportTripPdf({
 
   const summaryRows: string[][] = []
 
-  sortedDays.forEach((day) => {
+  for (const day of sortedDays) {
     const dayAccommodations = accommodations.filter(
       (accommodation) => accommodation.trip_day_id === day.id,
     )
@@ -1314,7 +1314,7 @@ export async function exportTripPdf({
     })
 
     footer()
-  })
+  }
 
   // ==========================================================
   // ULTIMA PAGINA — RIEPILOGO ECONOMICO
