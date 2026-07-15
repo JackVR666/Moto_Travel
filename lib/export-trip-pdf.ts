@@ -858,7 +858,7 @@ export async function exportTripPdf({
         '—',
         '—',
       ])
-      return
+      continue
     }
 
     dayAccommodations.forEach((accommodation, index) => {
@@ -879,7 +879,7 @@ export async function exportTripPdf({
         accommodation.breakfast_included ? 'Inclusa' : 'No',
       ])
     })
-  })
+  }
 
   autoTable(doc, {
     startY: 36,
@@ -1018,7 +1018,7 @@ export async function exportTripPdf({
   // ==========================================================
   // PAGINE SUCCESSIVE — DETTAGLIO GIORNATE
   // ==========================================================
-  sortedDays.forEach((day) => {
+  for (const day of sortedDays) {
     const dayAccommodations = accommodations.filter(
       (accommodation) => accommodation.trip_day_id === day.id,
     )
