@@ -9,6 +9,7 @@ import {
   type PdfExpense,
   type PdfExpenseCategory,
   type PdfTripDay,
+  type PdfTrackPoint,
 } from '@/lib/export-trip-pdf'
 
 type ExportTripPdfButtonProps = {
@@ -20,6 +21,7 @@ type ExportTripPdfButtonProps = {
   accommodations: PdfAccommodation[]
   expenses: PdfExpense[]
   expenseCategories: PdfExpenseCategory[]
+  trackPoints: PdfTrackPoint[]
 }
 
 export function ExportTripPdfButton({
@@ -31,6 +33,7 @@ export function ExportTripPdfButton({
   accommodations,
   expenses,
   expenseCategories,
+  trackPoints,
 }: ExportTripPdfButtonProps) {
   const [exporting, setExporting] = useState(false)
 
@@ -52,6 +55,7 @@ export function ExportTripPdfButton({
         accommodations,
         expenses,
         expenseCategories,
+        trackPoints,
       })
     } catch (error) {
       console.error('Errore generazione PDF:', error)

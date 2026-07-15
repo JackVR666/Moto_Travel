@@ -41,6 +41,15 @@ export type PdfExpenseCategory = {
   name: string
 }
 
+export type PdfTrackPoint = {
+  lat: number
+  lon: number
+  ele?: number | null
+  speed?: number | null
+  time?: string | null
+  tripDayId?: string | null
+}
+
 export type ExportTripPdfInput = {
   title: string
   startDate: string
@@ -50,6 +59,7 @@ export type ExportTripPdfInput = {
   accommodations: PdfAccommodation[]
   expenses: PdfExpense[]
   expenseCategories: PdfExpenseCategory[]
+  trackPoints: PdfTrackPoint[]
 }
 
 function formatDate(value: string | null | undefined): string {
@@ -178,6 +188,126 @@ async function loadImageAsDataUrl(path: string): Promise<string | null> {
   }
 }
 
+function trackPointsForDay(
+  day: PdfTripDay,
+  trackPoints: PdfTrackPoint[],
+): PdfTrackPoint[] {
+  const direct = trackPoints.filter(
+    (point) => point.tripDayId === day.id,
+  )
+
+  if (direct.length > 0) return direct
+
+  const dateKey = String(day.travel_date).slice(0, 10)
+
+  return trackPoints.filter(
+    (point) => point.time?.slice(0, 10) === dateKey,
+  )
+}
+
+function createTrackDiagram(
+  points: PdfTrackPoint[],
+  width = 1400,
+  height = 700,
+): string | null {
+  const valid = points.filter(
+    (point) =>
+      Number.isFinite(Number(point.lat)) &&
+      Number.isFinite(Number(point.lon)),
+  )
+
+  if (valid.length < 2 || typeof document === 'undefined') return null
+
+  const canvas = document.createElement('canvas')
+  canvas.width = width
+  canvas.height = height
+
+  const context = canvas.getContext('2d')
+  if (!context) return null
+
+  context.fillStyle = '#f8fafc'
+  context.fillRect(0, 0, width, height)
+
+  const latitudes = valid.map((point) => Number(point.lat))
+  const longitudes = valid.map((point) => Number(point.lon))
+
+  let minLat = Math.min(...latitudes)
+  let maxLat = Math.max(...latitudes)
+  let minLon = Math.min(...longitudes)
+  let maxLon = Math.max(...longitudes)
+
+  if (minLat === maxLat) {
+    minLat -= 0.001
+    maxLat += 0.001
+  }
+
+  if (minLon === maxLon) {
+    minLon -= 0.001
+    maxLon += 0.001
+  }
+
+  const padding = 55
+  const drawableWidth = width - padding * 2
+  const drawableHeight = height - padding * 2
+
+  const project = (point: PdfTrackPoint) => {
+    const x =
+      padding +
+      ((Number(point.lon) - minLon) / (maxLon - minLon)) *
+        drawableWidth
+
+    const y =
+      height -
+      padding -
+      ((Number(point.lat) - minLat) / (maxLat - minLat)) *
+        drawableHeight
+
+    return { x, y }
+  }
+
+  context.strokeStyle = '#d4af37'
+  context.lineWidth = Math.max(4, width / 260)
+  context.lineCap = 'round'
+  context.lineJoin = 'round'
+  context.beginPath()
+
+  const maximumPoints = 4500
+  const step = Math.max(1, Math.ceil(valid.length / maximumPoints))
+
+  valid.forEach((point, index) => {
+    if (index % step !== 0 && index !== valid.length - 1) return
+
+    const projected = project(point)
+
+    if (index === 0) {
+      context.moveTo(projected.x, projected.y)
+    } else {
+      context.lineTo(projected.x, projected.y)
+    }
+  })
+
+  context.stroke()
+
+  const start = project(valid[0])
+  const end = project(valid[valid.length - 1])
+
+  context.fillStyle = '#16a34a'
+  context.beginPath()
+  context.arc(start.x, start.y, 11, 0, Math.PI * 2)
+  context.fill()
+
+  context.fillStyle = '#dc2626'
+  context.beginPath()
+  context.arc(end.x, end.y, 11, 0, Math.PI * 2)
+  context.fill()
+
+  context.strokeStyle = '#cbd5e1'
+  context.lineWidth = 2
+  context.strokeRect(1, 1, width - 2, height - 2)
+
+  return canvas.toDataURL('image/png')
+}
+
 export async function exportTripPdf({
   title,
   startDate,
@@ -187,6 +317,7 @@ export async function exportTripPdf({
   accommodations,
   expenses,
   expenseCategories,
+  trackPoints,
 }: ExportTripPdfInput): Promise<void> {
   const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
     import('jspdf'),
@@ -600,6 +731,43 @@ export async function exportTripPdf({
   })
 
   // ==========================================================
+  // PAGINA — TRACCIA COMPLETA
+  // ==========================================================
+  if (trackPoints.length > 1) {
+    const fullTrackImage = createTrackDiagram(trackPoints)
+
+    if (fullTrackImage) {
+      doc.addPage('a4', 'landscape')
+      sectionHeader(
+        'Traccia completa del viaggio',
+        `${trackPoints.length} punti GPS · ${totalKm.toFixed(1)} km`,
+      )
+
+      doc.addImage(
+        fullTrackImage,
+        'PNG',
+        margin,
+        36,
+        pageWidth - margin * 2,
+        145,
+        undefined,
+        'FAST',
+      )
+
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(7)
+      doc.setTextColor(90)
+      doc.text(
+        'Rappresentazione schematica della traccia: punto verde = partenza, punto rosso = arrivo.',
+        margin,
+        187,
+      )
+
+      footer()
+    }
+  }
+
+  // ==========================================================
   // PAGINE SUCCESSIVE — DETTAGLIO GIORNATE
   // ==========================================================
   sortedDays.forEach((day) => {
@@ -664,7 +832,41 @@ export async function exportTripPdf({
     doc.setFontSize(8)
     doc.setTextColor(65)
     const dayNoteLines = doc.splitTextToSize(day.notes || '—', 76)
-    doc.text(dayNoteLines, 15, 97)
+    doc.text(dayNoteLines.slice(0, 5), 15, 97)
+
+    const dailyTrackPoints = trackPointsForDay(day, trackPoints)
+    const dailyTrackImage = createTrackDiagram(
+      dailyTrackPoints,
+      900,
+      520,
+    )
+
+    if (dailyTrackImage) {
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(8)
+      doc.setTextColor(35)
+      doc.text('Traccia del giorno', 15, 129)
+
+      doc.addImage(
+        dailyTrackImage,
+        'PNG',
+        15,
+        134,
+        76,
+        48,
+        undefined,
+        'FAST',
+      )
+
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(6.5)
+      doc.setTextColor(90)
+      doc.text(
+        `${dailyTrackPoints.length} punti GPS`,
+        15,
+        187,
+      )
+    }
 
     // Colonna destra: pernottamenti
     const rightX = 104

@@ -34,6 +34,10 @@ import { PlanningTab } from '@/components/trip/PlanningTab'
 import { TripOverview } from '@/components/trip/TripOverview'
 import { RoadbookView } from '@/components/trip/RoadbookView'
 import { TripTabs, type TripTab } from '@/components/trip/TripTabs'
+import {
+  associateTrackPointsToDays,
+  persistTrackPointDayAssignments,
+} from '@/lib/track-day-assignment'
 
 
 const TripMap = dynamic(() => import('@/components/trip-map'), {
@@ -112,6 +116,8 @@ export function TripDashboard() {
   const [loading, setLoading] = useState(false)
   const [saveState, setSaveState] = useState<SaveState>('idle')
   const [hasNewGpxLoaded, setHasNewGpxLoaded] = useState(false)
+  const [selectedTrackDayId, setSelectedTrackDayId] = useState<string>('all')
+  const [assigningTrackDays, setAssigningTrackDays] = useState(false)
 
   const fetchCategories = async () => {
     const { data } = await supabase
@@ -565,6 +571,7 @@ const removeTripDay = async (dayId: string) => {
     setTripNotes('')
     setEditingTripId(null)
     setHasNewGpxLoaded(false)
+    setSelectedTrackDayId('all')
   }
 
   const startEditingExpenses = async (tripId: string, title: string, dateStr: string, endDateStr: string) => {
@@ -573,6 +580,7 @@ const removeTripDay = async (dayId: string) => {
     setCustomName(title)
     setHasNewGpxLoaded(false)
     setActiveTab('overview')
+    setSelectedTrackDayId('all')
     
     const start = dateStr ? dateStr.slice(0, 10) : ''
     setCustomDate(start)
@@ -618,7 +626,7 @@ let from = 0
 while (true) {
   const { data: page, error: pageError } = await supabase
     .from('track_points')
-    .select('latitude, longitude, elevation, timestamp, speed')
+    .select('id, latitude, longitude, elevation, timestamp, speed, trip_day_id')
     .eq('trip_id', tripId)
     .order('timestamp', { ascending: true })
     .range(from, from + pageSize - 1)
@@ -643,7 +651,8 @@ while (true) {
             lon: Number(p.longitude), // Usa p.longitude, NON p.lon! Mappa su 'lon' per Leaflet
             ele: p.elevation !== null ? p.elevation : null,
             time: p.timestamp || null,
-            speed: p.speed !== null ? p.speed : null
+            speed: p.speed !== null ? p.speed : null,
+            tripDayId: p.trip_day_id || null,
           }))
 
           let recomputedMaxSpeed = 0
@@ -815,6 +824,13 @@ for (const p of pointsData ?? []) {
           
           if (pointsToUpdate.length > 0) {
             await updateTripWithGpx(editingTripId, finalKm, pointsToUpdate)
+
+            if (tripDays.length > 0) {
+              await persistTrackPointDayAssignments(
+                editingTripId,
+                tripDays,
+              )
+            }
           }
         }
 
@@ -866,6 +882,13 @@ for (const p of pointsData ?? []) {
 
             if (formattedPointsToSave.length > 0) {
               await updateTripWithGpx(tripData.id, kmToSave, formattedPointsToSave)
+
+              if (tripDays.length > 0) {
+                await persistTrackPointDayAssignments(
+                  tripData.id,
+                  tripDays,
+                )
+              }
             }
           }
 
@@ -894,8 +917,174 @@ for (const p of pointsData ?? []) {
     }
   }
 
+  const assignedTrackPoints = useMemo(() => {
+    if (!trip?.points) return []
+
+    return associateTrackPointsToDays(
+      trip.points as any[],
+      tripDays,
+    )
+  }, [trip?.points, tripDays])
+
+  const displayedTrackPoints = useMemo(() => {
+    if (selectedTrackDayId === 'all') return assignedTrackPoints
+
+    return assignedTrackPoints.filter(
+      (point) => point.tripDayId === selectedTrackDayId,
+    )
+  }, [assignedTrackPoints, selectedTrackDayId])
+
+  const displayedStops = useMemo(() => {
+    if (!trip?.stops) return []
+    if (selectedTrackDayId === 'all') return trip.stops
+
+    const selectedDay = tripDays.find(
+      (day) => day.id === selectedTrackDayId,
+    )
+
+    if (!selectedDay) return []
+
+    const selectedDate = String(selectedDay.travel_date).slice(0, 10)
+
+    return trip.stops.filter(
+      (stop) =>
+        new Date(stop.startTime).toISOString().slice(0, 10) ===
+        selectedDate,
+    )
+  }, [trip?.stops, tripDays, selectedTrackDayId])
+
+  const calculateDisplayedStats = useMemo(() => {
+    const points = displayedTrackPoints
+    if (points.length === 0) return null
+
+    const toRad = (degrees: number) => (degrees * Math.PI) / 180
+    const haversineKm = (
+      lat1: number,
+      lon1: number,
+      lat2: number,
+      lon2: number,
+    ) => {
+      const radius = 6371
+      const dLat = toRad(lat2 - lat1)
+      const dLon = toRad(lon2 - lon1)
+      const a =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos(toRad(lat1)) *
+          Math.cos(toRad(lat2)) *
+          Math.sin(dLon / 2) ** 2
+      return radius * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+    }
+
+    let km = 0
+    let maxSpeed = 0
+    let speedSum = 0
+    let speedCount = 0
+
+    for (let index = 1; index < points.length; index++) {
+      km += haversineKm(
+        Number(points[index - 1].lat),
+        Number(points[index - 1].lon),
+        Number(points[index].lat),
+        Number(points[index].lon),
+      )
+    }
+
+    for (const point of points) {
+      const speed = Number(point.speed)
+
+      if (
+        Number.isFinite(speed) &&
+        speed > 0 &&
+        speed <= MAX_PLAUSIBLE_SPEED_KMH
+      ) {
+        maxSpeed = Math.max(maxSpeed, speed)
+        speedSum += speed
+        speedCount++
+      }
+    }
+
+    const firstTime = points.find((point) => point.time)?.time
+    const lastTime = [...points].reverse().find((point) => point.time)?.time
+
+    let movingMinutes = 0
+
+    if (firstTime && lastTime) {
+      const start = new Date(firstTime).getTime()
+      const end = new Date(lastTime).getTime()
+
+      if (Number.isFinite(start) && Number.isFinite(end) && end > start) {
+        movingMinutes = Math.round((end - start) / 60_000)
+      }
+    }
+
+    const hours = Math.floor(movingMinutes / 60)
+    const minutes = movingMinutes % 60
+
+    return {
+      km: km.toFixed(1),
+      maxSpeed: maxSpeed > 0 ? maxSpeed.toFixed(0) : '—',
+      averageSpeed:
+        speedCount > 0
+          ? (speedSum / speedCount).toFixed(1)
+          : '—',
+      movingTime:
+        movingMinutes > 0
+          ? hours > 0
+            ? `${hours}h ${minutes}m`
+            : `${minutes}m`
+          : '—',
+    }
+  }, [displayedTrackPoints])
+
+  const selectedTrackDay = useMemo(
+    () =>
+      tripDays.find((day) => day.id === selectedTrackDayId) ?? null,
+    [tripDays, selectedTrackDayId],
+  )
+
+  const handleAssignTrackDays = async () => {
+    if (!editingTripId || tripDays.length === 0) return
+
+    setAssigningTrackDays(true)
+
+    try {
+      const result = await persistTrackPointDayAssignments(
+        editingTripId,
+        tripDays,
+      )
+
+      alert(
+        `Associazione completata: ${result.assigned} punti associati, ${result.unassigned} senza giornata.`,
+      )
+
+      await startEditingExpenses(
+        editingTripId,
+        customName,
+        customDate,
+        customEndDate,
+      )
+
+      setActiveTab('map')
+    } catch (assignmentError) {
+      console.error('Errore associazione giornate GPX:', assignmentError)
+      alert(
+        `Errore associazione giornate: ${
+          assignmentError instanceof Error
+            ? assignmentError.message
+            : String(assignmentError)
+        }`,
+      )
+    } finally {
+      setAssigningTrackDays(false)
+    }
+  }
+
   const stats = useMemo(() => {
-  if (!trip) return null
+    if (!trip) return null
+
+    if (selectedTrackDayId !== 'all') {
+      return calculateDisplayedStats
+    }
 
     const movingMinutes = Math.round(trip.movingTimeMinutes ?? 0)
     const movingHours = Math.floor(movingMinutes / 60)
@@ -919,11 +1108,15 @@ for (const p of pointsData ?? []) {
       movingTime: movingTimeLabel,
       stopsCount: trip.stops?.length ?? 0,
     }
-  }, [trip])
+  }, [trip, selectedTrackDayId, calculateDisplayedStats])
 
   const hasValidPoints = useMemo(() => {
-    return !!(trip && trip.points && Array.isArray(trip.points) && trip.points.length > 0 && trip.points[0].lat && trip.points[0].lon)
-  }, [trip])
+    return (
+      displayedTrackPoints.length > 0 &&
+      Number.isFinite(Number(displayedTrackPoints[0].lat)) &&
+      Number.isFinite(Number(displayedTrackPoints[0].lon))
+    )
+  }, [displayedTrackPoints])
 
   return (
     <>
@@ -1144,6 +1337,7 @@ for (const p of pointsData ?? []) {
                       accommodations={accommodations}
                       expenses={expenses}
                       expenseCategories={expenseCategories}
+                      trackPoints={assignedTrackPoints}
                       formatDate={formatDate}
                     />
                   )}
@@ -1335,6 +1529,64 @@ for (const p of pointsData ?? []) {
 
               {activeTab === 'map' && (
                 <div className="space-y-4">
+                  {trip && assignedTrackPoints.length > 0 && (
+                    <div className="rounded-xl border border-border bg-card p-3 shadow-sm sm:p-4">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                        <div className="min-w-0 flex-1">
+                          <label className="text-[8px] font-bold uppercase tracking-wider text-muted-foreground sm:text-[10px]">
+                            Traccia visualizzata
+                          </label>
+
+                          <select
+                            value={selectedTrackDayId}
+                            onChange={(event) =>
+                              setSelectedTrackDayId(event.target.value)
+                            }
+                            className="mt-1 h-9 w-full rounded-md border border-border bg-background px-2 text-[10px] font-medium text-foreground sm:max-w-sm sm:text-xs"
+                          >
+                            <option value="all">
+                              Traccia completa ({assignedTrackPoints.length} punti)
+                            </option>
+
+                            {tripDays.map((day) => {
+                              const pointCount = assignedTrackPoints.filter(
+                                (point) => point.tripDayId === day.id,
+                              ).length
+
+                              return (
+                                <option key={day.id} value={day.id}>
+                                  Giorno {day.day_number} · {formatDate(day.travel_date)}
+                                  {pointCount > 0 ? ` · ${pointCount} punti` : ' · nessun punto'}
+                                </option>
+                              )
+                            })}
+                          </select>
+
+                          <p className="mt-1 text-[8px] text-muted-foreground sm:text-[10px]">
+                            {selectedTrackDay
+                              ? `Percorso del Giorno ${selectedTrackDay.day_number}: ${selectedTrackDay.start_city || '—'} - ${selectedTrackDay.end_city || '—'}`
+                              : 'Visualizzazione completa del viaggio.'}
+                          </p>
+                        </div>
+
+                        {editingTripId && tripDays.length > 0 && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={handleAssignTrackDays}
+                            disabled={assigningTrackDays}
+                            className="h-8 shrink-0 text-[9px] sm:text-[11px]"
+                          >
+                            {assigningTrackDays
+                              ? 'Associazione…'
+                              : 'Ricalcola giornate GPX'}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   {stats && (
                     <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
                       {[
@@ -1410,16 +1662,16 @@ for (const p of pointsData ?? []) {
                           </h4>
 
                           <p className="flex min-w-0 flex-wrap items-center gap-1 text-[9px] text-muted-foreground sm:text-[11px]">
-                            {trip.stops.length === 0
+                            {displayedStops.length === 0
                               ? 'Nessuna sosta lunga rilevata.'
-                              : `${trip.stops.length} soste rilevate.`}
+                              : `${displayedStops.length} soste rilevate.`}
                           </p>
                         </div>
                       </div>
 
-                      {trip.stops.length > 0 && (
+                      {displayedStops.length > 0 && (
                         <div className="space-y-2">
-                          {trip.stops.map((stop, index) => {
+                          {displayedStops.map((stop, index) => {
                             const start = new Date(stop.startTime)
                             const end = new Date(stop.endTime)
 
@@ -1480,7 +1732,10 @@ for (const p of pointsData ?? []) {
 
                   <div className="relative h-[300px] overflow-hidden rounded-xl border border-border bg-secondary/10 shadow-inner sm:h-[450px]">
                     {hasValidPoints && trip && trip.points ? (
-                      <TripMap key={trip.points.length} points={trip.points} />
+                      <TripMap
+                        key={`${selectedTrackDayId}-${displayedTrackPoints.length}`}
+                        points={displayedTrackPoints}
+                      />
                     ) : (
                       <div className="flex h-full flex-col items-center justify-center gap-3 px-4 text-center bg-card/20 py-8">
                         <MapIcon className="size-6 text-primary animate-pulse" />

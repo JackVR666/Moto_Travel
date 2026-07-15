@@ -44,6 +44,15 @@ export type RoadbookExpenseCategory = {
   name: string
 }
 
+export type RoadbookTrackPoint = {
+  lat: number
+  lon: number
+  ele?: number | null
+  speed?: number | null
+  time?: string | null
+  tripDayId?: string | null
+}
+
 type RoadbookViewProps = {
   title: string
   startDate: string
@@ -53,6 +62,7 @@ type RoadbookViewProps = {
   accommodations: RoadbookAccommodation[]
   expenses: RoadbookExpense[]
   expenseCategories: RoadbookExpenseCategory[]
+  trackPoints: RoadbookTrackPoint[]
   formatDate: (iso: string | null) => string
 }
 
@@ -83,6 +93,7 @@ export function RoadbookView({
   accommodations,
   expenses,
   expenseCategories,
+  trackPoints,
   formatDate,
 }: RoadbookViewProps) {
   const totalHotelCost = accommodations.reduce(
@@ -117,6 +128,7 @@ export function RoadbookView({
             accommodations={accommodations}
             expenses={expenses}
             expenseCategories={expenseCategories}
+            trackPoints={trackPoints}
           />
         </div>
 
