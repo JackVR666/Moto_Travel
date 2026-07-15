@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useState, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import Image from 'next/image'
+import { AppSplash } from '@/components/app-splash'
 import {
   Bike,
   Route,
@@ -925,26 +926,18 @@ for (const p of pointsData ?? []) {
   }, [trip])
 
   return (
-    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-background text-foreground">
+    <>
+      <AppSplash />
+      <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-background text-foreground">
       <header className="border-b border-border bg-card/60 backdrop-blur sticky top-0 z-50">
         <div className="mx-auto flex w-full max-w-[1600px] items-center justify-between px-3 py-2.5 sm:px-6 sm:py-4 lg:px-8">
           <div className="flex min-w-0 items-center gap-2.5">
-            <Image
-              src="/logo/logo-square.png"
-              alt="Moto /=\ Viaggi"
-              width={44}
-              height={44}
-              priority
-              className="size-9 shrink-0 rounded-lg shadow-sm sm:size-11 sm:rounded-xl"
-            />
-
-            <div className="min-w-0">
-              <h1 className="whitespace-nowrap text-xs font-bold leading-tight sm:text-base">
-                Moto /=\ Viaggi
-              </h1>
-              <p className="hidden text-xs text-muted-foreground sm:block">
-                Roadbook, pianificazione e diario di viaggio
-              </p>
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm sm:size-10 sm:rounded-xl">
+              <Bike className="size-4.5 sm:size-5.5" />
+            </div>
+            <div>
+              <h1 className="whitespace-nowrap text-xs font-bold leading-tight sm:text-base">GoldWing Rides</h1>
+              <p className="text-xs text-muted-foreground hidden sm:block">Logbook & Contabilità Goldwing</p>
             </div>
           </div>
           {mode !== 'select' && (
@@ -959,6 +952,18 @@ for (const p of pointsData ?? []) {
       <main className="mx-auto w-full max-w-[1600px] px-3 py-4 pb-24 sm:px-6 sm:py-6 sm:pb-6 lg:px-8">
         {mode === 'select' && (
           <div className="space-y-4 sm:space-y-6">
+            <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+              <div className="flex items-center justify-center bg-black px-4 py-3 sm:py-4">
+                <Image
+                  src="/logo/logo-horizontal.png"
+                  alt="Moto /=\ Viaggi"
+                  width={700}
+                  height={180}
+                  priority
+                  className="h-auto w-full max-w-[620px] object-contain"
+                />
+              </div>
+            </div>
             <div className="grid gap-4">
               <div className="flex flex-col justify-between space-y-3 rounded-xl border border-border bg-card p-3 shadow-sm sm:space-y-4 sm:p-5">
                 <div className="space-y-2">
@@ -1549,6 +1554,7 @@ for (const p of pointsData ?? []) {
           }
         }
       `}</style>
-    </div>
+      </div>
+    </>
   )
 }

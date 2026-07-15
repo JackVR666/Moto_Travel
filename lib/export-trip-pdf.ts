@@ -118,6 +118,24 @@ function bookingUrl(accommodation: PdfAccommodation): string | null {
   return accommodation.booking_url || accommodation.airbnb_url || null
 }
 
+async function loadImageAsDataUrl(path: string): Promise<string | null> {
+  try {
+    const response = await fetch(path)
+    if (!response.ok) return null
+
+    const blob = await response.blob()
+
+    return await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(String(reader.result))
+      reader.onerror = () => reject(reader.error)
+      reader.readAsDataURL(blob)
+    })
+  } catch {
+    return null
+  }
+}
+
 function mapsUrl(address: string | null): string | null {
   if (!address) return null
 
@@ -147,6 +165,10 @@ export async function exportTripPdf({
     format: 'a4',
     compress: true,
   })
+
+  const logoDataUrl = await loadImageAsDataUrl(
+    '/logo/logo-horizontal.png'
+  )
 
   const pageWidth = doc.internal.pageSize.getWidth()
   const pageHeight = doc.internal.pageSize.getHeight()
@@ -217,29 +239,47 @@ export async function exportTripPdf({
   }
 
   // Copertina / riepilogo
-  doc.setFillColor(30, 41, 59)
-  doc.roundedRect(margin, 14, pageWidth - margin * 2, 25, 3, 3, 'F')
+  doc.setFillColor(8, 8, 8)
+  doc.roundedRect(margin, 14, pageWidth - margin * 2, 30, 3, 3, 'F')
+
+  if (logoDataUrl) {
+    doc.addImage(
+      logoDataUrl,
+      'PNG',
+      margin + 5,
+      17,
+      58,
+      15,
+      undefined,
+      'FAST'
+    )
+  }
 
   doc.setTextColor(255)
   doc.setFont('helvetica', 'bold')
-  doc.setFontSize(18)
-  doc.text(title || 'Viaggio senza titolo', margin + 7, 25)
+  doc.setFontSize(15)
+  doc.text(
+    title || 'Viaggio senza titolo',
+    logoDataUrl ? margin + 70 : margin + 7,
+    27
+  )
 
   doc.setFont('helvetica', 'normal')
-  doc.setFontSize(9)
+  doc.setFontSize(8)
+  doc.setTextColor(220)
   doc.text(
     `${formatDate(startDate)} → ${formatDate(endDate)}`,
-    margin + 7,
-    32,
+    logoDataUrl ? margin + 70 : margin + 7,
+    34
   )
 
   doc.setTextColor(30)
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(10)
-  doc.text('Riepilogo generale', margin, 47)
+  doc.text('Riepilogo generale', margin, 52)
 
   autoTable(doc, {
-    startY: 51,
+    startY: 56,
     margin: { left: margin, right: margin },
     theme: 'grid',
     head: [[
