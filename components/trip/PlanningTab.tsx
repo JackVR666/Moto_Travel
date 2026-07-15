@@ -203,22 +203,53 @@ export function PlanningTab({
         : []
   }
 
-const getStayDayLabel = (
-  accommodation: Accommodation
-    ): string => {
-      const coveredDays = getCoveredDays(accommodation)
-        .map((day) => Number(day.day_number))
-        .filter((dayNumber) => Number.isFinite(dayNumber))
-        .sort((a, b) => a - b)
+  const getStayDayLabel = (accommodation: Accommodation): string => {
+    const linkedDay = sortedTripDays.find(
+      (day) => day.id === accommodation.trip_day_id
+    )
 
-      if (coveredDays.length === 0) return ''
+    if (!linkedDay) return ''
 
-      if (coveredDays.length === 1) {
-        return `Giorno ${coveredDays[0]}`
-      }
+    const firstDayNumber = Number(linkedDay.day_number)
 
-      return `Giorni ${coveredDays.join('/')}`
-}
+    if (!Number.isFinite(firstDayNumber)) return ''
+
+    const checkInDate = accommodation.check_in_date
+      ? new Date(`${accommodation.check_in_date.slice(0, 10)}T12:00:00`)
+      : null
+
+    const checkOutDate = accommodation.check_out_date
+      ? new Date(`${accommodation.check_out_date.slice(0, 10)}T12:00:00`)
+      : null
+
+    let numberOfNights = 1
+
+    if (
+      checkInDate &&
+      checkOutDate &&
+      !Number.isNaN(checkInDate.getTime()) &&
+      !Number.isNaN(checkOutDate.getTime())
+    ) {
+      numberOfNights = Math.max(
+        1,
+        Math.round(
+          (checkOutDate.getTime() - checkInDate.getTime()) /
+            86_400_000
+        )
+      )
+    }
+
+    const coveredDayNumbers = Array.from(
+      { length: numberOfNights },
+      (_, index) => firstDayNumber + index
+    )
+
+    if (coveredDayNumbers.length === 1) {
+      return `Giorno ${coveredDayNumbers[0]}`
+    }
+
+    return `Giorni ${coveredDayNumbers.join('/')}`
+  }
 
   const getCoveringAccommodation = (
     day: TripDay

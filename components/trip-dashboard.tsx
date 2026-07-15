@@ -1336,39 +1336,71 @@ for (const p of pointsData ?? []) {
               {activeTab === 'map' && (
                 <div className="space-y-4">
                   {stats && (
-                    <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-                      <StatCard
-                        icon={Route}
-                        label="Km totali"
-                        value={stats.km}
-                        unit="km"
-                      />
+                    <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
+                      {[
+                        {
+                          icon: Route,
+                          label: 'Km totali',
+                          value: stats.km,
+                          unit: 'km',
+                        },
+                        {
+                          icon: Gauge,
+                          label: 'Velocità max',
+                          value: stats.maxSpeed,
+                          unit: 'km/h',
+                        },
+                        {
+                          icon: Gauge,
+                          label: 'Velocità media',
+                          value: stats.averageSpeed,
+                          unit: 'km/h',
+                        },
+                        {
+                          icon: Clock3,
+                          label: 'Tempo in movimento',
+                          value: stats.movingTime,
+                          unit: '',
+                        },
+                      ].map((item) => {
+                        const Icon = item.icon
 
-                      <StatCard
-                        icon={Gauge}
-                        label="Velocità max"
-                        value={stats.maxSpeed}
-                        unit="km/h"
-                      />
+                        return (
+                          <div
+                            key={item.label}
+                            className="min-w-0 rounded-xl border border-border bg-card p-2.5 shadow-sm sm:p-4"
+                          >
+                            <div className="flex min-w-0 items-center gap-2">
+                              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-secondary text-muted-foreground sm:size-10">
+                                <Icon className="size-4 sm:size-5" />
+                              </div>
 
-                      <StatCard
-                        icon={Gauge}
-                        label="Velocità media"
-                        value={stats.averageSpeed}
-                        unit="km/h"
-                      />
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate text-[7px] font-bold uppercase leading-tight tracking-wide text-muted-foreground sm:text-[10px]">
+                                  {item.label}
+                                </p>
 
-                      <StatCard
-                        icon={Clock3}
-                        label="Tempo in movimento"
-                        value={stats.movingTime}
-                        unit=""
-                      />
+                                <div className="mt-1 flex min-w-0 flex-wrap items-baseline gap-x-1">
+                                  <span className="break-all font-mono text-[15px] font-black leading-none text-foreground sm:text-xl">
+                                    {item.value}
+                                  </span>
+
+                                  {item.unit && (
+                                    <span className="text-[7px] font-medium text-muted-foreground sm:text-[10px]">
+                                      {item.unit}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
                     </div>
                   )}
 
                   {trip?.stops && (
-                    <div className="rounded-xl border border-border bg-card p-4 shadow-sm space-y-3">
+                    <div className="space-y-2.5 rounded-xl border border-border bg-card p-3 shadow-sm sm:space-y-3 sm:p-4">
                       <div className="flex items-center gap-2">
                         <Coffee className="size-4 text-primary" />
 
@@ -1416,15 +1448,15 @@ for (const p of pointsData ?? []) {
                             return (
                               <div
                                 key={`${stop.startTime}-${index}`}
-                                className="rounded-lg border border-border/50 bg-secondary/10 p-3 text-xs"
+                                className="rounded-lg border border-border/50 bg-secondary/10 p-2.5 text-[9px] sm:p-3 sm:text-xs"
                               >
-                                <div className="flex items-start justify-between gap-3">
+                                <div className="flex min-w-0 items-start justify-between gap-2 sm:gap-3">
                                   <div>
-                                    <p className="font-bold text-foreground">
+                                    <p className="text-[10px] font-bold text-foreground sm:text-xs">
                                       Sosta {index + 1}
                                     </p>
 
-                                    <p className="mt-1 text-[11px] text-muted-foreground">
+                                    <p className="mt-1 text-[8px] text-muted-foreground sm:text-[11px]">
                                       {startTime} → {endTime} · {duration}
                                     </p>
                                   </div>
@@ -1433,7 +1465,7 @@ for (const p of pointsData ?? []) {
                                     href={mapsUrl}
                                     target="_blank"
                                     rel="noreferrer"
-                                    className="shrink-0 rounded-md border border-border bg-background px-2 py-1 text-[11px] font-medium hover:bg-secondary"
+                                    className="h-7 shrink-0 whitespace-nowrap rounded-md border border-border bg-background px-2 text-[8px] font-medium leading-7 hover:bg-secondary sm:h-auto sm:py-1 sm:text-[11px] sm:leading-normal"
                                   >
                                     Apri Maps
                                   </a>
@@ -1446,7 +1478,7 @@ for (const p of pointsData ?? []) {
                     </div>
                   )}
 
-                  <div className="relative h-[380px] sm:h-[450px] overflow-hidden rounded-xl border border-border bg-secondary/10 shadow-inner">
+                  <div className="relative h-[300px] overflow-hidden rounded-xl border border-border bg-secondary/10 shadow-inner sm:h-[450px]">
                     {hasValidPoints && trip && trip.points ? (
                       <TripMap key={trip.points.length} points={trip.points} />
                     ) : (
@@ -1462,7 +1494,7 @@ for (const p of pointsData ?? []) {
                     )}
                   </div>
 
-                  <div className="rounded-xl border border-border bg-card p-4 shadow-sm space-y-2">
+                  <div className="space-y-2 rounded-xl border border-border bg-card p-3 shadow-sm sm:p-4">
                     <div className="flex items-center gap-1.5 text-muted-foreground">
                       <CloudUpload className="size-4 text-primary" />
                       <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">
