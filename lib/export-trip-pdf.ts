@@ -205,11 +205,174 @@ function trackPointsForDay(
   )
 }
 
-function createTrackDiagram(
+const OSM_TILE_SIZE = 256
+const OSM_MAX_TILE_COUNT = 36
+
+function clampLatitude(latitude: number): number {
+  return Math.max(-85.05112878, Math.min(85.05112878, latitude))
+}
+
+function longitudeToWorldX(longitude: number, zoom: number): number {
+  const scale = OSM_TILE_SIZE * 2 ** zoom
+  return ((longitude + 180) / 360) * scale
+}
+
+function latitudeToWorldY(latitude: number, zoom: number): number {
+  const scale = OSM_TILE_SIZE * 2 ** zoom
+  const clamped = clampLatitude(latitude)
+  const radians = (clamped * Math.PI) / 180
+  const mercator =
+    Math.log(Math.tan(Math.PI / 4 + radians / 2))
+
+  return (1 - mercator / Math.PI) / 2 * scale
+}
+
+function chooseMapZoom(
+  minLat: number,
+  maxLat: number,
+  minLon: number,
+  maxLon: number,
+  width: number,
+  height: number,
+  padding: number,
+): number {
+  for (let zoom = 15; zoom >= 2; zoom--) {
+    const left = longitudeToWorldX(minLon, zoom)
+    const right = longitudeToWorldX(maxLon, zoom)
+    const top = latitudeToWorldY(maxLat, zoom)
+    const bottom = latitudeToWorldY(minLat, zoom)
+
+    const fitsWidth = right - left <= width - padding * 2
+    const fitsHeight = bottom - top <= height - padding * 2
+
+    if (fitsWidth && fitsHeight) return zoom
+  }
+
+  return 2
+}
+
+async function loadTileImage(
+  zoom: number,
+  x: number,
+  y: number,
+): Promise<HTMLImageElement | null> {
+  try {
+    const tileCount = 2 ** zoom
+    const wrappedX = ((x % tileCount) + tileCount) % tileCount
+
+    if (y < 0 || y >= tileCount) return null
+
+    const response = await fetch(
+      `https://tile.openstreetmap.org/${zoom}/${wrappedX}/${y}.png`,
+      {
+        mode: 'cors',
+        cache: 'force-cache',
+      },
+    )
+
+    if (!response.ok) return null
+
+    const blob = await response.blob()
+    const objectUrl = URL.createObjectURL(blob)
+
+    try {
+      return await new Promise<HTMLImageElement | null>((resolve) => {
+        const image = new Image()
+
+        image.onload = () => resolve(image)
+        image.onerror = () => resolve(null)
+        image.src = objectUrl
+      })
+    } finally {
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 0)
+    }
+  } catch {
+    return null
+  }
+}
+
+async function drawOpenStreetMapBackground(
+  context: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  zoom: number,
+  minWorldX: number,
+  minWorldY: number,
+  maxWorldX: number,
+  maxWorldY: number,
+): Promise<boolean> {
+  const worldWidth = maxWorldX - minWorldX
+  const worldHeight = maxWorldY - minWorldY
+
+  if (worldWidth <= 0 || worldHeight <= 0) return false
+
+  const scale = Math.min(width / worldWidth, height / worldHeight)
+  const renderedWidth = worldWidth * scale
+  const renderedHeight = worldHeight * scale
+  const offsetX = (width - renderedWidth) / 2
+  const offsetY = (height - renderedHeight) / 2
+
+  const firstTileX = Math.floor(minWorldX / OSM_TILE_SIZE)
+  const lastTileX = Math.floor(maxWorldX / OSM_TILE_SIZE)
+  const firstTileY = Math.floor(minWorldY / OSM_TILE_SIZE)
+  const lastTileY = Math.floor(maxWorldY / OSM_TILE_SIZE)
+
+  const tileCoordinates: Array<{ x: number; y: number }> = []
+
+  for (let tileY = firstTileY; tileY <= lastTileY; tileY++) {
+    for (let tileX = firstTileX; tileX <= lastTileX; tileX++) {
+      tileCoordinates.push({ x: tileX, y: tileY })
+    }
+  }
+
+  if (
+    tileCoordinates.length === 0 ||
+    tileCoordinates.length > OSM_MAX_TILE_COUNT
+  ) {
+    return false
+  }
+
+  const loadedTiles = await Promise.all(
+    tileCoordinates.map(async ({ x, y }) => ({
+      x,
+      y,
+      image: await loadTileImage(zoom, x, y),
+    })),
+  )
+
+  let drawnTiles = 0
+
+  for (const tile of loadedTiles) {
+    if (!tile.image) continue
+
+    const tileWorldX = tile.x * OSM_TILE_SIZE
+    const tileWorldY = tile.y * OSM_TILE_SIZE
+
+    const destinationX =
+      offsetX + (tileWorldX - minWorldX) * scale
+    const destinationY =
+      offsetY + (tileWorldY - minWorldY) * scale
+    const destinationSize = OSM_TILE_SIZE * scale
+
+    context.drawImage(
+      tile.image,
+      destinationX,
+      destinationY,
+      destinationSize + 1,
+      destinationSize + 1,
+    )
+
+    drawnTiles++
+  }
+
+  return drawnTiles > 0
+}
+
+async function createTrackDiagram(
   points: PdfTrackPoint[],
   width = 1400,
   height = 700,
-): string | null {
+): Promise<string | null> {
   const valid = points.filter(
     (point) =>
       Number.isFinite(Number(point.lat)) &&
@@ -225,7 +388,7 @@ function createTrackDiagram(
   const context = canvas.getContext('2d')
   if (!context) return null
 
-  context.fillStyle = '#f8fafc'
+  context.fillStyle = '#eef2f5'
   context.fillRect(0, 0, width, height)
 
   const latitudes = valid.map((point) => Number(point.lat))
@@ -246,41 +409,106 @@ function createTrackDiagram(
     maxLon += 0.001
   }
 
-  const padding = 55
-  const drawableWidth = width - padding * 2
-  const drawableHeight = height - padding * 2
+  const latPadding = Math.max((maxLat - minLat) * 0.08, 0.002)
+  const lonPadding = Math.max((maxLon - minLon) * 0.08, 0.002)
 
-  const project = (point: PdfTrackPoint) => {
-    const x =
-      padding +
-      ((Number(point.lon) - minLon) / (maxLon - minLon)) *
-        drawableWidth
+  minLat -= latPadding
+  maxLat += latPadding
+  minLon -= lonPadding
+  maxLon += lonPadding
 
-    const y =
-      height -
-      padding -
-      ((Number(point.lat) - minLat) / (maxLat - minLat)) *
-        drawableHeight
+  const visualPadding = Math.max(24, Math.round(width * 0.025))
+  const zoom = chooseMapZoom(
+    minLat,
+    maxLat,
+    minLon,
+    maxLon,
+    width,
+    height,
+    visualPadding,
+  )
 
-    return { x, y }
+  const minWorldX = longitudeToWorldX(minLon, zoom)
+  const maxWorldX = longitudeToWorldX(maxLon, zoom)
+  const minWorldY = latitudeToWorldY(maxLat, zoom)
+  const maxWorldY = latitudeToWorldY(minLat, zoom)
+
+  const mapDrawn = await drawOpenStreetMapBackground(
+    context,
+    width,
+    height,
+    zoom,
+    minWorldX,
+    minWorldY,
+    maxWorldX,
+    maxWorldY,
+  )
+
+  if (!mapDrawn) {
+    context.fillStyle = '#f8fafc'
+    context.fillRect(0, 0, width, height)
+  } else {
+    context.fillStyle = 'rgba(255,255,255,0.12)'
+    context.fillRect(0, 0, width, height)
   }
 
-  context.strokeStyle = '#d4af37'
-  context.lineWidth = Math.max(4, width / 260)
+  const worldWidth = maxWorldX - minWorldX
+  const worldHeight = maxWorldY - minWorldY
+  const scale = Math.min(width / worldWidth, height / worldHeight)
+  const renderedWidth = worldWidth * scale
+  const renderedHeight = worldHeight * scale
+  const offsetX = (width - renderedWidth) / 2
+  const offsetY = (height - renderedHeight) / 2
+
+  const project = (point: PdfTrackPoint) => ({
+    x:
+      offsetX +
+      (longitudeToWorldX(Number(point.lon), zoom) - minWorldX) *
+        scale,
+    y:
+      offsetY +
+      (latitudeToWorldY(Number(point.lat), zoom) - minWorldY) *
+        scale,
+  })
+
+  context.strokeStyle = 'rgba(0,0,0,0.55)'
+  context.lineWidth = Math.max(8, width / 150)
   context.lineCap = 'round'
   context.lineJoin = 'round'
   context.beginPath()
 
   const maximumPoints = 4500
   const step = Math.max(1, Math.ceil(valid.length / maximumPoints))
+  let firstProjectedPoint = true
 
   valid.forEach((point, index) => {
     if (index % step !== 0 && index !== valid.length - 1) return
 
     const projected = project(point)
 
-    if (index === 0) {
+    if (firstProjectedPoint) {
       context.moveTo(projected.x, projected.y)
+      firstProjectedPoint = false
+    } else {
+      context.lineTo(projected.x, projected.y)
+    }
+  })
+
+  context.stroke()
+
+  context.strokeStyle = '#d4af37'
+  context.lineWidth = Math.max(4, width / 260)
+  context.beginPath()
+  firstProjectedPoint = true
+
+  valid.forEach((point, index) => {
+    if (index % step !== 0 && index !== valid.length - 1) return
+
+    const projected = project(point)
+
+    if (firstProjectedPoint) {
+      context.moveTo(projected.x, projected.y)
+      firstProjectedPoint = false
     } else {
       context.lineTo(projected.x, projected.y)
     }
@@ -290,16 +518,35 @@ function createTrackDiagram(
 
   const start = project(valid[0])
   const end = project(valid[valid.length - 1])
+  const markerRadius = Math.max(8, width / 125)
 
   context.fillStyle = '#16a34a'
+  context.strokeStyle = '#ffffff'
+  context.lineWidth = Math.max(3, width / 420)
   context.beginPath()
-  context.arc(start.x, start.y, 11, 0, Math.PI * 2)
+  context.arc(start.x, start.y, markerRadius, 0, Math.PI * 2)
   context.fill()
+  context.stroke()
 
   context.fillStyle = '#dc2626'
   context.beginPath()
-  context.arc(end.x, end.y, 11, 0, Math.PI * 2)
+  context.arc(end.x, end.y, markerRadius, 0, Math.PI * 2)
   context.fill()
+  context.stroke()
+
+  context.fillStyle = 'rgba(255,255,255,0.90)'
+  context.fillRect(8, height - 28, 245, 20)
+
+  context.fillStyle = '#475569'
+  context.font = `${Math.max(12, Math.round(width / 95))}px sans-serif`
+  context.textBaseline = 'middle'
+  context.fillText(
+    mapDrawn
+      ? '© OpenStreetMap contributors'
+      : 'Sfondo cartografico non disponibile',
+    14,
+    height - 18,
+  )
 
   context.strokeStyle = '#cbd5e1'
   context.lineWidth = 2
@@ -307,6 +554,7 @@ function createTrackDiagram(
 
   return canvas.toDataURL('image/png')
 }
+
 
 export async function exportTripPdf({
   title,
@@ -734,7 +982,7 @@ export async function exportTripPdf({
   // PAGINA — TRACCIA COMPLETA
   // ==========================================================
   if (trackPoints.length > 1) {
-    const fullTrackImage = createTrackDiagram(trackPoints)
+    const fullTrackImage = await createTrackDiagram(trackPoints)
 
     if (fullTrackImage) {
       doc.addPage('a4', 'landscape')
@@ -758,7 +1006,7 @@ export async function exportTripPdf({
       doc.setFontSize(7)
       doc.setTextColor(90)
       doc.text(
-        'Rappresentazione schematica della traccia: punto verde = partenza, punto rosso = arrivo.',
+        'Mappa OpenStreetMap: punto verde = partenza, punto rosso = arrivo.',
         margin,
         187,
       )
@@ -835,7 +1083,7 @@ export async function exportTripPdf({
     doc.text(dayNoteLines.slice(0, 5), 15, 97)
 
     const dailyTrackPoints = trackPointsForDay(day, trackPoints)
-    const dailyTrackImage = createTrackDiagram(
+    const dailyTrackImage = await createTrackDiagram(
       dailyTrackPoints,
       900,
       520,
