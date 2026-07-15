@@ -76,6 +76,9 @@ type PlanningTabProps = {
     accommodationPayAtProperty: boolean
     setAccommodationPayAtProperty: (value: boolean) => void
 
+    accommodationBreakfastIncluded: boolean
+    setAccommodationBreakfastIncluded: (value: boolean) => void
+
     addAccommodation: () => void
 
     dayDate: string
@@ -136,6 +139,8 @@ export function PlanningTab({
     setAccommodationPaymentDate,
     accommodationPayAtProperty,
     setAccommodationPayAtProperty,
+    accommodationBreakfastIncluded,
+    setAccommodationBreakfastIncluded,
     addAccommodation,
     dayDate,
     setDayDate,
@@ -160,6 +165,69 @@ export function PlanningTab({
     updateAccommodation,
     deleteAccommodation,
 }: PlanningTabProps) {
+  const sortedTripDays = [...tripDays].sort(
+    (a, b) => Number(a.day_number) - Number(b.day_number)
+  )
+
+  const getCoveredDays = (accommodation: Accommodation): TripDay[] => {
+    const linkedDay = sortedTripDays.find(
+      (day) => day.id === accommodation.trip_day_id
+    )
+
+    const checkInDate =
+      accommodation.check_in_date?.slice(0, 10) ||
+      linkedDay?.travel_date?.slice(0, 10) ||
+      null
+
+    const checkOutDate = accommodation.check_out_date?.slice(0, 10) || null
+
+    if (!checkInDate) {
+      return linkedDay ? [linkedDay] : []
+    }
+
+    const covered = sortedTripDays.filter((day) => {
+      const date = day.travel_date?.slice(0, 10)
+      if (!date) return false
+
+      if (!checkOutDate) {
+        return date === checkInDate
+      }
+
+      return date >= checkInDate && date < checkOutDate
+    })
+
+    return covered.length > 0
+      ? covered
+      : linkedDay
+        ? [linkedDay]
+        : []
+  }
+
+  const getStayDayLabel = (accommodation: Accommodation): string => {
+    const dayNumbers = getCoveredDays(accommodation).map(
+      (day) => day.day_number
+    )
+
+    if (dayNumbers.length === 0) return ''
+    if (dayNumbers.length === 1) return `Giorno ${dayNumbers[0]}`
+    if (dayNumbers.length === 2) {
+      return `Giorni ${dayNumbers[0]} e ${dayNumbers[1]}`
+    }
+
+    return `Giorni ${dayNumbers.slice(0, -1).join(', ')} e ${
+      dayNumbers[dayNumbers.length - 1]
+    }`
+  }
+
+  const getCoveringAccommodation = (
+    day: TripDay
+  ): Accommodation | undefined =>
+    accommodations.find((accommodation) =>
+      getCoveredDays(accommodation).some(
+        (coveredDay) => coveredDay.id === day.id
+      )
+    )
+
   return (
   <div className="space-y-4">
     <div className="rounded-xl border border-border bg-card p-4 shadow-sm space-y-3">
@@ -273,7 +341,16 @@ export function PlanningTab({
         </p>
       ) : (
         <div className="space-y-2">
-          {tripDays.map((day) => (
+          {tripDays.map((day) => {
+            const linkedAccommodations = accommodations.filter(
+              (accommodation) => accommodation.trip_day_id === day.id
+            )
+            const coveringAccommodation = getCoveringAccommodation(day)
+            const isCoveredByAnotherDay =
+              coveringAccommodation &&
+              coveringAccommodation.trip_day_id !== day.id
+
+            return (
             <div
               key={day.id}
               className="rounded-lg bg-background border border-border/50 p-3 text-xs shadow-sm"
@@ -306,27 +383,41 @@ export function PlanningTab({
                     </p>
                   )}
                   
-                  {accommodations
-                    .filter((accommodation) => accommodation.trip_day_id === day.id)
-                    .map((accommodation) => (
-                      <AccommodationCard
-                        key={accommodation.id}
-                        accommodation={accommodation}
-                        formatDate={formatDate}
-                        onEdit={startEditAccommodation}
-                        onDelete={deleteAccommodation}
-                      />
-                    ))}
+                  {linkedAccommodations.map((accommodation) => (
+                    <AccommodationCard
+                      key={accommodation.id}
+                      accommodation={accommodation}
+                      formatDate={formatDate}
+                      onEdit={startEditAccommodation}
+                      onDelete={deleteAccommodation}
+                      stayDayLabel={getStayDayLabel(accommodation)}
+                    />
+                  ))}
 
+                  {isCoveredByAnotherDay && coveringAccommodation && (
+                    <div className="mt-2 rounded-lg border border-border/50 bg-secondary/10 p-2 text-[9px] text-muted-foreground sm:text-[11px]">
+                      🏨 Giornata già coperta da{' '}
+                      <span className="font-bold text-foreground">
+                        {coveringAccommodation.name}
+                      </span>{' '}
+                      ({getStayDayLabel(coveringAccommodation)})
+                    </div>
+                  )}
+
+                  {!coveringAccommodation && (
                     <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setSelectedDayForAccommodation(day.id)}
-                        className="mt-2 h-10 w-full rounded-md text-xs sm:h-8 sm:w-auto sm:text-[11px]"
-                        >
-                        + Pernottamento
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedDayForAccommodation(day.id)
+                        setAccommodationCheckInDate(day.travel_date || '')
+                      }}
+                      className="mt-2 h-10 w-full rounded-md text-xs sm:h-8 sm:w-auto sm:text-[11px]"
+                    >
+                      + Pernottamento
                     </Button>
+                  )}
 
                     {selectedDayForAccommodation === day.id && (
                     <div className="mt-3 rounded-lg border border-border bg-secondary/10 p-3 space-y-2">
@@ -445,14 +536,27 @@ export function PlanningTab({
                         className="w-full rounded-md border border-border bg-background py-1.5 px-2.5 text-xs"
                         />
 
-                        <label className="flex items-center gap-2 text-xs">
-                        <input
-                            type="checkbox"
-                            checked={accommodationParking}
-                            onChange={(e) => setAccommodationParking(e.target.checked)}
-                        />
-                        Parcheggio moto
-                        </label>
+                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                          <label className="flex items-center gap-2 text-xs">
+                            <input
+                              type="checkbox"
+                              checked={accommodationParking}
+                              onChange={(e) => setAccommodationParking(e.target.checked)}
+                            />
+                            Parcheggio moto
+                          </label>
+
+                          <label className="flex items-center gap-2 text-xs">
+                            <input
+                              type="checkbox"
+                              checked={accommodationBreakfastIncluded}
+                              onChange={(e) =>
+                                setAccommodationBreakfastIncluded(e.target.checked)
+                              }
+                            />
+                            Colazione inclusa
+                          </label>
+                        </div>
 
                         <textarea
                         placeholder="Note"
@@ -503,7 +607,8 @@ export function PlanningTab({
                 </div>
               </div>
             </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>

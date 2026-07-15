@@ -29,6 +29,7 @@ export type RoadbookAccommodation = {
   free_cancellation_until: string | null
   payment_date: string | null
   pay_at_property: boolean | null
+  breakfast_included: boolean | null
 }
 
 export type RoadbookExpense = {
@@ -282,6 +283,12 @@ export function RoadbookView({
                       </div>
 
                       <div className="mt-2 flex flex-wrap gap-1.5">
+                        {accommodation.breakfast_included && (
+                          <span className="inline-flex h-7 items-center rounded border border-border bg-background px-2 text-[8px] font-bold">
+                            ☕ Colazione inclusa
+                          </span>
+                        )}
+
                         {booking && (
                           <a
                             href={booking.href}
@@ -338,6 +345,7 @@ export function RoadbookView({
               <th className="px-3 py-3 text-right">Costo</th>
               <th className="px-3 py-3 text-left">Disdetta</th>
               <th className="px-3 py-3 text-left">Pagamento</th>
+              <th className="px-3 py-3 text-left">Colazione</th>
               <th className="px-3 py-3 text-left">Link</th>
               <th className="px-3 py-3 text-left">Note</th>
             </tr>
@@ -428,6 +436,9 @@ export function RoadbookView({
                         : accommodation?.payment_date
                           ? formatDate(accommodation.payment_date)
                           : '—'}
+                    </td>
+                    <td className="px-3 py-3 text-muted-foreground">
+                      {accommodation?.breakfast_included ? 'Inclusa' : '—'}
                     </td>
                     <td className="px-3 py-3">
                       {booking ? (

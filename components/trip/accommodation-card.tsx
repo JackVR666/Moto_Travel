@@ -18,6 +18,7 @@ export type Accommodation = {
   free_cancellation_until: string | null
   payment_date: string | null
   pay_at_property: boolean | null
+  breakfast_included: boolean | null
 }
 
 type AccommodationCardProps = {
@@ -25,6 +26,7 @@ type AccommodationCardProps = {
   formatDate: (iso: string | null) => string
   onEdit: (accommodation: Accommodation) => void
   onDelete: (id: string) => void
+  stayDayLabel?: string
 }
 
 function formatTime(time: string | null): string {
@@ -36,6 +38,7 @@ export function AccommodationCard({
   formatDate,
   onEdit,
   onDelete,
+  stayDayLabel,
 }: AccommodationCardProps) {
   const bookingLink =
     accommodation.booking_url || accommodation.airbnb_url
@@ -54,6 +57,14 @@ export function AccommodationCard({
 
   return (
     <div className="mt-2 rounded-lg border border-border/60 bg-secondary/10 p-2 text-[9px] shadow-sm sm:mt-3 sm:rounded-xl sm:p-3 sm:text-xs">
+      {stayDayLabel && (
+        <div className="mb-2">
+          <span className="inline-flex rounded border border-border/40 bg-background px-1.5 py-0.5 text-[8px] font-bold text-muted-foreground sm:text-[10px]">
+            {stayDayLabel}
+          </span>
+        </div>
+      )}
+
       <div className="flex min-w-0 items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           <p className="break-words text-[11px] font-bold leading-tight text-foreground sm:text-sm">
@@ -142,11 +153,20 @@ export function AccommodationCard({
         </div>
       </div>
 
-      {accommodation.parking_available && (
-        <div className="mt-2">
-          <span className="inline-flex rounded bg-background px-1.5 py-1 text-[9px] text-muted-foreground sm:rounded-md sm:px-2 sm:text-[11px]">
-            🅿️ Parcheggio moto
-          </span>
+      {(accommodation.parking_available ||
+        accommodation.breakfast_included) && (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {accommodation.parking_available && (
+            <span className="inline-flex rounded bg-background px-1.5 py-1 text-[9px] text-muted-foreground sm:rounded-md sm:px-2 sm:text-[11px]">
+              🅿️ Parcheggio moto
+            </span>
+          )}
+
+          {accommodation.breakfast_included && (
+            <span className="inline-flex rounded bg-background px-1.5 py-1 text-[9px] text-muted-foreground sm:rounded-md sm:px-2 sm:text-[11px]">
+              ☕ Colazione inclusa
+            </span>
+          )}
         </div>
       )}
 

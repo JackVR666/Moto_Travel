@@ -104,6 +104,7 @@ export function TripDashboard() {
   const [accommodationCancellationDate, setAccommodationCancellationDate] = useState('')
   const [accommodationPaymentDate, setAccommodationPaymentDate] = useState('')
   const [accommodationPayAtProperty, setAccommodationPayAtProperty] = useState(false)
+  const [accommodationBreakfastIncluded, setAccommodationBreakfastIncluded] = useState(false)
 
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -239,6 +240,40 @@ const addAccommodation = async () => {
     return
   }
 
+  const selectedDay = tripDays.find(
+    (day) => day.id === selectedDayForAccommodation
+  )
+
+  if (selectedDay) {
+    const selectedDate = String(selectedDay.travel_date).slice(0, 10)
+
+    const coveringAccommodation = accommodations.find((accommodation) => {
+      const checkIn = accommodation.check_in_date
+        ? String(accommodation.check_in_date).slice(0, 10)
+        : null
+      const checkOut = accommodation.check_out_date
+        ? String(accommodation.check_out_date).slice(0, 10)
+        : null
+
+      if (!checkIn) {
+        return accommodation.trip_day_id === selectedDayForAccommodation
+      }
+
+      if (!checkOut) {
+        return checkIn === selectedDate
+      }
+
+      return selectedDate >= checkIn && selectedDate < checkOut
+    })
+
+    if (coveringAccommodation) {
+      alert(
+        `Questa giornata è già coperta dal pernottamento "${coveringAccommodation.name}".`
+      )
+      return
+    }
+  }
+
   const { error } = await supabase
     .from('accommodations')
     .insert([
@@ -260,6 +295,8 @@ const addAccommodation = async () => {
           ? null
           : accommodationPaymentDate || null,
         pay_at_property: accommodationPayAtProperty,
+      breakfast_included: accommodationBreakfastIncluded,
+        breakfast_included: accommodationBreakfastIncluded,
       },
     ])
 
@@ -287,6 +324,7 @@ const addAccommodation = async () => {
   setAccommodationCancellationDate('')
   setAccommodationPaymentDate('')
   setAccommodationPayAtProperty(false)
+  setAccommodationBreakfastIncluded(false)
 
   if (editingTripId) {
     await fetchAccommodations(editingTripId)
@@ -316,6 +354,7 @@ const startEditAccommodation = (acc: any) => {
   setAccommodationCancellationDate(acc.free_cancellation_until || '')
   setAccommodationPaymentDate(acc.payment_date || '')
   setAccommodationPayAtProperty(!!acc.pay_at_property)
+  setAccommodationBreakfastIncluded(!!acc.breakfast_included)
 }
 
 //Salva modifica albergo
@@ -366,6 +405,7 @@ const updateAccommodation = async () => {
   setAccommodationCancellationDate('')
   setAccommodationPaymentDate('')
   setAccommodationPayAtProperty(false)
+  setAccommodationBreakfastIncluded(false)
 
   await fetchAccommodations(editingTripId)
 }
@@ -1073,6 +1113,8 @@ for (const p of pointsData ?? []) {
                   setAccommodationPaymentDate={setAccommodationPaymentDate}
                   accommodationPayAtProperty={accommodationPayAtProperty}
                   setAccommodationPayAtProperty={setAccommodationPayAtProperty}
+                  accommodationBreakfastIncluded={accommodationBreakfastIncluded}
+                  setAccommodationBreakfastIncluded={setAccommodationBreakfastIncluded}
                 />
              )}
                  

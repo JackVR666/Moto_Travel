@@ -26,6 +26,7 @@ export type PdfAccommodation = {
   free_cancellation_until: string | null
   payment_date: string | null
   pay_at_property: boolean | null
+  breakfast_included: boolean | null
 }
 
 export type PdfExpense = {
@@ -399,6 +400,9 @@ export async function exportTripPdf({
           accommodation.parking_available
             ? 'Parcheggio moto: sì'
             : 'Parcheggio moto: no',
+          accommodation.breakfast_included
+            ? 'Colazione: inclusa'
+            : 'Colazione: non inclusa',
         ].join('\n'),
         [day.notes, accommodation.notes].filter(Boolean).join('\n') || '—',
       ])
