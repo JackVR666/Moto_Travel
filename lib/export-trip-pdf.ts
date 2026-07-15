@@ -22,11 +22,11 @@ export type PdfAccommodation = {
   check_out_time: string | null
   price: number | null
   parking_available: boolean | null
+  breakfast_included: boolean | null
   notes: string | null
   free_cancellation_until: string | null
   payment_date: string | null
   pay_at_property: boolean | null
-  breakfast_included: boolean | null
 }
 
 export type PdfExpense = {
@@ -59,7 +59,6 @@ function formatDate(value: string | null | undefined): string {
   const [year, month, day] = dateOnly.split('-')
 
   if (!year || !month || !day) return value
-
   return `${day}/${month}/${year}`
 }
 
@@ -83,25 +82,54 @@ function safeFileName(value: string): string {
   )
 }
 
+function parseDateOnly(value: string | null | undefined): Date | null {
+  if (!value) return null
+  const date = new Date(`${value.slice(0, 10)}T12:00:00`)
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
 function countDays(startDate: string, endDate: string): number {
-  if (!startDate || !endDate) return 0
+  const start = parseDateOnly(startDate)
+  const end = parseDateOnly(endDate)
 
-  const start = new Date(`${startDate.slice(0, 10)}T12:00:00`)
-  const end = new Date(`${endDate.slice(0, 10)}T12:00:00`)
-
-  if (
-    Number.isNaN(start.getTime()) ||
-    Number.isNaN(end.getTime()) ||
-    end < start
-  ) {
-    return 0
-  }
-
+  if (!start || !end || end < start) return 0
   return Math.floor((end.getTime() - start.getTime()) / 86_400_000) + 1
 }
 
+function countNights(accommodation: PdfAccommodation): number {
+  const checkIn = parseDateOnly(accommodation.check_in_date)
+  const checkOut = parseDateOnly(accommodation.check_out_date)
+
+  if (!checkIn) return 1
+  if (!checkOut) return 1
+
+  return Math.max(
+    1,
+    Math.round((checkOut.getTime() - checkIn.getTime()) / 86_400_000),
+  )
+}
+
+function stayDayLabel(
+  accommodation: PdfAccommodation,
+  tripDays: PdfTripDay[],
+): string {
+  const linkedDay = tripDays.find(
+    (day) => day.id === accommodation.trip_day_id,
+  )
+
+  if (!linkedDay) return '—'
+
+  const first = Number(linkedDay.day_number)
+  const nights = countNights(accommodation)
+  const numbers = Array.from({ length: nights }, (_, index) => first + index)
+
+  return numbers.length === 1
+    ? `Giorno ${numbers[0]}`
+    : `Giorni ${numbers.join('/')}`
+}
+
 function paymentLabel(accommodation: PdfAccommodation): string {
-  if (accommodation.pay_at_property) return 'Pagamento in struttura'
+  if (accommodation.pay_at_property) return 'In struttura'
   if (accommodation.payment_date) {
     return `Addebito ${formatDate(accommodation.payment_date)}`
   }
@@ -116,6 +144,13 @@ function bookingLabel(accommodation: PdfAccommodation): string {
 
 function bookingUrl(accommodation: PdfAccommodation): string | null {
   return accommodation.booking_url || accommodation.airbnb_url || null
+}
+
+function mapsUrl(address: string | null): string | null {
+  if (!address) return null
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+    address,
+  )}`
 }
 
 async function loadImageAsDataUrl(path: string): Promise<string | null> {
@@ -134,14 +169,6 @@ async function loadImageAsDataUrl(path: string): Promise<string | null> {
   } catch {
     return null
   }
-}
-
-function mapsUrl(address: string | null): string | null {
-  if (!address) return null
-
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-    address,
-  )}`
 }
 
 export async function exportTripPdf({
@@ -166,35 +193,39 @@ export async function exportTripPdf({
     compress: true,
   })
 
-  const logoDataUrl = await loadImageAsDataUrl(
-    '/logo/logo-horizontal.png'
-  )
+  const logoDataUrl = await loadImageAsDataUrl('/logo/logo-horizontal.png')
 
+  const margin = 10
   const pageWidth = doc.internal.pageSize.getWidth()
   const pageHeight = doc.internal.pageSize.getHeight()
-  const margin = 10
 
-  const sortedDays = [...tripDays].sort((a, b) => {
-    const orderDiff = Number(a.day_number) - Number(b.day_number)
-    if (orderDiff !== 0) return orderDiff
-    return String(a.travel_date).localeCompare(String(b.travel_date))
-  })
+  const sortedDays = [...tripDays].sort(
+    (a, b) => Number(a.day_number) - Number(b.day_number),
+  )
 
   const totalDays = countDays(startDate, endDate)
   const expectedNights = Math.max(totalDays - 1, 0)
-  const totalPlannedKm = sortedDays.reduce(
+  const bookedNights = accommodations.reduce(
+    (sum, accommodation) => sum + countNights(accommodation),
+    0,
+  )
+
+  const totalKm = sortedDays.reduce(
     (sum, day) => sum + Number(day.planned_km || 0),
     0,
   )
+
   const totalHotelCost = accommodations.reduce(
     (sum, accommodation) => sum + Number(accommodation.price || 0),
     0,
   )
-  const totalRegisteredExpenses = expenses.reduce(
+
+  const totalExpenses = expenses.reduce(
     (sum, expense) => sum + Number(expense.amount || 0),
     0,
   )
-  const indicativeTotal = totalHotelCost + totalRegisteredExpenses
+
+  const grandTotal = totalHotelCost + totalExpenses
 
   const expensesByCategory = expenseCategories
     .map((category) => ({
@@ -210,137 +241,167 @@ export async function exportTripPdf({
     timeStyle: 'short',
   })
 
-  const addPageHeader = (pageNumber: number) => {
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(7)
-    doc.setTextColor(70)
-    doc.text(title || 'Viaggio senza titolo', margin, 7)
+  const footer = () => {
+    const current = doc.getCurrentPageInfo().pageNumber
+    const total = doc.getNumberOfPages()
 
     doc.setFont('helvetica', 'normal')
     doc.setFontSize(6.5)
+    doc.setTextColor(95)
+
     doc.text(
-      `Roadbook · generato ${generatedAt}`,
-      pageWidth - margin,
-      7,
-      { align: 'right' },
+      `${title || 'Viaggio'} · Moto /=\\ Viaggi`,
+      margin,
+      pageHeight - 5,
     )
 
-    doc.setDrawColor(210)
-    doc.line(margin, 9, pageWidth - margin, 9)
-
-    doc.setFontSize(6.5)
-    doc.setTextColor(90)
     doc.text(
-      `Pagina ${pageNumber}`,
+      `Pagina ${current} di ${total}`,
       pageWidth - margin,
       pageHeight - 5,
       { align: 'right' },
     )
   }
 
-  // Copertina / riepilogo
+  const sectionHeader = (label: string, subtitle?: string) => {
+    doc.setFillColor(8, 8, 8)
+    doc.roundedRect(margin, 12, pageWidth - margin * 2, 18, 2.5, 2.5, 'F')
+
+    if (logoDataUrl) {
+      doc.addImage(
+        logoDataUrl,
+        'PNG',
+        margin + 4,
+        15,
+        43,
+        11,
+        undefined,
+        'FAST',
+      )
+    }
+
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(13)
+    doc.setTextColor(255)
+    doc.text(label, logoDataUrl ? margin + 53 : margin + 5, 21)
+
+    if (subtitle) {
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(7)
+      doc.setTextColor(210)
+      doc.text(subtitle, logoDataUrl ? margin + 53 : margin + 5, 26)
+    }
+  }
+
+  // ==========================================================
+  // PAGINA 1 — COPERTINA + RIEPILOGO
+  // ==========================================================
   doc.setFillColor(8, 8, 8)
-  doc.roundedRect(margin, 14, pageWidth - margin * 2, 30, 3, 3, 'F')
+  doc.roundedRect(margin, 12, pageWidth - margin * 2, 34, 3, 3, 'F')
 
   if (logoDataUrl) {
     doc.addImage(
       logoDataUrl,
       'PNG',
       margin + 5,
-      17,
-      58,
-      15,
+      16,
+      63,
+      16,
       undefined,
-      'FAST'
+      'FAST',
     )
   }
 
   doc.setTextColor(255)
   doc.setFont('helvetica', 'bold')
-  doc.setFontSize(15)
+  doc.setFontSize(17)
   doc.text(
     title || 'Viaggio senza titolo',
-    logoDataUrl ? margin + 70 : margin + 7,
-    27
+    logoDataUrl ? margin + 75 : margin + 7,
+    26,
   )
 
   doc.setFont('helvetica', 'normal')
-  doc.setFontSize(8)
-  doc.setTextColor(220)
+  doc.setFontSize(9)
+  doc.setTextColor(215)
   doc.text(
     `${formatDate(startDate)} → ${formatDate(endDate)}`,
-    logoDataUrl ? margin + 70 : margin + 7,
-    34
+    logoDataUrl ? margin + 75 : margin + 7,
+    34,
   )
 
-  doc.setTextColor(30)
+  doc.setFontSize(6.5)
+  doc.text(
+    `Generato il ${generatedAt}`,
+    logoDataUrl ? margin + 75 : margin + 7,
+    40,
+  )
+
+  doc.setTextColor(35)
   doc.setFont('helvetica', 'bold')
-  doc.setFontSize(10)
-  doc.text('Riepilogo generale', margin, 52)
+  doc.setFontSize(11)
+  doc.text('Riepilogo generale', margin, 56)
 
   autoTable(doc, {
-    startY: 56,
+    startY: 60,
     margin: { left: margin, right: margin },
     theme: 'grid',
     head: [[
       'Giorni',
-      'Tappe pianificate',
-      'Pernottamenti',
+      'Tappe',
+      'Hotel',
+      'Notti',
       'Km previsti',
       'Costo hotel',
-      'Spese registrate',
-      'Totale indicativo',
+      'Spese',
+      'Totale',
     ]],
     body: [[
       totalDays || '—',
       sortedDays.length,
-      `${accommodations.length}/${expectedNights || '—'}`,
-      `${totalPlannedKm.toFixed(1)} km`,
+      accommodations.length,
+      `${bookedNights}/${expectedNights || '—'}`,
+      `${totalKm.toFixed(1)} km`,
       formatMoney(totalHotelCost),
-      formatMoney(totalRegisteredExpenses),
-      formatMoney(indicativeTotal),
+      formatMoney(totalExpenses),
+      formatMoney(grandTotal),
     ]],
     styles: {
       font: 'helvetica',
       fontSize: 8,
-      cellPadding: 2.3,
+      cellPadding: 2.4,
+      halign: 'center',
       valign: 'middle',
-      textColor: 35,
       lineColor: 210,
       lineWidth: 0.2,
+      textColor: 35,
     },
     headStyles: {
-      fillColor: [51, 65, 85],
+      fillColor: [48, 59, 76],
       textColor: 255,
       fontStyle: 'bold',
-      halign: 'center',
-    },
-    bodyStyles: {
-      halign: 'center',
     },
   })
 
-  const summaryFinalY =
-    (doc as typeof doc & { lastAutoTable?: { finalY: number } }).lastAutoTable
-      ?.finalY ?? 70
-
-  let currentY = summaryFinalY + 7
+  let y =
+    ((doc as typeof doc & { lastAutoTable?: { finalY: number } })
+      .lastAutoTable?.finalY ?? 80) + 8
 
   if (expensesByCategory.length > 0) {
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(10)
-    doc.text('Spese registrate per categoria', margin, currentY)
+    doc.text('Spese per categoria', margin, y)
 
     autoTable(doc, {
-      startY: currentY + 3,
+      startY: y + 3,
       margin: { left: margin, right: margin },
       theme: 'striped',
+      tableWidth: 100,
       head: [['Categoria', 'Importo']],
       body: expensesByCategory.map((item) => [
         item.name,
         formatMoney(item.total),
       ]),
-      tableWidth: 95,
       styles: {
         font: 'helvetica',
         fontSize: 8,
@@ -349,37 +410,49 @@ export async function exportTripPdf({
         lineWidth: 0.15,
       },
       headStyles: {
-        fillColor: [71, 85, 105],
+        fillColor: [73, 85, 104],
         textColor: 255,
+        fontStyle: 'bold',
       },
       columnStyles: {
-        1: { halign: 'right', cellWidth: 30 },
+        1: { halign: 'right', cellWidth: 32 },
       },
     })
 
-    currentY =
+    y =
       ((doc as typeof doc & { lastAutoTable?: { finalY: number } })
-        .lastAutoTable?.finalY ?? currentY) + 7
+        .lastAutoTable?.finalY ?? y) + 8
   }
 
   if (tripNotes.trim()) {
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(10)
-    doc.text('Note generali', margin, currentY)
+    doc.text('Note generali', margin, y)
 
     doc.setFont('helvetica', 'normal')
     doc.setFontSize(8)
-    const noteLines = doc.splitTextToSize(
+    doc.setTextColor(60)
+
+    const lines = doc.splitTextToSize(
       tripNotes.trim(),
       pageWidth - margin * 2,
     )
-    doc.text(noteLines, margin, currentY + 4)
+
+    doc.text(lines, margin, y + 4)
   }
 
-  doc.addPage('a4', 'landscape')
+  footer()
 
-  // Tabella pianificazione
-  const planningRows: string[][] = []
+  // ==========================================================
+  // PAGINA 2 — TABELLA RIEPILOGATIVA UNIFORME
+  // ==========================================================
+  doc.addPage('a4', 'landscape')
+  sectionHeader(
+    'Tabella riepilogativa',
+    'Sintesi essenziale di tappe, pernottamenti e costi',
+  )
+
+  const summaryRows: string[][] = []
 
   sortedDays.forEach((day) => {
     const dayAccommodations = accommodations.filter(
@@ -387,10 +460,9 @@ export async function exportTripPdf({
     )
 
     if (dayAccommodations.length === 0) {
-      planningRows.push([
+      summaryRows.push([
         String(day.day_number),
         `${day.start_city || '—'} → ${day.end_city || '—'}`,
-        formatDate(day.travel_date),
         formatDate(day.travel_date),
         day.planned_km !== null
           ? Number(day.planned_km).toFixed(0)
@@ -399,227 +471,422 @@ export async function exportTripPdf({
         '—',
         '—',
         '—',
-        '—',
-        '—',
-        day.notes || '—',
       ])
       return
     }
 
     dayAccommodations.forEach((accommodation, index) => {
-      planningRows.push([
-        index === 0 ? String(day.day_number) : '',
+      summaryRows.push([
+        index === 0 ? stayDayLabel(accommodation, sortedDays) : '',
         index === 0
           ? `${day.start_city || '—'} → ${day.end_city || '—'}`
-          : '↳ altro pernottamento',
+          : '↳ stesso soggiorno',
         index === 0 ? formatDate(day.travel_date) : '',
-        accommodation.check_out_date
-          ? formatDate(accommodation.check_out_date)
-          : formatDate(day.travel_date),
         index === 0 && day.planned_km !== null
           ? Number(day.planned_km).toFixed(0)
           : '',
         accommodation.name,
-        accommodation.address || '—',
-        `${formatDate(accommodation.check_in_date)} ${formatTime(
-          accommodation.check_in_time,
-        )}`,
-        `${formatDate(accommodation.check_out_date)} ${formatTime(
-          accommodation.check_out_time,
-        )}`,
         accommodation.price !== null
           ? formatMoney(Number(accommodation.price))
           : '—',
-        [
-          accommodation.free_cancellation_until
-            ? `Disdetta: ${formatDate(
-                accommodation.free_cancellation_until,
-              )}`
-            : 'Disdetta: —',
-          paymentLabel(accommodation),
-          accommodation.parking_available
-            ? 'Parcheggio moto: sì'
-            : 'Parcheggio moto: no',
-          accommodation.breakfast_included
-            ? 'Colazione: inclusa'
-            : 'Colazione: non inclusa',
-        ].join('\n'),
-        [day.notes, accommodation.notes].filter(Boolean).join('\n') || '—',
+        paymentLabel(accommodation),
+        accommodation.breakfast_included ? 'Inclusa' : 'No',
       ])
     })
   })
 
   autoTable(doc, {
-    startY: 13,
-    margin: { left: 7, right: 7, top: 13, bottom: 10 },
+    startY: 36,
+    margin: { left: margin, right: margin, bottom: 12 },
     theme: 'grid',
     head: [[
-      'G.',
+      'Giorno/i',
       'Tappa',
-      'Arrivo',
-      'Partenza',
+      'Data',
       'Km',
       'Pernottamento',
-      'Indirizzo',
-      'Check-in',
-      'Check-out',
       'Costo',
-      'Prenotazione / pagamento',
-      'Note',
+      'Pagamento',
+      'Colazione',
     ]],
-    body: planningRows,
+    body: summaryRows,
     styles: {
       font: 'helvetica',
-      fontSize: 6.2,
-      cellPadding: 1.5,
-      valign: 'top',
+      fontStyle: 'normal',
+      fontSize: 7.3,
+      cellPadding: 2,
+      valign: 'middle',
       overflow: 'linebreak',
       lineColor: 205,
       lineWidth: 0.15,
       textColor: 35,
+      minCellHeight: 8,
     },
     headStyles: {
+      font: 'helvetica',
+      fontStyle: 'bold',
       fillColor: [30, 41, 59],
       textColor: 255,
-      fontStyle: 'bold',
       halign: 'center',
-      valign: 'middle',
     },
     alternateRowStyles: {
       fillColor: [246, 248, 250],
     },
     columnStyles: {
-      0: { cellWidth: 7, halign: 'center' },
-      1: { cellWidth: 28 },
-      2: { cellWidth: 16 },
-      3: { cellWidth: 16 },
-      4: { cellWidth: 10, halign: 'right' },
-      5: { cellWidth: 27 },
-      6: { cellWidth: 36 },
-      7: { cellWidth: 22 },
-      8: { cellWidth: 22 },
-      9: { cellWidth: 18, halign: 'right' },
-      10: { cellWidth: 38 },
-      11: { cellWidth: 41 },
+      0: { cellWidth: 23, halign: 'center' },
+      1: { cellWidth: 55, font: 'helvetica', fontStyle: 'normal' },
+      2: { cellWidth: 24, halign: 'center' },
+      3: { cellWidth: 14, halign: 'right' },
+      4: { cellWidth: 63, font: 'helvetica', fontStyle: 'normal' },
+      5: { cellWidth: 24, halign: 'right' },
+      6: { cellWidth: 42 },
+      7: { cellWidth: 22, halign: 'center' },
     },
-    didDrawPage: (data) => {
-      addPageHeader(data.pageNumber + 1)
-    },
+    didDrawPage: footer,
   })
 
-  // Appendice link cliccabili
-  const accommodationsWithLinks = accommodations.filter(
-    (accommodation) =>
-      bookingUrl(accommodation) || mapsUrl(accommodation.address),
-  )
+  // ==========================================================
+  // PAGINE SUCCESSIVE — DETTAGLIO GIORNATE
+  // ==========================================================
+  sortedDays.forEach((day) => {
+    const dayAccommodations = accommodations.filter(
+      (accommodation) => accommodation.trip_day_id === day.id,
+    )
 
-  if (accommodationsWithLinks.length > 0) {
-    doc.addPage('a4', 'portrait')
+    doc.addPage('a4', 'landscape')
 
-    const portraitWidth = doc.internal.pageSize.getWidth()
-    const portraitHeight = doc.internal.pageSize.getHeight()
+    const primaryAccommodation = dayAccommodations[0]
+    const pageLabel = primaryAccommodation
+      ? stayDayLabel(primaryAccommodation, sortedDays)
+      : `Giorno ${day.day_number}`
 
-    doc.setTextColor(30)
+    sectionHeader(
+      `${pageLabel} · ${day.start_city || '—'} → ${day.end_city || '—'}`,
+      `${formatDate(day.travel_date)} · ${
+        day.planned_km !== null
+          ? `${Number(day.planned_km).toFixed(0)} km`
+          : 'Km non indicati'
+      }`,
+    )
+
+    // Colonna sinistra: tappa e note
+    doc.setFillColor(246, 248, 250)
+    doc.roundedRect(10, 36, 88, 155, 2.5, 2.5, 'F')
+
+    doc.setTextColor(35)
     doc.setFont('helvetica', 'bold')
-    doc.setFontSize(15)
-    doc.text('Link utili e prenotazioni', 14, 19)
+    doc.setFontSize(11)
+    doc.text('Tappa', 15, 46)
+
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(9)
+    const routeLines = doc.splitTextToSize(
+      `${day.start_city || '—'} → ${day.end_city || '—'}`,
+      76,
+    )
+    doc.text(routeLines, 15, 53)
+
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(8)
+    doc.text('Data', 15, 70)
+    doc.text('Km previsti', 52, 70)
+
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(8.5)
+    doc.text(formatDate(day.travel_date), 15, 76)
+    doc.text(
+      day.planned_km !== null
+        ? `${Number(day.planned_km).toFixed(1)} km`
+        : '—',
+      52,
+      76,
+    )
+
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(8)
+    doc.text('Note della tappa', 15, 90)
 
     doc.setFont('helvetica', 'normal')
     doc.setFontSize(8)
-    doc.setTextColor(90)
-    doc.text(
-      'I collegamenti restano cliccabili aprendo il PDF da computer o smartphone.',
-      14,
-      25,
-    )
+    doc.setTextColor(65)
+    const dayNoteLines = doc.splitTextToSize(day.notes || '—', 76)
+    doc.text(dayNoteLines, 15, 97)
 
-    let y = 34
+    // Colonna destra: pernottamenti
+    const rightX = 104
+    const rightWidth = pageWidth - rightX - margin
 
-    accommodationsWithLinks.forEach((accommodation, index) => {
-      const relatedDay = sortedDays.find(
-        (day) => day.id === accommodation.trip_day_id,
-      )
-      const booking = bookingUrl(accommodation)
-      const map = mapsUrl(accommodation.address)
+    if (dayAccommodations.length === 0) {
+      doc.setDrawColor(195)
+      doc.setLineDashPattern([2, 2], 0)
+      doc.roundedRect(rightX, 36, rightWidth, 55, 2.5, 2.5, 'S')
+      doc.setLineDashPattern([], 0)
 
-      if (y > portraitHeight - 35) {
-        doc.addPage('a4', 'portrait')
-        y = 20
-      }
-
-      doc.setDrawColor(220)
-      doc.setFillColor(248, 250, 252)
-      doc.roundedRect(14, y - 5, portraitWidth - 28, 27, 2, 2, 'FD')
-
-      doc.setTextColor(30)
       doc.setFont('helvetica', 'bold')
-      doc.setFontSize(10)
-      doc.text(
-        `${relatedDay ? `Giorno ${relatedDay.day_number} · ` : ''}${
-          accommodation.name
-        }`,
-        18,
-        y + 1,
-      )
+      doc.setFontSize(11)
+      doc.setTextColor(60)
+      doc.text('Nessun pernottamento associato', rightX + 8, 54)
 
       doc.setFont('helvetica', 'normal')
       doc.setFontSize(8)
-      doc.setTextColor(70)
+      doc.setTextColor(95)
+      doc.text(
+        'Questa giornata può essere una tappa senza pernottamento oppure una giornata coperta da un soggiorno precedente.',
+        rightX + 8,
+        63,
+        { maxWidth: rightWidth - 16 },
+      )
+    }
 
-      if (accommodation.address) {
-        doc.text(accommodation.address, 18, y + 6)
+    let hotelY = 36
+
+    dayAccommodations.forEach((accommodation) => {
+      const cardHeight = 70
+
+      if (hotelY + cardHeight > pageHeight - 15) {
+        footer()
+        doc.addPage('a4', 'landscape')
+        sectionHeader(
+          `${pageLabel} · Pernottamenti`,
+          `${day.start_city || '—'} → ${day.end_city || '—'}`,
+        )
+        hotelY = 36
       }
 
-      let linkY = y + 12
+      doc.setFillColor(252, 252, 252)
+      doc.setDrawColor(205)
+      doc.roundedRect(
+        rightX,
+        hotelY,
+        rightWidth,
+        cardHeight,
+        2.5,
+        2.5,
+        'FD',
+      )
+
+      doc.setTextColor(35)
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(11)
+      doc.text(
+        accommodation.name,
+        rightX + 7,
+        hotelY + 10,
+        { maxWidth: rightWidth - 50 },
+      )
+
+      if (accommodation.price !== null) {
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(10)
+        doc.text(
+          formatMoney(Number(accommodation.price)),
+          rightX + rightWidth - 7,
+          hotelY + 10,
+          { align: 'right' },
+        )
+      }
+
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(7.5)
+      doc.setTextColor(75)
+
+      const addressLines = doc.splitTextToSize(
+        accommodation.address || 'Indirizzo non indicato',
+        rightWidth - 14,
+      )
+      doc.text(addressLines, rightX + 7, hotelY + 17)
+
+      const leftCol = rightX + 7
+      const centerCol = rightX + 58
+      const infoY = hotelY + 33
+
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(7)
+      doc.setTextColor(95)
+      doc.text('CHECK-IN', leftCol, infoY)
+      doc.text('CHECK-OUT', centerCol, infoY)
+
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(8)
+      doc.setTextColor(35)
+      doc.text(
+        `${formatDate(accommodation.check_in_date)} ${formatTime(
+          accommodation.check_in_time,
+        )}`,
+        leftCol,
+        infoY + 6,
+      )
+      doc.text(
+        `${formatDate(accommodation.check_out_date)} ${formatTime(
+          accommodation.check_out_time,
+        )}`,
+        centerCol,
+        infoY + 6,
+      )
+
+      const detailX = rightX + 112
+
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(7)
+      doc.setTextColor(95)
+      doc.text('PAGAMENTO', detailX, infoY)
+      doc.text('DISDETTA', detailX, infoY + 12)
+
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(8)
+      doc.setTextColor(35)
+      doc.text(paymentLabel(accommodation), detailX, infoY + 6)
+      doc.text(
+        accommodation.free_cancellation_until
+          ? formatDate(accommodation.free_cancellation_until)
+          : '—',
+        detailX,
+        infoY + 18,
+      )
+
+      const serviceX = rightX + rightWidth - 57
+
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(7)
+      doc.setTextColor(95)
+      doc.text('SERVIZI', serviceX, infoY)
+
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(8)
+      doc.setTextColor(35)
+      doc.text(
+        accommodation.parking_available
+          ? 'Parcheggio moto: sì'
+          : 'Parcheggio moto: no',
+        serviceX,
+        infoY + 6,
+      )
+      doc.text(
+        accommodation.breakfast_included
+          ? 'Colazione: inclusa'
+          : 'Colazione: non inclusa',
+        serviceX,
+        infoY + 12,
+      )
+
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(7)
+      doc.setTextColor(95)
+      doc.text('NOTE HOTEL', leftCol, hotelY + 58)
+
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(7.5)
+      doc.setTextColor(65)
+      const hotelNotes = doc.splitTextToSize(
+        accommodation.notes || '—',
+        rightWidth - 14,
+      )
+      doc.text(hotelNotes.slice(0, 2), leftCol, hotelY + 64)
+
+      const booking = bookingUrl(accommodation)
+      const map = mapsUrl(accommodation.address)
 
       if (booking) {
         doc.setTextColor(25, 90, 160)
         doc.textWithLink(
           `${bookingLabel(accommodation)}: apri prenotazione`,
-          18,
-          linkY,
+          rightX + rightWidth - 72,
+          hotelY + 61,
           { url: booking },
         )
-        linkY += 5
       }
 
       if (map) {
         doc.setTextColor(25, 90, 160)
-        doc.textWithLink('Google Maps: apri posizione', 18, linkY, {
-          url: map,
-        })
+        doc.textWithLink(
+          'Google Maps',
+          rightX + rightWidth - 72,
+          hotelY + 67,
+          { url: map },
+        )
       }
 
-      y += 32
+      hotelY += cardHeight + 7
     })
 
-    const pageCount = doc.getNumberOfPages()
-    for (let page = 1; page <= pageCount; page++) {
-      doc.setPage(page)
-      const width = doc.internal.pageSize.getWidth()
-      const height = doc.internal.pageSize.getHeight()
+    footer()
+  })
 
-      doc.setFont('helvetica', 'normal')
-      doc.setFontSize(6.5)
-      doc.setTextColor(90)
-      doc.text(`Pagina ${page} di ${pageCount}`, width - 10, height - 5, {
-        align: 'right',
-      })
-    }
-  } else {
-    const pageCount = doc.getNumberOfPages()
-    for (let page = 1; page <= pageCount; page++) {
-      doc.setPage(page)
-      const width = doc.internal.pageSize.getWidth()
-      const height = doc.internal.pageSize.getHeight()
+  // ==========================================================
+  // ULTIMA PAGINA — RIEPILOGO ECONOMICO
+  // ==========================================================
+  doc.addPage('a4', 'landscape')
+  sectionHeader(
+    'Riepilogo economico',
+    'Costi pianificati e spese già registrate',
+  )
 
-      doc.setFont('helvetica', 'normal')
-      doc.setFontSize(6.5)
-      doc.setTextColor(90)
-      doc.text(`Pagina ${page} di ${pageCount}`, width - 10, height - 5, {
-        align: 'right',
-      })
-    }
+  const economicRows = [
+    ['Hotel', formatMoney(totalHotelCost)],
+    ...expensesByCategory.map((item) => [
+      item.name,
+      formatMoney(item.total),
+    ]),
+    ['Totale spese registrate', formatMoney(totalExpenses)],
+    ['Totale complessivo', formatMoney(grandTotal)],
+  ]
+
+  autoTable(doc, {
+    startY: 40,
+    margin: { left: 40, right: 40 },
+    theme: 'grid',
+    head: [['Voce', 'Importo']],
+    body: economicRows,
+    styles: {
+      font: 'helvetica',
+      fontSize: 9,
+      cellPadding: 3,
+      lineColor: 210,
+      lineWidth: 0.2,
+    },
+    headStyles: {
+      fillColor: [30, 41, 59],
+      textColor: 255,
+      fontStyle: 'bold',
+    },
+    columnStyles: {
+      1: {
+        halign: 'right',
+        cellWidth: 45,
+        fontStyle: 'bold',
+      },
+    },
+    didParseCell: (data) => {
+      if (
+        data.section === 'body' &&
+        data.row.index === economicRows.length - 1
+      ) {
+        data.cell.styles.fillColor = [239, 230, 200]
+        data.cell.styles.fontStyle = 'bold'
+      }
+    },
+  })
+
+  footer()
+
+  // Aggiorna la numerazione dopo che tutte le pagine esistono.
+  const finalPageCount = doc.getNumberOfPages()
+
+  for (let page = 1; page <= finalPageCount; page++) {
+    doc.setPage(page)
+
+    doc.setFillColor(255, 255, 255)
+    doc.rect(pageWidth - 45, pageHeight - 9, 38, 6, 'F')
+
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(6.5)
+    doc.setTextColor(95)
+    doc.text(
+      `Pagina ${page} di ${finalPageCount}`,
+      pageWidth - margin,
+      pageHeight - 5,
+      { align: 'right' },
+    )
   }
 
   doc.save(`${safeFileName(title)}-roadbook.pdf`)
