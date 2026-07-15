@@ -203,21 +203,22 @@ export function PlanningTab({
         : []
   }
 
-  const getStayDayLabel = (accommodation: Accommodation): string => {
-    const dayNumbers = getCoveredDays(accommodation).map(
-      (day) => day.day_number
-    )
+const getStayDayLabel = (
+  accommodation: Accommodation
+    ): string => {
+      const coveredDays = getCoveredDays(accommodation)
+        .map((day) => Number(day.day_number))
+        .filter((dayNumber) => Number.isFinite(dayNumber))
+        .sort((a, b) => a - b)
 
-    if (dayNumbers.length === 0) return ''
-    if (dayNumbers.length === 1) return `Giorno ${dayNumbers[0]}`
-    if (dayNumbers.length === 2) {
-      return `Giorni ${dayNumbers[0]} e ${dayNumbers[1]}`
-    }
+      if (coveredDays.length === 0) return ''
 
-    return `Giorni ${dayNumbers.slice(0, -1).join(', ')} e ${
-      dayNumbers[dayNumbers.length - 1]
-    }`
-  }
+      if (coveredDays.length === 1) {
+        return `Giorno ${coveredDays[0]}`
+      }
+
+      return `Giorni ${coveredDays.join('/')}`
+}
 
   const getCoveringAccommodation = (
     day: TripDay
