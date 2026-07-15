@@ -1092,94 +1092,145 @@ for (const p of pointsData ?? []) {
 
 
               {activeTab === 'expenses' && (
-                <div className="grid gap-4 space-y-4 lg:grid-cols-[minmax(0,1fr)_380px] lg:space-y-0 xl:grid-cols-[minmax(0,1fr)_420px]">
-                  
-                  <div className="space-y-4">
-                    <div className="rounded-xl border border-border bg-card p-4 shadow-sm space-y-3">
+                <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-4 xl:grid-cols-[minmax(0,1fr)_420px]">
+
+                  <div className="min-w-0 space-y-3 sm:space-y-4">
+                    <div className="space-y-3 rounded-xl border border-border bg-card p-3 shadow-sm sm:p-4">
                       <div className="flex items-center gap-1.5 text-muted-foreground">
-                        <Plus className="size-4 text-primary" />
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">Nuovo Movimento</h4>
+                        <Plus className="size-3.5 text-primary sm:size-4" />
+                        <h4 className="text-[9px] font-bold uppercase tracking-wider text-foreground sm:text-xs">
+                          Nuovo movimento
+                        </h4>
                       </div>
-                      <div className="grid gap-2.5 grid-cols-2 sm:grid-cols-3 bg-secondary/10 p-3 rounded-lg border border-border/40">
-                        <div className="space-y-0.5 col-span-2 sm:col-span-1">
-                          <span className="text-[10px] uppercase font-bold text-muted-foreground">Categoria</span>
+
+                      <div className="grid min-w-0 grid-cols-2 gap-2 rounded-lg border border-border/40 bg-secondary/10 p-2.5 sm:grid-cols-3 sm:gap-2.5 sm:p-3">
+                        <div className="col-span-2 min-w-0 space-y-0.5 sm:col-span-1">
+                          <span className="text-[8px] font-bold uppercase text-muted-foreground sm:text-[10px]">
+                            Categoria
+                          </span>
                           <select
                             value={selectedCatId}
                             onChange={(e) => setSelectedCatId(parseInt(e.target.value))}
-                            className="w-full rounded-md border border-border bg-background p-1.5 text-xs font-medium text-foreground focus:outline-none"
+                            className="h-9 w-full min-w-0 rounded-md border border-border bg-background px-2 text-[10px] font-medium text-foreground focus:outline-none sm:text-xs"
                           >
                             {expenseCategories.map((cat) => (
-                              <option key={cat.id} value={cat.id}>{cat.name}</option>
+                              <option key={cat.id} value={cat.id}>
+                                {cat.name}
+                              </option>
                             ))}
                           </select>
                         </div>
-                        <div className="space-y-0.5">
-                          <span className="text-[10px] uppercase font-bold text-muted-foreground">Data Spesa</span>
+
+                        <div className="min-w-0 space-y-0.5">
+                          <span className="text-[8px] font-bold uppercase text-muted-foreground sm:text-[10px]">
+                            Data spesa
+                          </span>
                           <input
                             type="date"
                             value={expenseDate}
                             onChange={(e) => setExpenseDate(e.target.value)}
-                            className="w-full rounded-md border border-border bg-background p-1.5 text-xs text-foreground focus:outline-none"
+                            className="block h-9 w-full min-w-0 max-w-full appearance-none rounded-md border border-border bg-background px-2 text-[10px] text-foreground focus:outline-none sm:text-xs"
                           />
                         </div>
-                        <div className="space-y-0.5">
-                          <span className="text-[10px] uppercase font-bold text-muted-foreground">Cifra (€)</span>
-                          <div className="relative flex items-center">
-                            <Euro className="absolute left-2 size-3 text-muted-foreground" />
+
+                        <div className="min-w-0 space-y-0.5">
+                          <span className="text-[8px] font-bold uppercase text-muted-foreground sm:text-[10px]">
+                            Cifra (€)
+                          </span>
+                          <div className="relative flex min-w-0 items-center">
+                            <Euro className="absolute left-2 size-3 shrink-0 text-muted-foreground" />
                             <input
                               type="number"
+                              inputMode="decimal"
                               step="0.01"
                               placeholder="0.00"
                               value={expenseAmount}
                               onChange={(e) => setExpenseAmount(e.target.value)}
-                              className="w-full rounded-md border border-border bg-background py-1.5 pl-6 pr-1 text-xs font-bold text-foreground focus:outline-none"
+                              className="h-9 w-full min-w-0 rounded-md border border-border bg-background pl-6 pr-2 text-[10px] font-bold text-foreground focus:outline-none sm:text-xs"
                             />
                           </div>
                         </div>
-                        <div className="col-span-2 sm:col-span-3 flex gap-2 items-end pt-1">
-                          <div className="flex-1 space-y-0.5">
-                            <span className="text-[10px] uppercase font-bold text-muted-foreground">Dettagli / Note</span>
-                            <input
-                              type="text"
-                              placeholder="Es. Benzina Total - Pieno"
-                              value={expenseNotes}
-                              onChange={(e) => setExpenseNotes(e.target.value)}
-                              className="w-full rounded-md border border-border bg-background py-1.5 px-2.5 text-xs text-foreground focus:outline-none"
-                            />
-                          </div>
-                          <Button type="button" onClick={addExpense} size="sm" className="h-8 px-3 font-bold text-xs gap-1 rounded-md">
-                            Aggiungi
+
+                        <div className="col-span-2 min-w-0 space-y-0.5 sm:col-span-3">
+                          <span className="text-[8px] font-bold uppercase text-muted-foreground sm:text-[10px]">
+                            Dettagli / note
+                          </span>
+                          <input
+                            type="text"
+                            placeholder="Es. Benzina Total - Pieno"
+                            value={expenseNotes}
+                            onChange={(e) => setExpenseNotes(e.target.value)}
+                            className="h-9 w-full min-w-0 rounded-md border border-border bg-background px-2.5 text-[10px] text-foreground focus:outline-none sm:text-xs"
+                          />
+                        </div>
+
+                        <div className="col-span-2 sm:col-span-3">
+                          <Button
+                            type="button"
+                            onClick={addExpense}
+                            size="sm"
+                            className="h-9 w-full gap-1 rounded-md px-3 text-[10px] font-bold sm:w-auto sm:text-xs"
+                          >
+                            <Plus className="size-3" />
+                            Aggiungi spesa
                           </Button>
                         </div>
                       </div>
                     </div>
 
-                    <div className="rounded-xl border border-border bg-card p-4 shadow-sm space-y-2">
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Lista Voci Inserite ({expenses.length})</h4>
+                    <div className="space-y-2 rounded-xl border border-border bg-card p-3 shadow-sm sm:p-4">
+                      <h4 className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground sm:text-xs">
+                        Lista voci inserite ({expenses.length})
+                      </h4>
+
                       {expenses.length === 0 ? (
-                        <p className="text-xs text-muted-foreground italic text-center py-6 bg-secondary/5 rounded-lg border border-dashed border-border">
+                        <p className="rounded-lg border border-dashed border-border bg-secondary/5 py-5 text-center text-[9px] italic text-muted-foreground sm:py-6 sm:text-xs">
                           Nessun costo inserito in questo tour.
                         </p>
                       ) : (
-                        <div className="max-h-[260px] overflow-y-auto space-y-2 pr-1">
+                        <div className="max-h-[320px] space-y-2 overflow-y-auto pr-0.5 sm:max-h-[360px] sm:pr-1">
                           {expenses.map((exp, idx) => {
-                            const catName = expenseCategories.find((c) => c.id === exp.category_id)?.name || 'Spesa'
+                            const catName =
+                              expenseCategories.find(
+                                (category) => category.id === exp.category_id
+                              )?.name || 'Spesa'
+
                             return (
-                              <div key={idx} className="flex items-center justify-between text-xs p-2.5 rounded-lg bg-background border border-border/50 shadow-sm">
-                                <div className="truncate mr-2 space-y-0.5">
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="font-bold text-foreground text-xs">{catName}</span>
-                                    <span className="text-[9px] text-muted-foreground font-mono bg-secondary px-1 rounded">
-                                      {formatDate(exp.expense_date)}
-                                    </span>
+                              <div
+                                key={idx}
+                                className="min-w-0 rounded-lg border border-border/50 bg-background p-2.5 shadow-sm"
+                              >
+                                <div className="flex min-w-0 items-start justify-between gap-2">
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                                      <span className="truncate text-[10px] font-bold text-foreground sm:text-xs">
+                                        {catName}
+                                      </span>
+                                      <span className="rounded bg-secondary px-1 py-0.5 font-mono text-[8px] text-muted-foreground sm:text-[9px]">
+                                        {formatDate(exp.expense_date)}
+                                      </span>
+                                    </div>
+
+                                    {exp.notes && (
+                                      <p className="mt-1 break-words text-[9px] italic leading-snug text-muted-foreground sm:text-[11px]">
+                                        “{exp.notes}”
+                                      </p>
+                                    )}
                                   </div>
-                                  {exp.notes && <p className="text-muted-foreground italic text-[11px] truncate">"{exp.notes}"</p>}
-                                </div>
-                                <div className="flex items-center gap-2 shrink-0">
-                                  <span className="font-mono font-bold text-xs bg-secondary/50 px-2 py-0.5 rounded-md border border-border/10">€{exp.amount.toFixed(2)}</span>
-                                  <button onClick={() => removeExpense(idx)} className="text-muted-foreground hover:text-destructive p-1 transition-colors">
-                                    <Trash2 className="size-3.5" />
-                                  </button>
+
+                                  <div className="flex shrink-0 items-center gap-1.5">
+                                    <span className="rounded-md border border-border/10 bg-secondary/50 px-1.5 py-1 font-mono text-[10px] font-bold text-foreground sm:px-2 sm:text-xs">
+                                      €{Number(exp.amount).toFixed(2)}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => removeExpense(idx)}
+                                      aria-label="Elimina spesa"
+                                      className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                                    >
+                                      <Trash2 className="size-3 sm:size-3.5" />
+                                    </button>
+                                  </div>
                                 </div>
                               </div>
                             )
@@ -1189,19 +1240,30 @@ for (const p of pointsData ?? []) {
                     </div>
                   </div>
 
-                  <div className="space-y-4">
-                    <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
-                      <div className="flex items-center justify-between border-b border-border/50 pb-2 mb-3">
-                        <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Totale Speso</span>
-                        <span className="text-xl font-black text-primary font-mono">€ {totalExpensesCost}</span>
+                  <div className="min-w-0 space-y-3 sm:space-y-4">
+                    <div className="rounded-xl border border-border bg-card p-3 shadow-sm sm:p-4">
+                      <div className="mb-3 flex min-w-0 items-center justify-between gap-3 border-b border-border/50 pb-2">
+                        <span className="min-w-0 text-[9px] font-bold uppercase tracking-wider text-muted-foreground sm:text-xs">
+                          Totale speso
+                        </span>
+                        <span className="shrink-0 whitespace-nowrap font-mono text-base font-black text-primary sm:text-xl">
+                          € {totalExpensesCost}
+                        </span>
                       </div>
-                      <div className="grid gap-1.5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-1">
+
+                      <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 lg:grid-cols-1">
                         {expenseCategories.map((cat) => {
                           const subtotal = categorySubtotals[cat.id] || 0
+
                           return (
-                            <div key={cat.id} className="flex items-center justify-between p-2 rounded-lg bg-secondary/10 border border-border/20 text-xs">
-                              <span className="text-muted-foreground truncate mr-2">{cat.name}</span>
-                              <span className="font-mono font-bold text-foreground shrink-0 bg-background px-1.5 py-0.5 rounded border border-border/30">
+                            <div
+                              key={cat.id}
+                              className="flex min-w-0 items-center justify-between gap-2 rounded-lg border border-border/20 bg-secondary/10 p-2"
+                            >
+                              <span className="min-w-0 truncate text-[9px] text-muted-foreground sm:text-xs">
+                                {cat.name}
+                              </span>
+                              <span className="shrink-0 whitespace-nowrap rounded border border-border/30 bg-background px-1.5 py-0.5 font-mono text-[9px] font-bold text-foreground sm:text-xs">
                                 € {subtotal.toFixed(2)}
                               </span>
                             </div>
@@ -1210,7 +1272,6 @@ for (const p of pointsData ?? []) {
                       </div>
                     </div>
                   </div>
-
                 </div>
               )}
 
