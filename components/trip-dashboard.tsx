@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic'
 import Image from 'next/image'
 import { AppSplash } from '@/components/app-splash'
 import { StatisticsView } from '@/components/v2/StatisticsView'
+import { MapExplorerView } from '@/components/v2/MapExplorerView'
 import {
   Bike,
   Route,
@@ -28,6 +29,7 @@ import {
   LayoutDashboard,
   Luggage,
   BarChart3,
+  Globe2,
   Wrench,
   Settings,
   ChevronRight,
@@ -65,6 +67,7 @@ type ActiveTab = TripTab
 type FoundationView =
   | 'dashboard'
   | 'trips'
+  | 'mapExplorer'
   | 'statistics'
   | 'motorcycle'
   | 'settings'
@@ -1314,6 +1317,11 @@ for (const p of pointsData ?? []) {
       icon: Luggage,
     },
     {
+      id: 'mapExplorer' as const,
+      label: 'Mappa viaggi',
+      icon: Globe2,
+    },
+    {
       id: 'statistics' as const,
       label: 'Statistiche',
       icon: BarChart3,
@@ -1580,6 +1588,11 @@ for (const p of pointsData ?? []) {
             )}
           </div>
         )}
+
+        {mode === 'select' &&
+          foundationView === 'mapExplorer' && (
+            <MapExplorerView />
+          )}
 
         {mode === 'select' &&
           foundationView === 'statistics' && (
