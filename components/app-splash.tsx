@@ -31,14 +31,14 @@ export function AppSplash() {
         closing ? 'pointer-events-none opacity-0' : 'opacity-100'
       }`}
     >
-      <div className="relative h-full w-full">
+      <div className="relative h-full w-full p-3 sm:p-6 lg:p-10">
         <Image
           src="/splash/splash-iphone.png"
           alt=""
           fill
           priority
           sizes="100vw"
-          className="object-cover"
+          className="object-contain"
         />
       </div>
     </div>

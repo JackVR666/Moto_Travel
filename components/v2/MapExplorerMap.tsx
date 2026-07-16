@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { Fragment, useEffect } from 'react'
 import {
   CircleMarker,
   MapContainer,
@@ -28,6 +28,62 @@ type MapExplorerMapProps = {
   onSelectTrip: (tripId: string) => void
 }
 
+function RefreshMapSize({
+  dependencyKey,
+}: {
+  dependencyKey: string
+}) {
+  const map = useMap()
+
+  useEffect(() => {
+    let cancelled = false
+
+    const refresh = () => {
+      if (cancelled) return
+
+      map.invalidateSize({
+        animate: false,
+        pan: false,
+      })
+
+      map.eachLayer((layer) => {
+        const redrawable = layer as {
+          redraw?: () => unknown
+        }
+
+        redrawable.redraw?.()
+      })
+    }
+
+    const timers = [
+      window.setTimeout(refresh, 0),
+      window.setTimeout(refresh, 120),
+      window.setTimeout(refresh, 350),
+      window.setTimeout(refresh, 800),
+    ]
+
+    const container = map.getContainer()
+    const observer =
+      typeof ResizeObserver !== 'undefined'
+        ? new ResizeObserver(() => refresh())
+        : null
+
+    observer?.observe(container)
+    window.addEventListener('resize', refresh)
+    window.addEventListener('orientationchange', refresh)
+
+    return () => {
+      cancelled = true
+      timers.forEach((timer) => window.clearTimeout(timer))
+      observer?.disconnect()
+      window.removeEventListener('resize', refresh)
+      window.removeEventListener('orientationchange', refresh)
+    }
+  }, [map, dependencyKey])
+
+  return null
+}
+
 function FitVisibleTracks({
   trips,
 }: {
@@ -36,25 +92,37 @@ function FitVisibleTracks({
   const map = useMap()
 
   useEffect(() => {
-    const coordinates = trips.flatMap((trip) => trip.points)
+    const timer = window.setTimeout(() => {
+      map.invalidateSize({
+        animate: false,
+        pan: false,
+      })
 
-    if (coordinates.length === 0) {
-      map.setView([46.2, 11.2], 5)
-      return
-    }
+      const coordinates = trips.flatMap(
+        (trip) => trip.points,
+      )
 
-    if (coordinates.length === 1) {
-      map.setView(coordinates[0], 11)
-      return
-    }
+      if (coordinates.length === 0) {
+        map.setView([46.2, 11.2], 5)
+        return
+      }
 
-    map.fitBounds(
-      coordinates as LatLngBoundsExpression,
-      {
-        padding: [28, 28],
-        maxZoom: 12,
-      },
-    )
+      if (coordinates.length === 1) {
+        map.setView(coordinates[0], 11)
+        return
+      }
+
+      map.fitBounds(
+        coordinates as LatLngBoundsExpression,
+        {
+          padding: [28, 28],
+          maxZoom: 12,
+          animate: false,
+        },
+      )
+    }, 80)
+
+    return () => window.clearTimeout(timer)
   }, [map, trips])
 
   return null
@@ -86,11 +154,30 @@ export default function MapExplorerMap({
       center={[46.2, 11.2]}
       zoom={5}
       scrollWheelZoom
+      preferCanvas
       className="h-full w-full"
+      style={{
+        height: '100%',
+        width: '100%',
+        minHeight: '100%',
+        background: '#e5e7eb',
+      }}
     >
       <TileLayer
         attribution="&copy; OpenStreetMap contributors"
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        maxNativeZoom={19}
+        maxZoom={20}
+        keepBuffer={5}
+        updateWhenIdle={false}
+        updateWhenZooming={false}
+        crossOrigin="anonymous"
+      />
+
+      <RefreshMapSize
+        dependencyKey={`${selectedTripId}-${trips
+          .map((trip) => `${trip.id}:${trip.points.length}`)
+          .join('|')}`}
       />
 
       <FitVisibleTracks trips={trips} />
@@ -106,7 +193,7 @@ export default function MapExplorerMap({
         const end = trip.points[trip.points.length - 1]
 
         return (
-          <div key={trip.id}>
+          <Fragment key={trip.id}>
             <Polyline
               positions={trip.points}
               pathOptions={{
@@ -177,9 +264,23 @@ export default function MapExplorerMap({
                 {trip.title}
               </Popup>
             </CircleMarker>
-          </div>
+          </Fragment>
         )
       })}
+      <style jsx global>{`
+        .leaflet-container {
+          background: #e5e7eb !important;
+        }
+
+        .leaflet-tile-container {
+          backface-visibility: hidden;
+          transform: translateZ(0);
+        }
+
+        .leaflet-tile {
+          image-rendering: auto;
+        }
+      `}</style>
     </MapContainer>
   )
 }

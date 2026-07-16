@@ -482,6 +482,9 @@ export function MapExplorerView() {
         <div className="h-[430px] overflow-hidden rounded-2xl border border-border bg-card shadow-sm sm:h-[600px]">
           {visibleTrips.length > 0 ? (
             <MapExplorerMap
+              key={`${selectedTripId}-${visibleTrips
+                .map((trip) => `${trip.id}:${trip.points.length}`)
+                .join('|')}`}
               trips={visibleTrips}
               selectedTripId={selectedTripId}
               onSelectTrip={setSelectedTripId}
