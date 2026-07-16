@@ -47,6 +47,14 @@ type PointRow = {
   timestamp: string | null
 }
 
+type StopRow = {
+  latitude: number | null
+  longitude: number | null
+  start_time: string | null
+  end_time: string | null
+  duration_minutes: number | null
+}
+
 const TRACK_COLORS = [
   '#d4af37',
   '#2563eb',
@@ -136,6 +144,22 @@ async function fetchTripPoints(
   return points
 }
 
+async function fetchTripStops(
+  tripId: string,
+): Promise<StopRow[]> {
+  const { data, error } = await supabase
+    .from('trip_stops')
+    .select(
+      'latitude, longitude, start_time, end_time, duration_minutes',
+    )
+    .eq('trip_id', tripId)
+    .order('start_time', { ascending: true })
+
+  if (error) throw error
+
+  return (data || []) as StopRow[]
+}
+
 export function MapExplorerView() {
   const [trips, setTrips] = useState<ExplorerMapTrip[]>([])
   const [loading, setLoading] = useState(true)
@@ -171,7 +195,10 @@ export function MapExplorerView() {
 
         const loaded = await Promise.all(
           tripRows.map(async (trip, index) => {
-            const rawPoints = await fetchTripPoints(trip.id)
+            const [rawPoints, rawStops] = await Promise.all([
+              fetchTripPoints(trip.id),
+              fetchTripStops(trip.id),
+            ])
 
             return {
               id: trip.id,
@@ -184,6 +211,21 @@ export function MapExplorerView() {
               color:
                 TRACK_COLORS[index % TRACK_COLORS.length],
               points: simplifyPoints(rawPoints),
+              stops: rawStops
+                .filter(
+                  (stop) =>
+                    Number.isFinite(Number(stop.latitude)) &&
+                    Number.isFinite(Number(stop.longitude)),
+                )
+                .map((stop) => ({
+                  lat: Number(stop.latitude),
+                  lon: Number(stop.longitude),
+                  startTime: stop.start_time,
+                  endTime: stop.end_time,
+                  durationMinutes: Number(
+                    stop.duration_minutes || 0,
+                  ),
+                })),
             } satisfies ExplorerMapTrip
           }),
         )
@@ -449,7 +491,7 @@ export function MapExplorerView() {
         </div>
       </section>
 
-      <section className="grid grid-cols-3 gap-2 sm:gap-4">
+      <section className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-4">
         <div className="rounded-xl border border-border bg-card p-3 shadow-sm sm:p-5">
           <p className="text-[7px] font-bold uppercase tracking-wider text-muted-foreground sm:text-[10px]">
             Viaggi visibili
@@ -474,6 +516,15 @@ export function MapExplorerView() {
           </p>
           <p className="mt-2 text-lg font-black sm:text-2xl">
             {visiblePointCount}
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-border bg-card p-3 shadow-sm sm:p-5">
+          <p className="text-[7px] font-bold uppercase tracking-wider text-muted-foreground sm:text-[10px]">
+            Soste rilevate
+          </p>
+          <p className="mt-2 text-lg font-black sm:text-2xl">
+            {selectedTrip ? selectedTrip.stops.length : '—'}
           </p>
         </div>
       </section>
@@ -559,6 +610,15 @@ export function MapExplorerView() {
                     {selectedTrip.points.length}
                   </dd>
                 </div>
+
+                <div className="flex justify-between gap-3">
+                  <dt className="text-muted-foreground">
+                    Soste
+                  </dt>
+                  <dd className="font-bold">
+                    {selectedTrip.stops.length}
+                  </dd>
+                </div>
               </dl>
 
               <button
@@ -606,8 +666,9 @@ export function MapExplorerView() {
 
       <p className="text-[8px] leading-relaxed text-muted-foreground sm:text-[10px]">
         Le tracce della mappa generale vengono semplificate a un
-        massimo di circa 650 punti per viaggio. I dati GPX originali
-        restano invariati nel database.
+        massimo di circa 650 punti per viaggio. Se selezioni un solo
+        viaggio, i tag numerati mostrano le soste rilevate. I dati GPX
+        originali restano invariati nel database.
       </p>
     </div>
   )

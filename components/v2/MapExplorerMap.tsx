@@ -4,11 +4,13 @@ import { Fragment, useEffect, useMemo } from 'react'
 import {
   CircleMarker,
   MapContainer,
+  Marker,
   Polyline,
   Popup,
   TileLayer,
   useMap,
 } from 'react-leaflet'
+import { divIcon } from 'leaflet'
 import type { LatLngBoundsExpression } from 'leaflet'
 
 export type ExplorerMapTrip = {
@@ -20,6 +22,13 @@ export type ExplorerMapTrip = {
   status: 'pianificato' | 'in_corso' | 'completato'
   color: string
   points: Array<[number, number]>
+  stops: Array<{
+    lat: number
+    lon: number
+    startTime: string | null
+    endTime: string | null
+    durationMinutes: number
+  }>
 }
 
 type MapExplorerMapProps = {
@@ -134,6 +143,41 @@ function statusLabel(
   return 'Pianificato'
 }
 
+function formatDateTime(value: string | null): string {
+  if (!value) return '—'
+
+  const date = new Date(value)
+
+  if (Number.isNaN(date.getTime())) return value
+
+  return date.toLocaleString('it-IT', {
+    dateStyle: 'short',
+    timeStyle: 'short',
+  })
+}
+
+function formatDuration(minutes: number): string {
+  if (!Number.isFinite(minutes) || minutes <= 0) return '—'
+
+  const hours = Math.floor(minutes / 60)
+  const remainingMinutes = Math.round(minutes % 60)
+
+  if (hours <= 0) return `${remainingMinutes} min`
+  if (remainingMinutes === 0) return `${hours} h`
+
+  return `${hours} h ${remainingMinutes} min`
+}
+
+function stopIcon(index: number) {
+  return divIcon({
+    className: 'moto-stop-marker',
+    html: `<span>${index + 1}</span>`,
+    iconSize: [26, 26],
+    iconAnchor: [13, 13],
+    popupAnchor: [0, -15],
+  })
+}
+
 export default function MapExplorerMap({
   trips,
   selectedTripId,
@@ -179,7 +223,7 @@ export default function MapExplorerMap({
                 pathOptions={{
                   color: trip.color,
                   weight:
-                    selectedTripId === trip.id ? 7 : 5,
+                    selectedTripId === trip.id ? 4 : 2.5,
                   opacity: selected ? 1 : 0.28,
                   lineCap: 'round',
                   lineJoin: 'round',
@@ -247,6 +291,33 @@ export default function MapExplorerMap({
                   {trip.title}
                 </Popup>
               </CircleMarker>
+
+              {selectedTripId === trip.id &&
+                trip.stops.map((stop, index) => (
+                  <Marker
+                    key={`${trip.id}-stop-${index}`}
+                    position={[stop.lat, stop.lon]}
+                    icon={stopIcon(index)}
+                    zIndexOffset={700}
+                  >
+                    <Popup>
+                      <div className="min-w-[180px]">
+                        <p className="font-bold">
+                          Sosta {index + 1}
+                        </p>
+                        <p className="mt-1 text-xs">
+                          Inizio: {formatDateTime(stop.startTime)}
+                        </p>
+                        <p className="mt-1 text-xs">
+                          Fine: {formatDateTime(stop.endTime)}
+                        </p>
+                        <p className="mt-1 text-xs">
+                          Durata: {formatDuration(stop.durationMinutes)}
+                        </p>
+                      </div>
+                    </Popup>
+                  </Marker>
+                ))}
             </Fragment>
           )
         })}
@@ -308,6 +379,29 @@ export default function MapExplorerMap({
 
         .leaflet-overlay-pane path {
           pointer-events: stroke !important;
+        }
+
+        .moto-stop-marker {
+          background: transparent !important;
+          border: 0 !important;
+        }
+
+        .moto-stop-marker span {
+          display: flex;
+          width: 26px;
+          height: 26px;
+          align-items: center;
+          justify-content: center;
+          border: 2px solid #ffffff;
+          border-radius: 9999px;
+          background: #2563eb;
+          color: #ffffff;
+          font-size: 11px;
+          font-weight: 900;
+          line-height: 1;
+          box-shadow:
+            0 2px 7px rgba(0, 0, 0, 0.45),
+            0 0 0 1px rgba(37, 99, 235, 0.45);
         }
 
         .leaflet-pane,
