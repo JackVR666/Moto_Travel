@@ -1479,20 +1479,26 @@ for (const p of pointsData ?? []) {
           <main className="w-full px-3 py-4 pb-24 sm:px-6 sm:py-6 sm:pb-6 lg:px-8">
         {mode === 'select' && foundationView === 'dashboard' && (
           <div className="space-y-4 sm:space-y-6">
-            <section className="relative h-[440px] overflow-hidden rounded-2xl border border-border bg-black shadow-sm sm:h-[520px]">
+            <section className="relative h-[430px] overflow-hidden rounded-2xl border border-border bg-black shadow-sm sm:h-[520px]">
               <Image
                 src="/images/dashboard-hero.jpg"
                 alt="GoldWing tra le montagne con coniglietto"
                 fill
                 priority
-                className="object-cover object-center"
+                sizes="(max-width: 640px) 100vw, 1200px"
+                className="
+                  object-contain
+                  object-center
+                  sm:object-cover
+                  sm:object-center
+                "
               />
 
-              {/* Sfumatura inferiore per evidenziare il pulsante */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-black/10" />
+              {/* Sfumatura inferiore */}
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-black/5" />
 
               {/* Pulsante creato dal codice */}
-              <div className="absolute inset-x-0 bottom-6 flex justify-center px-5 sm:bottom-8">
+              <div className="absolute inset-x-0 bottom-5 flex justify-center px-5 sm:bottom-8">
                 <Button
                   type="button"
                   onClick={() => setFoundationView('trips')}
@@ -1503,7 +1509,7 @@ for (const p of pointsData ?? []) {
                     gap-3
                     rounded-2xl
                     bg-white/95
-                    px-6
+                    px-5
                     text-base
                     font-black
                     text-black
@@ -1511,6 +1517,7 @@ for (const p of pointsData ?? []) {
                     backdrop-blur-xl
                     hover:bg-white
                     sm:h-16
+                    sm:px-6
                     sm:text-lg
                   "
                 >
