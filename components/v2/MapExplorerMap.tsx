@@ -139,14 +139,9 @@ export default function MapExplorerMap({
   selectedTripId,
   onSelectTrip,
 }: MapExplorerMapProps) {
-  const mapKey = `${selectedTripId}-${trips
-    .map((trip) => `${trip.id}:${trip.points.length}`)
-    .join('|')}`
-
   return (
     <div className="relative h-full min-h-0 w-full overflow-hidden bg-[#e5e7eb]">
       <MapContainer
-        key={mapKey}
         center={[46.2, 11.2]}
         zoom={5}
         scrollWheelZoom
@@ -269,6 +264,50 @@ export default function MapExplorerMap({
           height: 256px !important;
           max-width: none !important;
           max-height: none !important;
+        }
+
+        .leaflet-map-pane {
+          z-index: 1 !important;
+        }
+
+        .leaflet-tile-pane {
+          z-index: 200 !important;
+        }
+
+        .leaflet-overlay-pane {
+          z-index: 400 !important;
+          pointer-events: auto !important;
+        }
+
+        .leaflet-shadow-pane {
+          z-index: 500 !important;
+        }
+
+        .leaflet-marker-pane {
+          z-index: 600 !important;
+        }
+
+        .leaflet-tooltip-pane {
+          z-index: 650 !important;
+        }
+
+        .leaflet-popup-pane {
+          z-index: 700 !important;
+        }
+
+        .leaflet-control {
+          z-index: 800 !important;
+        }
+
+        .leaflet-overlay-pane svg,
+        .leaflet-overlay-pane canvas {
+          z-index: 401 !important;
+          overflow: visible !important;
+          pointer-events: auto !important;
+        }
+
+        .leaflet-overlay-pane path {
+          pointer-events: stroke !important;
         }
 
         .leaflet-pane,
