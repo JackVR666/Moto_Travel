@@ -1,4 +1,7 @@
-import { Plus, Route, Trash2 } from 'lucide-react'
+'use client'
+
+import { ChevronDown, ChevronUp, Plus, Route, Trash2 } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { TripDayDiaryCard } from '@/components/trip/TripDayDiaryCard'
 import {
@@ -166,6 +169,23 @@ export function PlanningTab({
     updateAccommodation,
     deleteAccommodation,
 }: PlanningTabProps) {
+  const [expandedDayId, setExpandedDayId] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (
+      expandedDayId &&
+      !tripDays.some((day) => day.id === expandedDayId)
+    ) {
+      setExpandedDayId(null)
+    }
+  }, [tripDays, expandedDayId])
+
+  const toggleDay = (dayId: string) => {
+    setExpandedDayId((current) =>
+      current === dayId ? null : dayId
+    )
+  }
+
   const sortedTripDays = [...tripDays].sort(
     (a, b) => Number(a.day_number) - Number(b.day_number)
   )
@@ -374,7 +394,22 @@ export function PlanningTab({
         </p>
       ) : (
         <div className="space-y-2">
-          {tripDays.map((day) => {
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-border/50 bg-secondary/10 px-3 py-2">
+            <p className="text-[8px] text-muted-foreground sm:text-[10px]">
+              Clicca su una giornata per visualizzare tutti i dettagli.
+            </p>
+
+            <button
+              type="button"
+              onClick={() => setExpandedDayId(null)}
+              disabled={!expandedDayId}
+              className="h-7 shrink-0 rounded-md border border-border bg-background px-2.5 text-[8px] font-bold text-muted-foreground hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-40 sm:text-[10px]"
+            >
+              Chiudi giornata
+            </button>
+          </div>
+
+          {sortedTripDays.map((day) => {
             const linkedAccommodations = accommodations.filter(
               (accommodation) => accommodation.trip_day_id === day.id
             )
@@ -382,13 +417,77 @@ export function PlanningTab({
             const isCoveredByAnotherDay =
               coveringAccommodation &&
               coveringAccommodation.trip_day_id !== day.id
+            const expanded = expandedDayId === day.id
 
             return (
             <div
               key={day.id}
-              className="rounded-lg bg-background border border-border/50 p-3 text-xs shadow-sm"
+              className="overflow-hidden rounded-lg border border-border/50 bg-background text-xs shadow-sm"
             >
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <button
+                type="button"
+                onClick={() => toggleDay(day.id)}
+                className="flex w-full items-center gap-3 px-3 py-3 text-left transition-colors hover:bg-secondary/20 sm:px-4"
+              >
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary text-[10px] font-black text-primary-foreground sm:size-10 sm:text-xs">
+                  {day.day_number}
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                    <span className="text-[10px] font-black text-foreground sm:text-sm">
+                      Giorno {day.day_number}
+                    </span>
+
+                    <span className="text-[8px] text-muted-foreground sm:text-[10px]">
+                      {formatDate(day.travel_date)}
+                    </span>
+
+                    {linkedAccommodations.length > 0 && (
+                      <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 text-[7px] font-black uppercase tracking-wider text-emerald-500 sm:text-[8px]">
+                        {linkedAccommodations.length === 1
+                          ? 'Pernottamento'
+                          : `${linkedAccommodations.length} pernottamenti`}
+                      </span>
+                    )}
+
+                    {isCoveredByAnotherDay && (
+                      <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[7px] font-black uppercase tracking-wider text-amber-500 sm:text-[8px]">
+                        Soggiorno già coperto
+                      </span>
+                    )}
+                  </div>
+
+                  <p className="mt-0.5 truncate text-[9px] font-bold text-foreground/90 sm:text-xs">
+                    {day.title || 'Giornata senza titolo'}
+                  </p>
+
+                  {(day.start_city || day.end_city) && (
+                    <p className="mt-0.5 truncate text-[8px] text-muted-foreground sm:text-[10px]">
+                      {day.start_city || '—'} → {day.end_city || '—'}
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex shrink-0 items-center gap-2">
+                  {day.planned_km !== null &&
+                    day.planned_km !== undefined && (
+                      <span className="hidden text-[9px] font-bold text-muted-foreground sm:inline">
+                        {Number(day.planned_km).toFixed(0)} km
+                      </span>
+                    )}
+
+                  {expanded ? (
+                    <ChevronUp className="size-4 text-muted-foreground" />
+                  ) : (
+                    <ChevronDown className="size-4 text-muted-foreground" />
+                  )}
+                </div>
+              </button>
+
+              {expanded && (
+                <div className="border-t border-border/60 p-3 sm:p-4">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0 flex-1 space-y-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-mono text-[10px] bg-secondary px-1.5 py-0.5 rounded border border-border/30">
@@ -645,7 +744,9 @@ export function PlanningTab({
                     <Trash2 className="size-3.5" />
                   </button>
                 </div>
-              </div>
+                  </div>
+                </div>
+              )}
             </div>
             )
           })}
