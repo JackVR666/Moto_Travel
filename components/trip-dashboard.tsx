@@ -1479,40 +1479,44 @@ for (const p of pointsData ?? []) {
           <main className="w-full px-3 py-4 pb-24 sm:px-6 sm:py-6 sm:pb-6 lg:px-8">
         {mode === 'select' && foundationView === 'dashboard' && (
           <div className="space-y-4 sm:space-y-6">
-            <section className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-              <div className="grid gap-5 bg-gradient-to-br from-black via-zinc-950 to-amber-950/70 p-5 sm:grid-cols-[1fr_auto] sm:items-center sm:p-7">
-                <div>
-                  <span className="inline-flex rounded-full border border-amber-400/30 bg-amber-400/10 px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-amber-300">
-                    Versione 2 Preview
-                  </span>
+            <section className="relative h-[440px] overflow-hidden rounded-2xl border border-border bg-black shadow-sm sm:h-[520px]">
+              <Image
+                src="/images/dashboard-hero.jpg"
+                alt="GoldWing tra le montagne con coniglietto"
+                fill
+                priority
+                className="object-cover object-center"
+              />
 
-                  <h2 className="mt-3 text-xl font-black text-white sm:text-3xl">
-                    Bentornato in Moto /=\ Viaggi
-                  </h2>
+              {/* Sfumatura inferiore per evidenziare il pulsante */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-black/10" />
 
-                  <p className="mt-2 max-w-2xl text-[10px] leading-relaxed text-zinc-300 sm:text-sm">
-                    La nuova base dell'app separa navigazione, viaggi e future
-                    funzionalità senza modificare i dati o la logica della
-                    versione 1.0.
-                  </p>
-
-                  <Button
-                    type="button"
-                    onClick={() => setFoundationView('trips')}
-                    className="mt-4 h-9 gap-2 rounded-lg text-[10px] font-bold sm:text-xs"
-                  >
-                    <Luggage className="size-3.5" />
-                    Apri i miei viaggi
-                  </Button>
-                </div>
-
-                <Image
-                  src="/logo/logo-square.png"
-                  alt=""
-                  width={180}
-                  height={180}
-                  className="mx-auto hidden size-36 rounded-[28px] shadow-2xl sm:block"
-                />
+              {/* Pulsante creato dal codice */}
+              <div className="absolute inset-x-0 bottom-6 flex justify-center px-5 sm:bottom-8">
+                <Button
+                  type="button"
+                  onClick={() => setFoundationView('trips')}
+                  className="
+                    h-14
+                    w-full
+                    max-w-[440px]
+                    gap-3
+                    rounded-2xl
+                    bg-white/95
+                    px-6
+                    text-base
+                    font-black
+                    text-black
+                    shadow-2xl
+                    backdrop-blur-xl
+                    hover:bg-white
+                    sm:h-16
+                    sm:text-lg
+                  "
+                >
+                  <Luggage className="size-5 sm:size-6" />
+                  Apri i miei viaggi
+                </Button>
               </div>
             </section>
 
