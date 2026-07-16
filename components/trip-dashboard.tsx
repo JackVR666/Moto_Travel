@@ -6,6 +6,7 @@ import Image from 'next/image'
 import { AppSplash } from '@/components/app-splash'
 import { StatisticsView } from '@/components/v2/StatisticsView'
 import { MapExplorerView } from '@/components/v2/MapExplorerView'
+import { GoldWingManagerView } from '@/components/v2/GoldWingManagerView'
 import {
   Bike,
   Route,
@@ -1600,8 +1601,12 @@ for (const p of pointsData ?? []) {
           )}
 
         {mode === 'select' &&
-          (foundationView === 'motorcycle' ||
-            foundationView === 'settings') && (
+          foundationView === 'motorcycle' && (
+            <GoldWingManagerView />
+          )}
+
+        {mode === 'select' &&
+          foundationView === 'settings' && (
             <div className="flex min-h-[55vh] items-center justify-center">
               <div className="w-full max-w-xl rounded-2xl border border-dashed border-border bg-card p-6 text-center shadow-sm">
                 <span className="inline-flex rounded-full bg-primary/10 px-3 py-1 text-[9px] font-black uppercase tracking-wider text-primary">
