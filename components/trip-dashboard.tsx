@@ -4,6 +4,9 @@ import { useCallback, useMemo, useState, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import Image from 'next/image'
 import { AppSplash } from '@/components/app-splash'
+import { StatisticsView } from '@/components/v2/StatisticsView'
+import { MapExplorerView } from '@/components/v2/MapExplorerView'
+import { GoldWingManagerView } from '@/components/v2/GoldWingManagerView'
 import {
   Bike,
   Route,
@@ -22,6 +25,15 @@ import {
   FileText,
   Clock3,
   Coffee,
+  Menu,
+  X,
+  LayoutDashboard,
+  Luggage,
+  BarChart3,
+  Globe2,
+  Wrench,
+  Settings,
+  ChevronRight,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { GpxUploader } from '@/components/gpx-uploader'
@@ -50,8 +62,34 @@ const TripMap = dynamic(() => import('@/components/trip-map'), {
 })
 
 type SaveState = 'idle' | 'saving' | 'saved'
+type TripStatus = 'pianificato' | 'in_corso' | 'completato'
 type AppMode = 'select' | 'live' | 'gpx' | 'edit_expenses'
 type ActiveTab = TripTab
+type FoundationView =
+  | 'dashboard'
+  | 'trips'
+  | 'mapExplorer'
+  | 'statistics'
+  | 'motorcycle'
+  | 'settings'
+
+function tripStatusLabel(status: TripStatus): string {
+  if (status === 'in_corso') return 'In corso'
+  if (status === 'completato') return 'Completato'
+  return 'Pianificato'
+}
+
+function tripStatusClasses(status: TripStatus): string {
+  if (status === 'completato') {
+    return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-500'
+  }
+
+  if (status === 'in_corso') {
+    return 'border-amber-500/30 bg-amber-500/10 text-amber-500'
+  }
+
+  return 'border-sky-500/30 bg-sky-500/10 text-sky-500'
+}
 
 function formatDate(iso: string | null): string {
   if (!iso) return '—'
@@ -64,11 +102,16 @@ function formatDate(iso: string | null): string {
 export function TripDashboard() {
   const [mode, setMode] = useState<AppMode>('select')
   const [activeTab, setActiveTab] = useState<ActiveTab>('expenses')
+  const [foundationView, setFoundationView] =
+    useState<FoundationView>('dashboard')
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   
   const [trip, setTrip] = useState<ParsedTrip | null>(null)
   const [customName, setCustomName] = useState<string>('')
   const [customDate, setCustomDate] = useState<string>('')
   const [customEndDate, setCustomEndDate] = useState<string>('')
+  const [tripStatus, setTripStatus] =
+    useState<TripStatus>('pianificato')
   
   const [expenseCategories, setExpenseCategories] = useState<any[]>([])
   const [allTrips, setAllTrips] = useState<any[]>([])
@@ -143,7 +186,9 @@ export function TripDashboard() {
         notes,
         moving_time_minutes,
         average_moving_speed_kmh,
-        stops_count
+        stops_count,
+        status,
+        completed_at
       `)
       .order('trip_date', { ascending: false })
     
@@ -155,7 +200,11 @@ export function TripDashboard() {
     if (data) {
       const sanitizedTrips = data.map((t) => ({
         ...t,
-        total_km: t.total_km === null || t.total_km === undefined ? 0 : Number(t.total_km)
+        total_km:
+          t.total_km === null || t.total_km === undefined
+            ? 0
+            : Number(t.total_km),
+        status: (t.status || 'pianificato') as TripStatus,
       }))
       setAllTrips(sanitizedTrips)
     }
@@ -438,6 +487,62 @@ const deleteAccommodation = async (id: string) => {
   await fetchAccommodations(editingTripId)
 }
 
+const renumberTripDaysByDate = async (tripId: string) => {
+  const { data, error } = await supabase
+    .from('trip_days')
+    .select('id, travel_date, day_number, display_order')
+    .eq('trip_id', tripId)
+    .order('travel_date', { ascending: true })
+    .order('display_order', { ascending: true })
+    .order('day_number', { ascending: true })
+
+  if (error) {
+    throw new Error(
+      `Errore lettura giornate per riordino: ${error.message}`
+    )
+  }
+
+  const orderedDays = data || []
+
+  // Primo passaggio: numeri temporanei per evitare conflitti con eventuali vincoli univoci.
+  for (let index = 0; index < orderedDays.length; index++) {
+    const temporaryNumber = 100_000 + index + 1
+
+    const { error: temporaryError } = await supabase
+      .from('trip_days')
+      .update({
+        day_number: temporaryNumber,
+        display_order: temporaryNumber,
+      })
+      .eq('id', orderedDays[index].id)
+
+    if (temporaryError) {
+      throw new Error(
+        `Errore riordino temporaneo giornate: ${temporaryError.message}`
+      )
+    }
+  }
+
+  // Secondo passaggio: Giorno 1, Giorno 2, Giorno 3... in ordine di data.
+  for (let index = 0; index < orderedDays.length; index++) {
+    const finalNumber = index + 1
+
+    const { error: finalError } = await supabase
+      .from('trip_days')
+      .update({
+        day_number: finalNumber,
+        display_order: finalNumber,
+      })
+      .eq('id', orderedDays[index].id)
+
+    if (finalError) {
+      throw new Error(
+        `Errore numerazione definitiva giornate: ${finalError.message}`
+      )
+    }
+  }
+}
+
 const addTripDay = async () => {
   if (!editingTripId) {
     alert('Prima salva il viaggio, poi potrai aggiungere le giornate.')
@@ -476,6 +581,17 @@ const addTripDay = async () => {
     console.error('Errore inserimento giornata:', error)
     alert(`Errore inserimento giornata: ${error.message}`)
     return
+  }
+
+  try {
+    await renumberTripDaysByDate(editingTripId)
+  } catch (renumberError) {
+    console.error('Errore rinumerazione giornate:', renumberError)
+    alert(
+      renumberError instanceof Error
+        ? renumberError.message
+        : 'Errore durante la rinumerazione delle giornate.'
+    )
   }
 
   setDayTitle('')
@@ -520,6 +636,17 @@ const updateTripDay = async () => {
     return
   }
 
+  try {
+    await renumberTripDaysByDate(editingTripId)
+  } catch (renumberError) {
+    console.error('Errore rinumerazione giornate:', renumberError)
+    alert(
+      renumberError instanceof Error
+        ? renumberError.message
+        : 'Errore durante la rinumerazione delle giornate.'
+    )
+  }
+
   setEditingDayId(null)
   setDayDate('')
   setDayStartCity('')
@@ -548,6 +675,17 @@ const removeTripDay = async (dayId: string) => {
     return
   }
 
+  try {
+    await renumberTripDaysByDate(editingTripId)
+  } catch (renumberError) {
+    console.error('Errore rinumerazione giornate:', renumberError)
+    alert(
+      renumberError instanceof Error
+        ? renumberError.message
+        : 'Errore durante la rinumerazione delle giornate.'
+    )
+  }
+
   await fetchTripDays(editingTripId)
 }
 
@@ -565,6 +703,7 @@ const removeTripDay = async (dayId: string) => {
     setCustomName('Nuovo Giro Goldwing')
     setCustomDate(today)
     setCustomEndDate(today)
+    setTripStatus('pianificato')
     setExpenseDate(today)
     setExpenses([])
     setTrip(null)
@@ -592,6 +731,9 @@ const removeTripDay = async (dayId: string) => {
 
     const currentTripData = allTrips.find(t => t.id === tripId)
     setTripNotes(currentTripData?.notes || '')
+    setTripStatus(
+      (currentTripData?.status || 'pianificato') as TripStatus
+    )
 
     const { data: stopsData, error: stopsError } = await supabase
       .from('trip_stops')
@@ -800,6 +942,11 @@ for (const p of pointsData ?? []) {
             moving_time_minutes: trip?.movingTimeMinutes ?? null,
             average_moving_speed_kmh: trip?.averageMovingSpeedKmh ?? null,
             stops_count: trip?.stops?.length ?? 0,
+            status: tripStatus,
+            completed_at:
+              tripStatus === 'completato'
+                ? new Date().toISOString()
+                : null,
           })
           .eq('id', editingTripId)
 
@@ -864,6 +1011,11 @@ for (const p of pointsData ?? []) {
             moving_time_minutes: trip?.movingTimeMinutes ?? null,
             average_moving_speed_kmh: trip?.averageMovingSpeedKmh ?? null,
             stops_count: trip?.stops?.length ?? 0,
+            status: tripStatus,
+            completed_at:
+              tripStatus === 'completato'
+                ? new Date().toISOString()
+                : null,
           }])
           .select()
           .single()
@@ -1118,32 +1270,362 @@ for (const p of pointsData ?? []) {
     )
   }, [displayedTrackPoints])
 
+  const foundationStats = useMemo(() => {
+    const totalKm = allTrips.reduce(
+      (sum, currentTrip) =>
+        sum + Number(currentTrip.total_km || 0),
+      0,
+    )
+
+    const tripsWithDates = allTrips
+      .filter((currentTrip) => currentTrip.trip_date)
+      .sort(
+        (a, b) =>
+          new Date(b.trip_date).getTime() -
+          new Date(a.trip_date).getTime(),
+      )
+
+    return {
+      tripCount: allTrips.length,
+      totalKm,
+      latestTrip: tripsWithDates[0] ?? null,
+    }
+  }, [allTrips])
+
+  const selectFoundationView = (view: FoundationView) => {
+    setFoundationView(view)
+    setMobileMenuOpen(false)
+
+    if (mode !== 'select') {
+      setMode('select')
+      setTrip(null)
+      setEditingTripId(null)
+      setExpenses([])
+      setSaveState('idle')
+      setHasNewGpxLoaded(false)
+    }
+  }
+
+  const foundationNavigation = [
+    {
+      id: 'dashboard' as const,
+      label: 'Dashboard',
+      icon: LayoutDashboard,
+    },
+    {
+      id: 'trips' as const,
+      label: 'Viaggi',
+      icon: Luggage,
+    },
+    {
+      id: 'mapExplorer' as const,
+      label: 'Mappa viaggi',
+      icon: Globe2,
+    },
+    {
+      id: 'statistics' as const,
+      label: 'Statistiche',
+      icon: BarChart3,
+    },
+    {
+      id: 'motorcycle' as const,
+      label: 'GoldWing',
+      icon: Wrench,
+    },
+    {
+      id: 'settings' as const,
+      label: 'Impostazioni',
+      icon: Settings,
+    },
+  ]
+
   return (
     <>
       <AppSplash />
+
       <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-background text-foreground">
-      <header className="border-b border-border bg-card/60 backdrop-blur sticky top-0 z-50">
-        <div className="mx-auto flex w-full max-w-[1600px] items-center justify-between px-3 py-2.5 sm:px-6 sm:py-4 lg:px-8">
-          <div className="flex min-w-0 items-center gap-2.5">
-            <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm sm:size-10 sm:rounded-xl">
-              <Bike className="size-4.5 sm:size-5.5" />
+        {mobileMenuOpen && (
+          <button
+            type="button"
+            aria-label="Chiudi menu"
+            onClick={() => setMobileMenuOpen(false)}
+            className="fixed inset-0 z-[70] bg-black/55 backdrop-blur-sm lg:hidden"
+          />
+        )}
+
+        <aside
+          className={`fixed inset-y-0 left-0 z-[80] flex w-[250px] flex-col border-r border-border bg-card shadow-2xl transition-transform duration-200 lg:translate-x-0 ${
+            mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}
+        >
+          <div className="flex items-center justify-between border-b border-border px-4 py-4">
+            <div className="flex min-w-0 items-center gap-2.5">
+              <Image
+                src="/logo/logo-square.png"
+                alt="Moto /=\ Viaggi"
+                width={44}
+                height={44}
+                priority
+                className="size-10 shrink-0 rounded-xl"
+              />
+
+              <div className="min-w-0">
+                <p className="truncate text-sm font-black">
+                  Moto /=\ Viaggi
+                </p>
+                <p className="text-[9px] font-bold uppercase tracking-wider text-primary">
+                  Versione 2 Preview
+                </p>
+              </div>
             </div>
-            <div>
-              <h1 className="whitespace-nowrap text-xs font-bold leading-tight sm:text-base">GoldWing Rides</h1>
-              <p className="text-xs text-muted-foreground hidden sm:block">Logbook & Contabilità Goldwing</p>
+
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(false)}
+              className="rounded-lg p-2 text-muted-foreground hover:bg-secondary lg:hidden"
+            >
+              <X className="size-4" />
+            </button>
+          </div>
+
+          <nav className="flex-1 space-y-1 p-3">
+            {foundationNavigation.map((item) => {
+              const Icon = item.icon
+              const active =
+                mode === 'select' && foundationView === item.id
+
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => selectFoundationView(item.id)}
+                  className={`flex h-10 w-full items-center gap-3 rounded-lg px-3 text-left text-xs font-bold transition-colors ${
+                    active
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
+                  }`}
+                >
+                  <Icon className="size-4 shrink-0" />
+                  <span className="flex-1">{item.label}</span>
+                  {active && <ChevronRight className="size-3.5" />}
+                </button>
+              )
+            })}
+          </nav>
+
+          <div className="border-t border-border p-3">
+            <div className="rounded-lg bg-secondary/40 p-3">
+              <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
+                Ambiente
+              </p>
+              <p className="mt-1 text-xs font-bold text-foreground">
+                Branch version-2
+              </p>
+              <p className="mt-1 text-[9px] leading-relaxed text-muted-foreground">
+                La versione 1.0 pubblica resta invariata sul branch main.
+              </p>
             </div>
           </div>
-          {mode !== 'select' && (
-            <Button variant="outline" size="sm" className="h-8 shrink-0 whitespace-nowrap rounded-lg px-2.5 text-[10px] sm:h-9 sm:rounded-xl sm:px-3 sm:text-xs" onClick={() => { setMode('select'); setTrip(null); setEditingTripId(null); setExpenses([]); setSaveState('idle'); setHasNewGpxLoaded(false); }}>
-              <span className="sm:hidden">Menu</span>
-              <span className="hidden sm:inline">Torna al Menu</span>
-            </Button>
-          )}
-        </div>
-      </header>
+        </aside>
 
-      <main className="mx-auto w-full max-w-[1600px] px-3 py-4 pb-24 sm:px-6 sm:py-6 sm:pb-6 lg:px-8">
-        {mode === 'select' && (
+        <div className="min-h-screen lg:pl-[250px]">
+          <header className="sticky top-0 z-50 border-b border-border bg-card/80 backdrop-blur">
+            <div className="flex w-full items-center justify-between px-3 py-2.5 sm:px-6 sm:py-3 lg:px-8">
+              <div className="flex min-w-0 items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setMobileMenuOpen(true)}
+                  className="rounded-lg border border-border p-2 text-muted-foreground lg:hidden"
+                >
+                  <Menu className="size-4" />
+                </button>
+
+                <div className="min-w-0">
+                  <h1 className="truncate text-xs font-black sm:text-base">
+                    {mode !== 'select'
+                      ? customName || 'Gestione viaggio'
+                      : foundationNavigation.find(
+                          (item) => item.id === foundationView,
+                        )?.label || 'Dashboard'}
+                  </h1>
+
+                  <p className="hidden text-[10px] text-muted-foreground sm:block">
+                    Moto /=\ Viaggi 2.0 Foundation
+                  </p>
+                </div>
+              </div>
+
+              {mode !== 'select' && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 shrink-0 rounded-lg px-2.5 text-[10px] sm:h-9 sm:px-3 sm:text-xs"
+                  onClick={() => {
+                    setMode('select')
+                    setFoundationView('trips')
+                    setTrip(null)
+                    setEditingTripId(null)
+                    setExpenses([])
+                    setSaveState('idle')
+                    setHasNewGpxLoaded(false)
+                  }}
+                >
+                  Torna ai viaggi
+                </Button>
+              )}
+            </div>
+          </header>
+
+          <main className="w-full px-3 py-4 pb-24 sm:px-6 sm:py-6 sm:pb-6 lg:px-8">
+        {mode === 'select' && foundationView === 'dashboard' && (
+          <div className="space-y-4 sm:space-y-6">
+            <section className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+              <div className="grid gap-5 bg-gradient-to-br from-black via-zinc-950 to-amber-950/70 p-5 sm:grid-cols-[1fr_auto] sm:items-center sm:p-7">
+                <div>
+                  <span className="inline-flex rounded-full border border-amber-400/30 bg-amber-400/10 px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-amber-300">
+                    Versione 2 Preview
+                  </span>
+
+                  <h2 className="mt-3 text-xl font-black text-white sm:text-3xl">
+                    Bentornato in Moto /=\ Viaggi
+                  </h2>
+
+                  <p className="mt-2 max-w-2xl text-[10px] leading-relaxed text-zinc-300 sm:text-sm">
+                    La nuova base dell'app separa navigazione, viaggi e future
+                    funzionalità senza modificare i dati o la logica della
+                    versione 1.0.
+                  </p>
+
+                  <Button
+                    type="button"
+                    onClick={() => setFoundationView('trips')}
+                    className="mt-4 h-9 gap-2 rounded-lg text-[10px] font-bold sm:text-xs"
+                  >
+                    <Luggage className="size-3.5" />
+                    Apri i miei viaggi
+                  </Button>
+                </div>
+
+                <Image
+                  src="/logo/logo-square.png"
+                  alt=""
+                  width={180}
+                  height={180}
+                  className="mx-auto hidden size-36 rounded-[28px] shadow-2xl sm:block"
+                />
+              </div>
+            </section>
+
+            <section className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-4">
+              <div className="rounded-xl border border-border bg-card p-3 shadow-sm sm:p-5">
+                <p className="text-[8px] font-bold uppercase tracking-wider text-muted-foreground sm:text-[10px]">
+                  Viaggi archiviati
+                </p>
+                <p className="mt-2 text-xl font-black sm:text-3xl">
+                  {foundationStats.tripCount}
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-border bg-card p-3 shadow-sm sm:p-5">
+                <p className="text-[8px] font-bold uppercase tracking-wider text-muted-foreground sm:text-[10px]">
+                  Km complessivi
+                </p>
+                <p className="mt-2 text-xl font-black sm:text-3xl">
+                  {foundationStats.totalKm.toFixed(0)}
+                </p>
+              </div>
+
+              <div className="col-span-2 rounded-xl border border-border bg-card p-3 shadow-sm sm:col-span-1 sm:p-5">
+                <p className="text-[8px] font-bold uppercase tracking-wider text-muted-foreground sm:text-[10px]">
+                  Ultimo viaggio
+                </p>
+                <p className="mt-2 truncate text-sm font-black sm:text-lg">
+                  {foundationStats.latestTrip?.title || 'Nessun viaggio'}
+                </p>
+                <p className="mt-1 text-[9px] text-muted-foreground sm:text-xs">
+                  {foundationStats.latestTrip
+                    ? formatDate(foundationStats.latestTrip.trip_date)
+                    : '—'}
+                </p>
+              </div>
+            </section>
+
+            {foundationStats.latestTrip && (
+              <section className="rounded-xl border border-border bg-card p-3 shadow-sm sm:p-5">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[8px] font-bold uppercase tracking-wider text-primary sm:text-[10px]">
+                      Riprendi
+                    </p>
+                    <h3 className="mt-1 truncate text-sm font-black sm:text-lg">
+                      {foundationStats.latestTrip.title}
+                    </h3>
+                    <p className="mt-1 text-[9px] text-muted-foreground sm:text-xs">
+                      {Number(
+                        foundationStats.latestTrip.total_km || 0,
+                      ).toFixed(1)}{' '}
+                      km
+                    </p>
+                  </div>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      startEditingExpenses(
+                        foundationStats.latestTrip.id,
+                        foundationStats.latestTrip.title,
+                        foundationStats.latestTrip.trip_date,
+                        foundationStats.latestTrip.trip_end_date,
+                      )
+                    }
+                    className="h-8 shrink-0 text-[9px] sm:text-[11px]"
+                  >
+                    Apri
+                  </Button>
+                </div>
+              </section>
+            )}
+          </div>
+        )}
+
+        {mode === 'select' &&
+          foundationView === 'mapExplorer' && (
+            <MapExplorerView />
+          )}
+
+        {mode === 'select' &&
+          foundationView === 'statistics' && (
+            <StatisticsView />
+          )}
+
+        {mode === 'select' &&
+          foundationView === 'motorcycle' && (
+            <GoldWingManagerView />
+          )}
+
+        {mode === 'select' &&
+          foundationView === 'settings' && (
+            <div className="flex min-h-[55vh] items-center justify-center">
+              <div className="w-full max-w-xl rounded-2xl border border-dashed border-border bg-card p-6 text-center shadow-sm">
+                <span className="inline-flex rounded-full bg-primary/10 px-3 py-1 text-[9px] font-black uppercase tracking-wider text-primary">
+                  Foundation
+                </span>
+
+                <h2 className="mt-4 text-lg font-black sm:text-2xl">
+                  Sezione pronta per la prossima milestone
+                </h2>
+
+                <p className="mx-auto mt-2 max-w-md text-[10px] leading-relaxed text-muted-foreground sm:text-sm">
+                  La navigazione è già attiva, ma questa funzione non modifica
+                  ancora Supabase e verrà sviluppata in un pacchetto separato.
+                </p>
+              </div>
+            </div>
+          )}
+
+        {mode === 'select' && foundationView === 'trips' && (
           <div className="space-y-4 sm:space-y-6">
             <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
               <div className="flex items-center justify-center bg-black px-4 py-3 sm:py-4">
@@ -1187,7 +1669,22 @@ for (const p of pointsData ?? []) {
                   {allTrips.map((t) => (
                     <div key={t.id} className="flex min-w-0 items-center gap-2 py-2 text-xs first:pt-0 last:pb-0 sm:gap-3 sm:py-2.5">
                       <div className="min-w-0 flex-1 space-y-0.5">
-                        <p className="truncate text-xs font-bold text-foreground sm:text-sm">{t.title}</p>
+                        <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                          <p className="min-w-0 flex-1 truncate text-xs font-bold text-foreground sm:text-sm">
+                            {t.title}
+                          </p>
+
+                          <span
+                            className={`shrink-0 rounded-full border px-1.5 py-0.5 text-[7px] font-black uppercase tracking-wider sm:text-[8px] ${tripStatusClasses(
+                              (t.status || 'pianificato') as TripStatus
+                            )}`}
+                          >
+                            {tripStatusLabel(
+                              (t.status || 'pianificato') as TripStatus
+                            )}
+                          </span>
+                        </div>
+
                         <p className="flex min-w-0 flex-wrap items-center gap-1 text-[9px] text-muted-foreground sm:text-[11px]">
                           {formatDate(t.trip_date)} • <span className="max-w-full truncate rounded bg-secondary/60 px-1 py-0.5 font-mono font-medium text-foreground">{t.total_km > 0 ? `${t.total_km.toFixed(1)} km` : 'Solo Spese'}</span>
                         </p>
@@ -1214,7 +1711,7 @@ for (const p of pointsData ?? []) {
           <div className="space-y-4">
             
             <section className="w-full min-w-0 max-w-full overflow-hidden rounded-xl border border-border bg-card p-3 shadow-sm sm:p-4">
-              <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-3">
+              <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <div className="min-w-0 space-y-1">
                   <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground sm:text-[11px]">Titolo viaggio</span>
                   <input
@@ -1244,6 +1741,30 @@ for (const p of pointsData ?? []) {
                     onChange={(e) => setCustomEndDate(e.target.value)}
                     className="block h-9 w-full min-w-0 max-w-full appearance-none rounded-lg border border-border bg-secondary/10 px-2.5 text-[11px] text-foreground focus:border-primary focus:outline-none sm:h-10 sm:px-3 sm:text-xs"
                   />
+                </div>
+
+                <div className="min-w-0 space-y-1">
+                  <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground sm:text-[11px]">
+                    Stato viaggio
+                  </span>
+
+                  <select
+                    value={tripStatus}
+                    onChange={(event) =>
+                      setTripStatus(event.target.value as TripStatus)
+                    }
+                    className="block h-9 w-full min-w-0 rounded-lg border border-border bg-secondary/10 px-2.5 text-[11px] font-bold text-foreground focus:border-primary focus:outline-none sm:h-10 sm:px-3 sm:text-xs"
+                  >
+                    <option value="pianificato">Pianificato</option>
+                    <option value="in_corso">In corso</option>
+                    <option value="completato">Completato</option>
+                  </select>
+
+                  <p className="text-[8px] leading-relaxed text-muted-foreground sm:text-[10px]">
+                    {tripStatus === 'completato'
+                      ? 'Entrerà nelle statistiche definitive.'
+                      : 'Non entrerà nelle statistiche definitive.'}
+                  </p>
                 </div>
               </div>
             </section>
@@ -1841,6 +2362,7 @@ for (const p of pointsData ?? []) {
           }
         }
       `}</style>
+          </div>
       </div>
     </>
   )
