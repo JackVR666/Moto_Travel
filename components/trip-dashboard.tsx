@@ -455,6 +455,62 @@ const deleteAccommodation = async (id: string) => {
   await fetchAccommodations(editingTripId)
 }
 
+const renumberTripDaysByDate = async (tripId: string) => {
+  const { data, error } = await supabase
+    .from('trip_days')
+    .select('id, travel_date, day_number, display_order')
+    .eq('trip_id', tripId)
+    .order('travel_date', { ascending: true })
+    .order('display_order', { ascending: true })
+    .order('day_number', { ascending: true })
+
+  if (error) {
+    throw new Error(
+      `Errore lettura giornate per riordino: ${error.message}`
+    )
+  }
+
+  const orderedDays = data || []
+
+  // Primo passaggio: numeri temporanei per evitare conflitti con eventuali vincoli univoci.
+  for (let index = 0; index < orderedDays.length; index++) {
+    const temporaryNumber = 100_000 + index + 1
+
+    const { error: temporaryError } = await supabase
+      .from('trip_days')
+      .update({
+        day_number: temporaryNumber,
+        display_order: temporaryNumber,
+      })
+      .eq('id', orderedDays[index].id)
+
+    if (temporaryError) {
+      throw new Error(
+        `Errore riordino temporaneo giornate: ${temporaryError.message}`
+      )
+    }
+  }
+
+  // Secondo passaggio: Giorno 1, Giorno 2, Giorno 3... in ordine di data.
+  for (let index = 0; index < orderedDays.length; index++) {
+    const finalNumber = index + 1
+
+    const { error: finalError } = await supabase
+      .from('trip_days')
+      .update({
+        day_number: finalNumber,
+        display_order: finalNumber,
+      })
+      .eq('id', orderedDays[index].id)
+
+    if (finalError) {
+      throw new Error(
+        `Errore numerazione definitiva giornate: ${finalError.message}`
+      )
+    }
+  }
+}
+
 const addTripDay = async () => {
   if (!editingTripId) {
     alert('Prima salva il viaggio, poi potrai aggiungere le giornate.')
@@ -493,6 +549,17 @@ const addTripDay = async () => {
     console.error('Errore inserimento giornata:', error)
     alert(`Errore inserimento giornata: ${error.message}`)
     return
+  }
+
+  try {
+    await renumberTripDaysByDate(editingTripId)
+  } catch (renumberError) {
+    console.error('Errore rinumerazione giornate:', renumberError)
+    alert(
+      renumberError instanceof Error
+        ? renumberError.message
+        : 'Errore durante la rinumerazione delle giornate.'
+    )
   }
 
   setDayTitle('')
@@ -537,6 +604,17 @@ const updateTripDay = async () => {
     return
   }
 
+  try {
+    await renumberTripDaysByDate(editingTripId)
+  } catch (renumberError) {
+    console.error('Errore rinumerazione giornate:', renumberError)
+    alert(
+      renumberError instanceof Error
+        ? renumberError.message
+        : 'Errore durante la rinumerazione delle giornate.'
+    )
+  }
+
   setEditingDayId(null)
   setDayDate('')
   setDayStartCity('')
@@ -563,6 +641,17 @@ const removeTripDay = async (dayId: string) => {
     console.error('Errore eliminazione giornata:', error)
     alert(`Errore eliminazione giornata: ${error.message}`)
     return
+  }
+
+  try {
+    await renumberTripDaysByDate(editingTripId)
+  } catch (renumberError) {
+    console.error('Errore rinumerazione giornate:', renumberError)
+    alert(
+      renumberError instanceof Error
+        ? renumberError.message
+        : 'Errore durante la rinumerazione delle giornate.'
+    )
   }
 
   await fetchTripDays(editingTripId)
