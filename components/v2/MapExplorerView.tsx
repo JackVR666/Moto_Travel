@@ -479,12 +479,9 @@ export function MapExplorerView() {
       </section>
 
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_310px]">
-        <div className="h-[430px] overflow-hidden rounded-2xl border border-border bg-card shadow-sm sm:h-[600px]">
+        <div className="relative h-[430px] min-h-[430px] overflow-hidden rounded-2xl border border-border bg-card shadow-sm sm:h-[600px] sm:min-h-[600px]">
           {visibleTrips.length > 0 ? (
             <MapExplorerMap
-              key={`${selectedTripId}-${visibleTrips
-                .map((trip) => `${trip.id}:${trip.points.length}`)
-                .join('|')}`}
               trips={visibleTrips}
               selectedTripId={selectedTripId}
               onSelectTrip={setSelectedTripId}
