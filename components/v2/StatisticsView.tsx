@@ -26,6 +26,7 @@ type TripRow = {
   total_km: number | null
   moving_time_minutes: number | null
   average_moving_speed_kmh: number | null
+  status: 'pianificato' | 'in_corso' | 'completato'
 }
 
 type ExpenseRow = {
@@ -171,6 +172,8 @@ export function StatisticsView() {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [filterStartDate, setFilterStartDate] = useState('')
   const [filterEndDate, setFilterEndDate] = useState('')
+  const [includeUncompletedTrips, setIncludeUncompletedTrips] =
+    useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -190,7 +193,7 @@ export function StatisticsView() {
           supabase
             .from('trips')
             .select(
-              'id, title, trip_date, trip_end_date, total_km, moving_time_minutes, average_moving_speed_kmh',
+              'id, title, trip_date, trip_end_date, total_km, moving_time_minutes, average_moving_speed_kmh, status',
             )
             .order('trip_date', { ascending: true }),
           supabase
@@ -254,13 +257,20 @@ export function StatisticsView() {
   }, [])
 
   const filteredData = useMemo(() => {
-    const filteredTrips = data.trips.filter((trip) =>
-      tripOverlapsPeriod(
-        trip,
-        filterStartDate,
-        filterEndDate,
-      ),
-    )
+    const filteredTrips = data.trips.filter((trip) => {
+      const statusAllowed =
+        includeUncompletedTrips ||
+        trip.status === 'completato'
+
+      return (
+        statusAllowed &&
+        tripOverlapsPeriod(
+          trip,
+          filterStartDate,
+          filterEndDate,
+        )
+      )
+    })
 
     const allowedTripIds = new Set(
       filteredTrips.map((trip) => trip.id),
@@ -286,7 +296,12 @@ export function StatisticsView() {
           allowedDayIds.has(accommodation.trip_day_id),
       ),
     }
-  }, [data, filterStartDate, filterEndDate])
+  }, [
+    data,
+    filterStartDate,
+    filterEndDate,
+    includeUncompletedTrips,
+  ])
 
   const statistics = useMemo(() => {
     const totalKm = filteredData.trips.reduce(
@@ -570,6 +585,28 @@ export function StatisticsView() {
           </div>
         </div>
 
+        <div className="mt-4 flex flex-col gap-2 rounded-xl border border-border/60 bg-secondary/10 p-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-[9px] font-black text-foreground sm:text-xs">
+              Viaggi considerati
+            </p>
+            <p className="mt-0.5 text-[8px] text-muted-foreground sm:text-[10px]">
+              Per impostazione predefinita vengono conteggiati solo i viaggi completati e verificati.
+            </p>
+          </div>
+
+          <label className="flex shrink-0 items-center gap-2 text-[9px] font-bold sm:text-[11px]">
+            <input
+              type="checkbox"
+              checked={includeUncompletedTrips}
+              onChange={(event) =>
+                setIncludeUncompletedTrips(event.target.checked)
+              }
+            />
+            Includi anche pianificati e in corso
+          </label>
+        </div>
+
         <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
           <label className="min-w-0">
             <span className="text-[8px] font-bold uppercase tracking-wider text-muted-foreground sm:text-[10px]">
@@ -624,6 +661,7 @@ export function StatisticsView() {
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[8px] font-black uppercase tracking-wider text-primary sm:text-[10px]">
             {filteredData.trips.length} viaggi inclusi
+              {!includeUncompletedTrips ? ' · solo completati' : ' · tutti gli stati'}
           </span>
 
           {(filterStartDate || filterEndDate) && (

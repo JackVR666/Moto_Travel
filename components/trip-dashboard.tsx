@@ -59,6 +59,7 @@ const TripMap = dynamic(() => import('@/components/trip-map'), {
 })
 
 type SaveState = 'idle' | 'saving' | 'saved'
+type TripStatus = 'pianificato' | 'in_corso' | 'completato'
 type AppMode = 'select' | 'live' | 'gpx' | 'edit_expenses'
 type ActiveTab = TripTab
 type FoundationView =
@@ -67,6 +68,24 @@ type FoundationView =
   | 'statistics'
   | 'motorcycle'
   | 'settings'
+
+function tripStatusLabel(status: TripStatus): string {
+  if (status === 'in_corso') return 'In corso'
+  if (status === 'completato') return 'Completato'
+  return 'Pianificato'
+}
+
+function tripStatusClasses(status: TripStatus): string {
+  if (status === 'completato') {
+    return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-500'
+  }
+
+  if (status === 'in_corso') {
+    return 'border-amber-500/30 bg-amber-500/10 text-amber-500'
+  }
+
+  return 'border-sky-500/30 bg-sky-500/10 text-sky-500'
+}
 
 function formatDate(iso: string | null): string {
   if (!iso) return '—'
@@ -87,6 +106,8 @@ export function TripDashboard() {
   const [customName, setCustomName] = useState<string>('')
   const [customDate, setCustomDate] = useState<string>('')
   const [customEndDate, setCustomEndDate] = useState<string>('')
+  const [tripStatus, setTripStatus] =
+    useState<TripStatus>('pianificato')
   
   const [expenseCategories, setExpenseCategories] = useState<any[]>([])
   const [allTrips, setAllTrips] = useState<any[]>([])
@@ -161,7 +182,9 @@ export function TripDashboard() {
         notes,
         moving_time_minutes,
         average_moving_speed_kmh,
-        stops_count
+        stops_count,
+        status,
+        completed_at
       `)
       .order('trip_date', { ascending: false })
     
@@ -173,7 +196,11 @@ export function TripDashboard() {
     if (data) {
       const sanitizedTrips = data.map((t) => ({
         ...t,
-        total_km: t.total_km === null || t.total_km === undefined ? 0 : Number(t.total_km)
+        total_km:
+          t.total_km === null || t.total_km === undefined
+            ? 0
+            : Number(t.total_km),
+        status: (t.status || 'pianificato') as TripStatus,
       }))
       setAllTrips(sanitizedTrips)
     }
@@ -672,6 +699,7 @@ const removeTripDay = async (dayId: string) => {
     setCustomName('Nuovo Giro Goldwing')
     setCustomDate(today)
     setCustomEndDate(today)
+    setTripStatus('pianificato')
     setExpenseDate(today)
     setExpenses([])
     setTrip(null)
@@ -699,6 +727,9 @@ const removeTripDay = async (dayId: string) => {
 
     const currentTripData = allTrips.find(t => t.id === tripId)
     setTripNotes(currentTripData?.notes || '')
+    setTripStatus(
+      (currentTripData?.status || 'pianificato') as TripStatus
+    )
 
     const { data: stopsData, error: stopsError } = await supabase
       .from('trip_stops')
@@ -907,6 +938,11 @@ for (const p of pointsData ?? []) {
             moving_time_minutes: trip?.movingTimeMinutes ?? null,
             average_moving_speed_kmh: trip?.averageMovingSpeedKmh ?? null,
             stops_count: trip?.stops?.length ?? 0,
+            status: tripStatus,
+            completed_at:
+              tripStatus === 'completato'
+                ? new Date().toISOString()
+                : null,
           })
           .eq('id', editingTripId)
 
@@ -971,6 +1007,11 @@ for (const p of pointsData ?? []) {
             moving_time_minutes: trip?.movingTimeMinutes ?? null,
             average_moving_speed_kmh: trip?.averageMovingSpeedKmh ?? null,
             stops_count: trip?.stops?.length ?? 0,
+            status: tripStatus,
+            completed_at:
+              tripStatus === 'completato'
+                ? new Date().toISOString()
+                : null,
           }])
           .select()
           .single()
@@ -1610,7 +1651,22 @@ for (const p of pointsData ?? []) {
                   {allTrips.map((t) => (
                     <div key={t.id} className="flex min-w-0 items-center gap-2 py-2 text-xs first:pt-0 last:pb-0 sm:gap-3 sm:py-2.5">
                       <div className="min-w-0 flex-1 space-y-0.5">
-                        <p className="truncate text-xs font-bold text-foreground sm:text-sm">{t.title}</p>
+                        <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                          <p className="min-w-0 flex-1 truncate text-xs font-bold text-foreground sm:text-sm">
+                            {t.title}
+                          </p>
+
+                          <span
+                            className={`shrink-0 rounded-full border px-1.5 py-0.5 text-[7px] font-black uppercase tracking-wider sm:text-[8px] ${tripStatusClasses(
+                              (t.status || 'pianificato') as TripStatus
+                            )}`}
+                          >
+                            {tripStatusLabel(
+                              (t.status || 'pianificato') as TripStatus
+                            )}
+                          </span>
+                        </div>
+
                         <p className="flex min-w-0 flex-wrap items-center gap-1 text-[9px] text-muted-foreground sm:text-[11px]">
                           {formatDate(t.trip_date)} • <span className="max-w-full truncate rounded bg-secondary/60 px-1 py-0.5 font-mono font-medium text-foreground">{t.total_km > 0 ? `${t.total_km.toFixed(1)} km` : 'Solo Spese'}</span>
                         </p>
@@ -1637,7 +1693,7 @@ for (const p of pointsData ?? []) {
           <div className="space-y-4">
             
             <section className="w-full min-w-0 max-w-full overflow-hidden rounded-xl border border-border bg-card p-3 shadow-sm sm:p-4">
-              <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-3">
+              <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <div className="min-w-0 space-y-1">
                   <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground sm:text-[11px]">Titolo viaggio</span>
                   <input
@@ -1667,6 +1723,30 @@ for (const p of pointsData ?? []) {
                     onChange={(e) => setCustomEndDate(e.target.value)}
                     className="block h-9 w-full min-w-0 max-w-full appearance-none rounded-lg border border-border bg-secondary/10 px-2.5 text-[11px] text-foreground focus:border-primary focus:outline-none sm:h-10 sm:px-3 sm:text-xs"
                   />
+                </div>
+
+                <div className="min-w-0 space-y-1">
+                  <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground sm:text-[11px]">
+                    Stato viaggio
+                  </span>
+
+                  <select
+                    value={tripStatus}
+                    onChange={(event) =>
+                      setTripStatus(event.target.value as TripStatus)
+                    }
+                    className="block h-9 w-full min-w-0 rounded-lg border border-border bg-secondary/10 px-2.5 text-[11px] font-bold text-foreground focus:border-primary focus:outline-none sm:h-10 sm:px-3 sm:text-xs"
+                  >
+                    <option value="pianificato">Pianificato</option>
+                    <option value="in_corso">In corso</option>
+                    <option value="completato">Completato</option>
+                  </select>
+
+                  <p className="text-[8px] leading-relaxed text-muted-foreground sm:text-[10px]">
+                    {tripStatus === 'completato'
+                      ? 'Entrerà nelle statistiche definitive.'
+                      : 'Non entrerà nelle statistiche definitive.'}
+                  </p>
                 </div>
               </div>
             </section>
