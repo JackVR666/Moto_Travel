@@ -5,6 +5,7 @@ import {
   BarChart3,
   Bike,
   CalendarDays,
+  CalendarRange,
   Euro,
   Gauge,
   Hotel,
@@ -12,6 +13,7 @@ import {
   MapPinned,
   Receipt,
   Route,
+  RotateCcw,
   TrendingUp,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
@@ -121,6 +123,42 @@ function countNights(
   )
 }
 
+function todayIsoDate(): string {
+  return new Date().toISOString().slice(0, 10)
+}
+
+function beginningOfYearIso(): string {
+  const year = new Date().getFullYear()
+  return `${year}-01-01`
+}
+
+function beginningOfPreviousYearIso(): string {
+  const year = new Date().getFullYear() - 1
+  return `${year}-01-01`
+}
+
+function endOfPreviousYearIso(): string {
+  const year = new Date().getFullYear() - 1
+  return `${year}-12-31`
+}
+
+function tripOverlapsPeriod(
+  trip: TripRow,
+  startDate: string,
+  endDate: string,
+): boolean {
+  if (!startDate && !endDate) return true
+  if (!trip.trip_date) return false
+
+  const tripStart = trip.trip_date.slice(0, 10)
+  const tripEnd = (trip.trip_end_date || trip.trip_date).slice(0, 10)
+
+  if (startDate && tripEnd < startDate) return false
+  if (endDate && tripStart > endDate) return false
+
+  return true
+}
+
 export function StatisticsView() {
   const [data, setData] = useState<StatisticsData>({
     trips: [],
@@ -131,6 +169,8 @@ export function StatisticsView() {
   })
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [filterStartDate, setFilterStartDate] = useState('')
+  const [filterEndDate, setFilterEndDate] = useState('')
 
   useEffect(() => {
     let cancelled = false
@@ -213,36 +253,71 @@ export function StatisticsView() {
     }
   }, [])
 
+  const filteredData = useMemo(() => {
+    const filteredTrips = data.trips.filter((trip) =>
+      tripOverlapsPeriod(
+        trip,
+        filterStartDate,
+        filterEndDate,
+      ),
+    )
+
+    const allowedTripIds = new Set(
+      filteredTrips.map((trip) => trip.id),
+    )
+
+    const filteredTripDays = data.tripDays.filter((day) =>
+      allowedTripIds.has(day.trip_id),
+    )
+
+    const allowedDayIds = new Set(
+      filteredTripDays.map((day) => day.id),
+    )
+
+    return {
+      trips: filteredTrips,
+      expenses: data.expenses.filter((expense) =>
+        allowedTripIds.has(expense.trip_id),
+      ),
+      categories: data.categories,
+      tripDays: filteredTripDays,
+      accommodations: data.accommodations.filter(
+        (accommodation) =>
+          allowedDayIds.has(accommodation.trip_day_id),
+      ),
+    }
+  }, [data, filterStartDate, filterEndDate])
+
   const statistics = useMemo(() => {
-    const totalKm = data.trips.reduce(
+    const totalKm = filteredData.trips.reduce(
       (sum, trip) => sum + Number(trip.total_km || 0),
       0,
     )
 
-    const totalTravelDays = data.trips.reduce(
+    const totalTravelDays = filteredData.trips.reduce(
       (sum, trip) =>
         sum + countTripDays(trip.trip_date, trip.trip_end_date),
       0,
     )
 
-    const totalMovingMinutes = data.trips.reduce(
+    const totalMovingMinutes = filteredData.trips.reduce(
       (sum, trip) =>
         sum + Number(trip.moving_time_minutes || 0),
       0,
     )
 
-    const totalExpenses = data.expenses.reduce(
+    const totalExpenses = filteredData.expenses.reduce(
       (sum, expense) => sum + Number(expense.amount || 0),
       0,
     )
 
-    const totalHotelCost = data.accommodations.reduce(
+    const totalHotelCost = filteredData.accommodations.reduce(
       (sum, accommodation) =>
         sum + Number(accommodation.price || 0),
       0,
     )
 
-    const totalNights = data.accommodations.reduce(
+    const totalNights = filteredData.accommodations.reduce(
       (sum, accommodation) =>
         sum +
         countNights(
@@ -252,7 +327,7 @@ export function StatisticsView() {
       0,
     )
 
-    const weightedSpeedNumerator = data.trips.reduce(
+    const weightedSpeedNumerator = filteredData.trips.reduce(
       (sum, trip) => {
         const speed = Number(
           trip.average_moving_speed_kmh || 0,
@@ -270,12 +345,12 @@ export function StatisticsView() {
         : 0
 
     const dayToTrip = new Map(
-      data.tripDays.map((day) => [day.id, day.trip_id]),
+      filteredData.tripDays.map((day) => [day.id, day.trip_id]),
     )
 
     const hotelCostByTrip = new Map<string, number>()
 
-    for (const accommodation of data.accommodations) {
+    for (const accommodation of filteredData.accommodations) {
       const tripId = dayToTrip.get(accommodation.trip_day_id)
       if (!tripId) continue
 
@@ -288,7 +363,7 @@ export function StatisticsView() {
 
     const expenseByTrip = new Map<string, number>()
 
-    for (const expense of data.expenses) {
+    for (const expense of filteredData.expenses) {
       expenseByTrip.set(
         expense.trip_id,
         (expenseByTrip.get(expense.trip_id) || 0) +
@@ -306,7 +381,7 @@ export function StatisticsView() {
       }
     >()
 
-    for (const trip of data.trips) {
+    for (const trip of filteredData.trips) {
       if (!trip.trip_date) continue
 
       const year = Number(trip.trip_date.slice(0, 4))
@@ -332,11 +407,11 @@ export function StatisticsView() {
       (a, b) => b.year - a.year,
     )
 
-    const categoryTotals = data.categories
+    const categoryTotals = filteredData.categories
       .map((category) => ({
         id: category.id,
         name: category.name,
-        total: data.expenses
+        total: filteredData.expenses
           .filter(
             (expense) =>
               Number(expense.category_id) ===
@@ -351,7 +426,7 @@ export function StatisticsView() {
       .filter((category) => category.total > 0)
       .sort((a, b) => b.total - a.total)
 
-    const longestTrips = [...data.trips]
+    const longestTrips = [...filteredData.trips]
       .sort(
         (a, b) =>
           Number(b.total_km || 0) -
@@ -376,11 +451,11 @@ export function StatisticsView() {
           ? (totalExpenses + totalHotelCost) / totalKm
           : 0,
       averageKmPerTrip:
-        data.trips.length > 0
-          ? totalKm / data.trips.length
+        filteredData.trips.length > 0
+          ? totalKm / filteredData.trips.length
           : 0,
     }
-  }, [data])
+  }, [filteredData])
 
   if (loading) {
     return (
@@ -443,11 +518,146 @@ export function StatisticsView() {
         </div>
       </section>
 
+      <section className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <CalendarRange className="size-4 text-primary" />
+              <h3 className="text-xs font-black sm:text-base">
+                Periodo delle statistiche
+              </h3>
+            </div>
+
+            <p className="mt-1 text-[9px] text-muted-foreground sm:text-xs">
+              Un viaggio viene incluso quando almeno una sua giornata
+              ricade nel periodo selezionato.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setFilterStartDate('')
+                setFilterEndDate('')
+              }}
+              className="h-8 rounded-lg border border-border bg-background px-3 text-[9px] font-bold hover:bg-secondary sm:text-[11px]"
+            >
+              Tutto
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setFilterStartDate(beginningOfYearIso())
+                setFilterEndDate(todayIsoDate())
+              }}
+              className="h-8 rounded-lg border border-border bg-background px-3 text-[9px] font-bold hover:bg-secondary sm:text-[11px]"
+            >
+              Anno corrente
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setFilterStartDate(beginningOfPreviousYearIso())
+                setFilterEndDate(endOfPreviousYearIso())
+              }}
+              className="h-8 rounded-lg border border-border bg-background px-3 text-[9px] font-bold hover:bg-secondary sm:text-[11px]"
+            >
+              Anno scorso
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+          <label className="min-w-0">
+            <span className="text-[8px] font-bold uppercase tracking-wider text-muted-foreground sm:text-[10px]">
+              Dal
+            </span>
+
+            <span className="mt-1 flex w-full min-w-0 rounded-xl border border-border bg-background px-3 py-2">
+              <input
+                type="date"
+                value={filterStartDate}
+                max={filterEndDate || undefined}
+                onChange={(event) =>
+                  setFilterStartDate(event.target.value)
+                }
+                className="block w-full min-w-0 border-0 bg-transparent p-0 text-xs text-foreground outline-none sm:text-sm"
+              />
+            </span>
+          </label>
+
+          <label className="min-w-0">
+            <span className="text-[8px] font-bold uppercase tracking-wider text-muted-foreground sm:text-[10px]">
+              Al
+            </span>
+
+            <span className="mt-1 flex w-full min-w-0 rounded-xl border border-border bg-background px-3 py-2">
+              <input
+                type="date"
+                value={filterEndDate}
+                min={filterStartDate || undefined}
+                onChange={(event) =>
+                  setFilterEndDate(event.target.value)
+                }
+                className="block w-full min-w-0 border-0 bg-transparent p-0 text-xs text-foreground outline-none sm:text-sm"
+              />
+            </span>
+          </label>
+
+          <button
+            type="button"
+            onClick={() => {
+              setFilterStartDate('')
+              setFilterEndDate('')
+            }}
+            disabled={!filterStartDate && !filterEndDate}
+            className="flex h-10 items-center justify-center gap-2 rounded-xl border border-border bg-background px-4 text-[9px] font-bold hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-40 sm:text-[11px]"
+          >
+            <RotateCcw className="size-3.5" />
+            Azzera
+          </button>
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[8px] font-black uppercase tracking-wider text-primary sm:text-[10px]">
+            {filteredData.trips.length} viaggi inclusi
+          </span>
+
+          {(filterStartDate || filterEndDate) && (
+            <span className="text-[8px] text-muted-foreground sm:text-[10px]">
+              {filterStartDate
+                ? new Date(`${filterStartDate}T12:00:00`).toLocaleDateString('it-IT')
+                : 'Inizio archivio'}
+              {' → '}
+              {filterEndDate
+                ? new Date(`${filterEndDate}T12:00:00`).toLocaleDateString('it-IT')
+                : 'Oggi'}
+            </span>
+          )}
+        </div>
+      </section>
+
+      {filteredData.trips.length === 0 ? (
+        <section className="rounded-2xl border border-dashed border-border bg-card p-8 text-center">
+          <CalendarRange className="mx-auto size-8 text-muted-foreground" />
+          <h3 className="mt-3 text-sm font-black sm:text-lg">
+            Nessun viaggio nel periodo selezionato
+          </h3>
+          <p className="mx-auto mt-2 max-w-md text-[9px] text-muted-foreground sm:text-xs">
+            Modifica le date oppure premi “Tutto” per visualizzare
+            nuovamente l’intero archivio.
+          </p>
+        </section>
+      ) : (
+        <>
       <section className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 sm:gap-4">
         {[
           {
             label: 'Viaggi',
-            value: String(data.trips.length),
+            value: String(filteredData.trips.length),
             icon: Bike,
           },
           {
@@ -677,6 +887,8 @@ export function StatisticsView() {
           )}
         </div>
       </section>
+        </>
+      )}
     </div>
   )
 }
