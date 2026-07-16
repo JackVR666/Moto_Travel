@@ -1,5 +1,6 @@
 import { Plus, Route, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { TripDayDiaryCard } from '@/components/trip/TripDayDiaryCard'
 import {
   AccommodationCard,
   type Accommodation,
@@ -617,6 +618,13 @@ export function PlanningTab({
                     </div>
                     )}
 
+                  {editingTripId && (
+                    <TripDayDiaryCard
+                      tripId={editingTripId}
+                      day={day}
+                      formatDate={formatDate}
+                    />
+                  )}
                 </div>
 
                 <div className="flex shrink-0 items-center gap-2">
