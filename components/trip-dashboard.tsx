@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import Image from 'next/image'
 import { AppSplash } from '@/components/app-splash'
+import { StatisticsView } from '@/components/v2/StatisticsView'
 import {
   Bike,
   Route,
@@ -1540,8 +1541,12 @@ for (const p of pointsData ?? []) {
         )}
 
         {mode === 'select' &&
-          (foundationView === 'statistics' ||
-            foundationView === 'motorcycle' ||
+          foundationView === 'statistics' && (
+            <StatisticsView />
+          )}
+
+        {mode === 'select' &&
+          (foundationView === 'motorcycle' ||
             foundationView === 'settings') && (
             <div className="flex min-h-[55vh] items-center justify-center">
               <div className="w-full max-w-xl rounded-2xl border border-dashed border-border bg-card p-6 text-center shadow-sm">
