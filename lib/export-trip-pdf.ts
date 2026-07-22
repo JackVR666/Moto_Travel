@@ -980,13 +980,13 @@ export async function exportTripPdf({
         fontStyle: 'normal',
       },
       6: {
-        cellWidth: 15,
+        cellWidth: 20,
         font: 'helvetica',
         fontStyle: 'normal',
         overflow: 'linebreak',
       },
       7: {
-        cellWidth: 15,
+        cellWidth: 20,
         halign: 'center',
         font: 'helvetica',
         fontStyle: 'normal',
@@ -998,7 +998,7 @@ export async function exportTripPdf({
         fontStyle: 'normal',
       },
       9: {
-        cellWidth: 15,
+        cellWidth: 20,
         halign: 'center',
         font: 'helvetica',
         fontStyle: 'normal',
