@@ -861,42 +861,43 @@ export async function exportTripPdf({
       continue
     }
 
-    summaryRows.push([
-      index === 0 ? `Giorno ${day.day_number}` : '',
-      index === 0
-        ? routeLabel(day.start_city, day.end_city)
-        : 'Stesso soggiorno',
+    dayAccommodations.forEach((accommodation, index) => {
+      summaryRows.push([
+        index === 0 ? `Giorno ${day.day_number}` : '',
+        index === 0
+          ? routeLabel(day.start_city, day.end_city)
+          : 'Stesso soggiorno',
 
-      index === 0 ? formatDate(day.travel_date) : '',
+        index === 0 ? formatDate(day.travel_date) : '',
 
-      index === 0 && day.planned_km !== null
-        ? Number(day.planned_km).toFixed(0)
-        : '',
+        index === 0 && day.planned_km !== null
+          ? Number(day.planned_km).toFixed(0)
+          : '',
 
-      accommodation.name,
+        accommodation.name,
 
-      accommodation.address || '—',
+        accommodation.address || '—',
 
-      `${formatDate(accommodation.check_in_date)}
-    ${formatTime(accommodation.check_in_time)}`,
+        `${formatDate(accommodation.check_in_date)}
+      ${formatTime(accommodation.check_in_time)}`,
 
-      `${formatDate(accommodation.check_out_date)}
-    ${formatTime(accommodation.check_out_time)}`,
+        `${formatDate(accommodation.check_out_date)}
+      ${formatTime(accommodation.check_out_time)}`,
 
-      accommodation.price !== null
-        ? formatMoney(Number(accommodation.price))
-        : '—',
+        accommodation.price !== null
+          ? formatMoney(Number(accommodation.price))
+          : '—',
 
-      accommodation.free_cancellation_until
-        ? formatDate(accommodation.free_cancellation_until)
-        : '—',
+        accommodation.free_cancellation_until
+          ? formatDate(accommodation.free_cancellation_until)
+          : '—',
 
-      paymentLabel(accommodation),
+        paymentLabel(accommodation),
 
-      accommodation.breakfast_included
-        ? 'Inclusa'
-        : '—',
-    ])
+        accommodation.breakfast_included
+          ? 'Inclusa'
+          : '—',
+      ])
     })
   }
 
