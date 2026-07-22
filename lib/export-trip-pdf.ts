@@ -861,23 +861,42 @@ export async function exportTripPdf({
       continue
     }
 
-    dayAccommodations.forEach((accommodation, index) => {
-      summaryRows.push([
-        index === 0 ? `Giorno ${day.day_number}` : '',
-        index === 0
-          ? routeLabel(day.start_city, day.end_city)
-          : 'Stesso soggiorno',
-        index === 0 ? formatDate(day.travel_date) : '',
-        index === 0 && day.planned_km !== null
-          ? Number(day.planned_km).toFixed(0)
-          : '',
-        accommodation.name,
-        accommodation.price !== null
-          ? formatMoney(Number(accommodation.price))
-          : '—',
-        paymentLabel(accommodation),
-        accommodation.breakfast_included ? 'Inclusa' : 'No',
-      ])
+    summaryRows.push([
+      index === 0 ? `Giorno ${day.day_number}` : '',
+      index === 0
+        ? routeLabel(day.start_city, day.end_city)
+        : 'Stesso soggiorno',
+
+      index === 0 ? formatDate(day.travel_date) : '',
+
+      index === 0 && day.planned_km !== null
+        ? Number(day.planned_km).toFixed(0)
+        : '',
+
+      accommodation.name,
+
+      accommodation.address || '—',
+
+      `${formatDate(accommodation.check_in_date)}
+    ${formatTime(accommodation.check_in_time)}`,
+
+      `${formatDate(accommodation.check_out_date)}
+    ${formatTime(accommodation.check_out_time)}`,
+
+      accommodation.price !== null
+        ? formatMoney(Number(accommodation.price))
+        : '—',
+
+      accommodation.free_cancellation_until
+        ? formatDate(accommodation.free_cancellation_until)
+        : '—',
+
+      paymentLabel(accommodation),
+
+      accommodation.breakfast_included
+        ? 'Inclusa'
+        : '—',
+    ])
     })
   }
 
@@ -891,7 +910,11 @@ export async function exportTripPdf({
       'Data',
       'Km',
       'Pernottamento',
+      'Indirizzo',
+      'Check-in',
+      'Check-out',
       'Costo',
+      'Disdetta',
       'Pagamento',
       'Colazione',
     ]],
@@ -962,6 +985,30 @@ export async function exportTripPdf({
         overflow: 'linebreak',
       },
       7: {
+        cellWidth: 20,
+        halign: 'center',
+        font: 'helvetica',
+        fontStyle: 'normal',
+      },
+      8: {
+        cellWidth: 20,
+        halign: 'center',
+        font: 'helvetica',
+        fontStyle: 'normal',
+      },
+      9: {
+        cellWidth: 20,
+        halign: 'center',
+        font: 'helvetica',
+        fontStyle: 'normal',
+      },
+      10: {
+        cellWidth: 20,
+        halign: 'center',
+        font: 'helvetica',
+        fontStyle: 'normal',
+      },
+      11: {
         cellWidth: 20,
         halign: 'center',
         font: 'helvetica',
