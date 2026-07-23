@@ -119,6 +119,45 @@ function countNights(accommodation: PdfAccommodation): number {
   )
 }
 
+function accommodationCoversDay(
+  accommodation: PdfAccommodation,
+  day: PdfTripDay,
+): boolean {
+  const dayDate = parseDateOnly(day.travel_date)
+  const checkIn = parseDateOnly(accommodation.check_in_date)
+  const checkOut = parseDateOnly(accommodation.check_out_date)
+
+  /*
+   * Un soggiorno copre tutte le notti:
+   *
+   * check-in <= giorno < check-out
+   *
+   * Esempio:
+   * check-in 12/08
+   * check-out 15/08
+   *
+   * Copre le giornate del 12, 13 e 14 agosto.
+   * Il 15 agosto è il giorno della partenza dall'hotel.
+   */
+  if (dayDate && checkIn && checkOut) {
+    return dayDate >= checkIn && dayDate < checkOut
+  }
+
+  /*
+   * Se è presente solo la data di check-in,
+   * consideriamo coperta la giornata del check-in.
+   */
+  if (dayDate && checkIn && !checkOut) {
+    return dayDate.getTime() === checkIn.getTime()
+  }
+
+  /*
+   * Compatibilità con vecchi pernottamenti
+   * nei quali le date non erano state compilate.
+   */
+  return accommodation.trip_day_id === day.id
+}
+
 function stayDayLabel(
   accommodation: PdfAccommodation,
   tripDays: PdfTripDay[],
@@ -841,9 +880,9 @@ export async function exportTripPdf({
   const summaryRows: string[][] = []
 
   for (const day of sortedDays) {
-    const dayAccommodations = accommodations.filter(
-      (accommodation) => accommodation.trip_day_id === day.id,
-    )
+    const dayAccommodations = accommodations.filter((accommodation) =>
+      accommodationCoversDay(accommodation, day),
+    ) 
 
     if (dayAccommodations.length === 0) {
       summaryRows.push([
@@ -1067,16 +1106,13 @@ export async function exportTripPdf({
   // PAGINE SUCCESSIVE — DETTAGLIO GIORNATE
   // ==========================================================
   for (const day of sortedDays) {
-    const dayAccommodations = accommodations.filter(
-      (accommodation) => accommodation.trip_day_id === day.id,
+    const dayAccommodations = accommodations.filter((accommodation) =>
+      accommodationCoversDay(accommodation, day),
     )
 
     doc.addPage('a4', 'landscape')
 
-    const primaryAccommodation = dayAccommodations[0]
-    const pageLabel = primaryAccommodation
-      ? stayDayLabel(primaryAccommodation, sortedDays)
-      : `Giorno ${day.day_number}`
+    const pageLabel = `Giorno ${day.day_number}`
 
     sectionHeader(
       `${pageLabel} · ${routeLabel(day.start_city, day.end_city)}`,
