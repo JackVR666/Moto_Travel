@@ -924,7 +924,7 @@ export async function exportTripPdf({
       ${formatTime(accommodation.check_out_time)}`,
 
         accommodation.price !== null
-          ? formatMoney(Number(accommodation.price))
+          ? formatMoney(Number(accommodation.price) / countNights(accommodation))
           : '—',
 
         accommodation.free_cancellation_until
