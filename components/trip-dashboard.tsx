@@ -7,6 +7,7 @@ import { AppSplash } from '@/components/app-splash'
 import { StatisticsView } from '@/components/v2/StatisticsView'
 import { MapExplorerView } from '@/components/v2/MapExplorerView'
 import { GoldWingManagerView } from '@/components/v2/GoldWingManagerView'
+import TravelChecklist from '@/components/checklist/TravelChecklist'
 import {
   Bike,
   Route,
@@ -34,6 +35,7 @@ import {
   Wrench,
   Settings,
   ChevronRight,
+  ListChecks,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { GpxUploader } from '@/components/gpx-uploader'
@@ -68,6 +70,7 @@ type ActiveTab = TripTab
 type FoundationView =
   | 'dashboard'
   | 'trips'
+  | 'checklist'
   | 'mapExplorer'
   | 'statistics'
   | 'motorcycle'
@@ -1318,6 +1321,11 @@ for (const p of pointsData ?? []) {
       icon: Luggage,
     },
     {
+      id: 'checklist' as const,
+      label: 'Checklist partenza',
+      icon: ListChecks,
+    },
+    {
       id: 'mapExplorer' as const,
       label: 'Mappa viaggi',
       icon: Globe2,
@@ -1600,6 +1608,11 @@ for (const p of pointsData ?? []) {
             )}
           </div>
         )}
+
+        {mode === 'select' &&
+          foundationView === 'checklist' && (
+            <TravelChecklist />
+          )}
 
         {mode === 'select' &&
           foundationView === 'mapExplorer' && (
