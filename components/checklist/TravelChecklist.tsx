@@ -62,30 +62,16 @@ function sortChecklist(
 }
 
 export default function TravelChecklist() {
-  const [sections, setSections] = useState<
-    TravelChecklistSection[]
-  >([])
-
+  const [sections, setSections] = useState<TravelChecklistSection[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [resetting, setResetting] = useState(false)
-  const [updatingItemId, setUpdatingItemId] = useState<
-    string | null
-  >(null)
-
-  const [errorMessage, setErrorMessage] = useState<
-    string | null
-  >(null)
-
-  const [successMessage, setSuccessMessage] = useState<
-    string | null
-  >(null)
-
+  const [updatingItemId, setUpdatingItemId] = useState<string | null>(null)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [sectionForm, setSectionForm] =
     useState<SectionFormState | null>(null)
-
-  const [itemForm, setItemForm] =
-    useState<ItemFormState | null>(null)
+  const [itemForm, setItemForm] = useState<ItemFormState | null>(null)
 
   const loadChecklist = useCallback(async () => {
     try {
@@ -113,21 +99,16 @@ export default function TravelChecklist() {
         `)
         .order('position', { ascending: true })
 
-      if (error) {
-        throw error
-      }
+      if (error) throw error
 
-      const normalizedSections = (
-        data ?? []
-      ) as TravelChecklistSection[]
-
-      setSections(sortChecklist(normalizedSections))
+      setSections(
+        sortChecklist((data ?? []) as TravelChecklistSection[]),
+      )
     } catch (error) {
       console.error(
         'Errore durante il caricamento della checklist:',
         error,
       )
-
       setErrorMessage(
         'Non è stato possibile caricare la checklist.',
       )
@@ -141,53 +122,33 @@ export default function TravelChecklist() {
   }, [loadChecklist])
 
   const totals = useMemo(() => {
-    const items = sections.flatMap(
-      (section) => section.items,
-    )
-
-    const completed = items.filter(
-      (item) => item.is_completed,
+    const items = sections.flatMap((section) => section.items)
+    const completed = items.filter((item) => item.is_completed).length
+    const missingEssential = items.filter(
+      (item) => item.is_essential && !item.is_completed,
     ).length
-
-    const essentialItems = items.filter(
-      (item) => item.is_essential,
-    )
-
-    const missingEssential = essentialItems.filter(
-      (item) => !item.is_completed,
-    ).length
-
-    const percentage =
-      items.length > 0
-        ? Math.round((completed / items.length) * 100)
-        : 0
 
     return {
       total: items.length,
       completed,
-      percentage,
-      essential: essentialItems.length,
       missingEssential,
+      percentage:
+        items.length > 0
+          ? Math.round((completed / items.length) * 100)
+          : 0,
     }
   }, [sections])
 
   function showSuccess(message: string) {
     setSuccessMessage(message)
-
-    window.setTimeout(() => {
-      setSuccessMessage(null)
-    }, 3000)
+    window.setTimeout(() => setSuccessMessage(null), 3000)
   }
 
   function openNewSectionForm() {
-    setSectionForm({
-      ...EMPTY_SECTION_FORM,
-    })
+    setSectionForm({ ...EMPTY_SECTION_FORM })
   }
 
-  function openEditSectionForm(
-    section: TravelChecklistSection,
-  ) {
+  function openEditSectionForm(section: TravelChecklistSection) {
     setSectionForm({
       id: section.id,
       title: section.title,
@@ -201,9 +162,7 @@ export default function TravelChecklist() {
     })
   }
 
-  function openEditItemForm(
-    item: TravelChecklistItem,
-  ) {
+  function openEditItemForm(item: TravelChecklistItem) {
     setItemForm({
       id: item.id,
       sectionId: item.section_id,
@@ -214,16 +173,12 @@ export default function TravelChecklist() {
   }
 
   async function saveSection() {
-    if (!sectionForm) {
-      return
-    }
+    if (!sectionForm) return
 
     const title = sectionForm.title.trim()
 
     if (!title) {
-      setErrorMessage(
-        'Inserisci il nome del capitolo.',
-      )
+      setErrorMessage('Inserisci il nome del capitolo.')
       return
     }
 
@@ -234,22 +189,15 @@ export default function TravelChecklist() {
       if (sectionForm.id) {
         const { error } = await supabase
           .from('travel_checklist_sections')
-          .update({
-            title,
-          })
+          .update({ title })
           .eq('id', sectionForm.id)
 
-        if (error) {
-          throw error
-        }
+        if (error) throw error
 
         setSections((current) =>
           current.map((section) =>
             section.id === sectionForm.id
-              ? {
-                  ...section,
-                  title,
-                }
+              ? { ...section, title }
               : section,
           ),
         )
@@ -258,38 +206,25 @@ export default function TravelChecklist() {
       } else {
         const nextPosition =
           sections.length > 0
-            ? Math.max(
-                ...sections.map(
-                  (section) => section.position,
-                ),
-              ) + 10
+            ? Math.max(...sections.map((section) => section.position)) + 10
             : 10
 
         const { data, error } = await supabase
           .from('travel_checklist_sections')
-          .insert({
-            title,
-            position: nextPosition,
-          })
-          .select(`
-            id,
-            title,
-            position,
-            created_at
-          `)
+          .insert({ title, position: nextPosition })
+          .select('id, title, position, created_at')
           .single()
 
-        if (error) {
-          throw error
-        }
-
-        const newSection: TravelChecklistSection = {
-          ...data,
-          items: [],
-        }
+        if (error) throw error
 
         setSections((current) =>
-          sortChecklist([...current, newSection]),
+          sortChecklist([
+            ...current,
+            {
+              ...(data as Omit<TravelChecklistSection, 'items'>),
+              items: [],
+            },
+          ]),
         )
 
         showSuccess('Nuovo capitolo creato.')
@@ -301,7 +236,6 @@ export default function TravelChecklist() {
         'Errore durante il salvataggio del capitolo:',
         error,
       )
-
       setErrorMessage(
         'Non è stato possibile salvare il capitolo.',
       )
@@ -310,16 +244,12 @@ export default function TravelChecklist() {
     }
   }
 
-  async function deleteSection(
-    section: TravelChecklistSection,
-  ) {
+  async function deleteSection(section: TravelChecklistSection) {
     const confirmed = window.confirm(
       `Vuoi eliminare il capitolo "${section.title}"?\n\nVerranno eliminate anche tutte le voci contenute nel capitolo.`,
     )
 
-    if (!confirmed) {
-      return
-    }
+    if (!confirmed) return
 
     try {
       setErrorMessage(null)
@@ -329,14 +259,11 @@ export default function TravelChecklist() {
         .delete()
         .eq('id', section.id)
 
-      if (error) {
-        throw error
-      }
+      if (error) throw error
 
       setSections((current) =>
         current.filter(
-          (currentSection) =>
-            currentSection.id !== section.id,
+          (currentSection) => currentSection.id !== section.id,
         ),
       )
 
@@ -346,7 +273,6 @@ export default function TravelChecklist() {
         'Errore durante l’eliminazione del capitolo:',
         error,
       )
-
       setErrorMessage(
         'Non è stato possibile eliminare il capitolo.',
       )
@@ -354,17 +280,13 @@ export default function TravelChecklist() {
   }
 
   async function saveItem() {
-    if (!itemForm || !itemForm.sectionId) {
-      return
-    }
+    if (!itemForm || !itemForm.sectionId) return
 
     const text = itemForm.text.trim()
     const notes = itemForm.notes.trim()
 
     if (!text) {
-      setErrorMessage(
-        'Inserisci il testo della voce.',
-      )
+      setErrorMessage('Inserisci il testo della voce.')
       return
     }
 
@@ -394,20 +316,15 @@ export default function TravelChecklist() {
           `)
           .single()
 
-        if (error) {
-          throw error
-        }
+        if (error) throw error
 
-        const updatedItem =
-          data as TravelChecklistItem
+        const updatedItem = data as TravelChecklistItem
 
         setSections((current) =>
           current.map((section) => ({
             ...section,
             items: section.items.map((item) =>
-              item.id === updatedItem.id
-                ? updatedItem
-                : item,
+              item.id === updatedItem.id ? updatedItem : item,
             ),
           })),
         )
@@ -415,17 +332,13 @@ export default function TravelChecklist() {
         showSuccess('Voce aggiornata.')
       } else {
         const targetSection = sections.find(
-          (section) =>
-            section.id === itemForm.sectionId,
+          (section) => section.id === itemForm.sectionId,
         )
 
         const nextPosition =
-          targetSection &&
-          targetSection.items.length > 0
+          targetSection && targetSection.items.length > 0
             ? Math.max(
-                ...targetSection.items.map(
-                  (item) => item.position,
-                ),
+                ...targetSection.items.map((item) => item.position),
               ) + 10
             : 10
 
@@ -452,9 +365,7 @@ export default function TravelChecklist() {
           `)
           .single()
 
-        if (error) {
-          throw error
-        }
+        if (error) throw error
 
         const newItem = data as TravelChecklistItem
 
@@ -464,8 +375,7 @@ export default function TravelChecklist() {
               ? {
                   ...section,
                   items: [...section.items, newItem].sort(
-                    (a, b) =>
-                      a.position - b.position,
+                    (a, b) => a.position - b.position,
                   ),
                 }
               : section,
@@ -481,7 +391,6 @@ export default function TravelChecklist() {
         'Errore durante il salvataggio della voce:',
         error,
       )
-
       setErrorMessage(
         'Non è stato possibile salvare la voce.',
       )
@@ -490,16 +399,12 @@ export default function TravelChecklist() {
     }
   }
 
-  async function deleteItem(
-    item: TravelChecklistItem,
-  ) {
+  async function deleteItem(item: TravelChecklistItem) {
     const confirmed = window.confirm(
       `Vuoi eliminare la voce "${item.text}"?`,
     )
 
-    if (!confirmed) {
-      return
-    }
+    if (!confirmed) return
 
     try {
       setErrorMessage(null)
@@ -509,16 +414,13 @@ export default function TravelChecklist() {
         .delete()
         .eq('id', item.id)
 
-      if (error) {
-        throw error
-      }
+      if (error) throw error
 
       setSections((current) =>
         current.map((section) => ({
           ...section,
           items: section.items.filter(
-            (currentItem) =>
-              currentItem.id !== item.id,
+            (currentItem) => currentItem.id !== item.id,
           ),
         })),
       )
@@ -529,40 +431,33 @@ export default function TravelChecklist() {
         'Errore durante l’eliminazione della voce:',
         error,
       )
-
       setErrorMessage(
         'Non è stato possibile eliminare la voce.',
       )
     }
   }
 
-  async function toggleItem(
-    item: TravelChecklistItem,
-  ) {
-    const nextCompletedValue =
-      !item.is_completed
+  async function toggleItem(item: TravelChecklistItem) {
+    const nextCompletedValue = !item.is_completed
+    const completedAt = nextCompletedValue
+      ? new Date().toISOString()
+      : null
 
     try {
       setUpdatingItemId(item.id)
       setErrorMessage(null)
 
-      const completedAt = nextCompletedValue
-        ? new Date().toISOString()
-        : null
-
       setSections((current) =>
         current.map((section) => ({
           ...section,
-          items: section.items.map(
-            (currentItem) =>
-              currentItem.id === item.id
-                ? {
-                    ...currentItem,
-                    is_completed:
-                      nextCompletedValue,
-                    completed_at: completedAt,
-                  }
-                : currentItem,
+          items: section.items.map((currentItem) =>
+            currentItem.id === item.id
+              ? {
+                  ...currentItem,
+                  is_completed: nextCompletedValue,
+                  completed_at: completedAt,
+                }
+              : currentItem,
           ),
         })),
       )
@@ -575,9 +470,7 @@ export default function TravelChecklist() {
         })
         .eq('id', item.id)
 
-      if (error) {
-        throw error
-      }
+      if (error) throw error
     } catch (error) {
       console.error(
         'Errore durante l’aggiornamento della voce:',
@@ -587,11 +480,8 @@ export default function TravelChecklist() {
       setSections((current) =>
         current.map((section) => ({
           ...section,
-          items: section.items.map(
-            (currentItem) =>
-              currentItem.id === item.id
-                ? item
-                : currentItem,
+          items: section.items.map((currentItem) =>
+            currentItem.id === item.id ? item : currentItem,
           ),
         })),
       )
@@ -613,12 +503,10 @@ export default function TravelChecklist() {
     }
 
     const confirmed = window.confirm(
-      `Vuoi preparare un nuovo viaggio?\n\nVerranno eliminate tutte le spunte, ma capitoli e voci resteranno invariati.`,
+      'Vuoi preparare un nuovo viaggio?\n\nVerranno eliminate tutte le spunte, ma capitoli e voci resteranno invariati.',
     )
 
-    if (!confirmed) {
-      return
-    }
+    if (!confirmed) return
 
     try {
       setResetting(true)
@@ -632,9 +520,7 @@ export default function TravelChecklist() {
         })
         .eq('is_completed', true)
 
-      if (error) {
-        throw error
-      }
+      if (error) throw error
 
       setSections((current) =>
         current.map((section) => ({
@@ -655,7 +541,6 @@ export default function TravelChecklist() {
         'Errore durante l’azzeramento della checklist:',
         error,
       )
-
       setErrorMessage(
         'Non è stato possibile azzerare la checklist.',
       )
@@ -667,8 +552,8 @@ export default function TravelChecklist() {
   if (loading) {
     return (
       <div className="flex min-h-[420px] items-center justify-center">
-        <div className="flex items-center gap-3 text-slate-500">
-          <Loader2 className="h-5 w-5 animate-spin" />
+        <div className="flex items-center gap-3 text-muted-foreground">
+          <Loader2 className="size-5 animate-spin" />
           Caricamento checklist...
         </div>
       </div>
@@ -676,47 +561,44 @@ export default function TravelChecklist() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto w-full max-w-6xl space-y-5">
       {errorMessage && (
-        <div className="flex items-start justify-between gap-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="flex items-start justify-between gap-4 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
           <div className="flex items-start gap-2">
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+            <AlertTriangle className="mt-0.5 size-4 shrink-0" />
             <span>{errorMessage}</span>
           </div>
-
           <button
             type="button"
             onClick={() => setErrorMessage(null)}
-            className="rounded-lg p-1 hover:bg-red-100"
+            className="rounded-lg p-1 hover:bg-red-500/15"
             aria-label="Chiudi messaggio"
           >
-            <X className="h-4 w-4" />
+            <X className="size-4" />
           </button>
         </div>
       )}
 
       {successMessage && (
-        <div className="flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-          <Check className="h-4 w-4" />
+        <div className="flex items-center gap-2 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
+          <Check className="size-4" />
           {successMessage}
         </div>
       )}
 
-      <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
-        <div className="bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 px-5 py-6 text-white sm:px-7 sm:py-8">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+      <section className="overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
+        <div className="px-5 py-6 sm:px-7 sm:py-7">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
             <div>
-              <div className="mb-2 text-xs font-semibold uppercase tracking-[0.22em] text-amber-400">
+              <p className="text-[10px] font-black uppercase tracking-[0.24em] text-amber-500">
                 Preparazione viaggio
-              </div>
-
-              <h1 className="text-2xl font-bold sm:text-3xl">
+              </p>
+              <h1 className="mt-2 text-2xl font-black tracking-tight text-foreground sm:text-3xl">
                 Checklist partenza
               </h1>
-
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
-                Una checklist permanente che puoi migliorare
-                viaggio dopo viaggio.
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+                Una checklist permanente che puoi migliorare viaggio dopo
+                viaggio.
               </p>
             </div>
 
@@ -724,79 +606,84 @@ export default function TravelChecklist() {
               type="button"
               onClick={resetChecklist}
               disabled={resetting}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/10 px-4 py-3 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-border bg-secondary/70 px-4 text-sm font-bold text-foreground transition hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-50"
             >
               {resetting ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="size-4 animate-spin" />
               ) : (
-                <RefreshCcw className="h-4 w-4" />
+                <RefreshCcw className="size-4" />
               )}
-
               Prepara un nuovo viaggio
             </button>
           </div>
 
-          <div className="mt-7 grid gap-3 sm:grid-cols-3">
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur">
-              <div className="text-2xl font-bold">
+          <div className="mt-6 grid gap-3 md:grid-cols-3">
+            <div className="rounded-2xl border border-border bg-secondary/30 p-4 sm:p-5">
+              <p className="text-3xl font-black text-foreground">
                 {totals.percentage}%
-              </div>
-
-              <div className="mt-1 text-xs text-slate-300">
-                completato
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">completato</p>
+              <div className="mt-4 h-2 overflow-hidden rounded-full bg-secondary">
+                <div
+                  className="h-full rounded-full bg-amber-500 transition-all duration-500"
+                  style={{ width: `${totals.percentage}%` }}
+                />
               </div>
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur">
-              <div className="text-2xl font-bold">
+            <div className="rounded-2xl border border-border bg-secondary/30 p-4 sm:p-5">
+              <p className="text-3xl font-black text-foreground">
                 {totals.completed}/{totals.total}
-              </div>
-
-              <div className="mt-1 text-xs text-slate-300">
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
                 attività preparate
+              </p>
+              <div className="mt-4 h-2 overflow-hidden rounded-full bg-secondary">
+                <div
+                  className="h-full rounded-full bg-amber-500 transition-all duration-500"
+                  style={{ width: `${totals.percentage}%` }}
+                />
               </div>
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur">
-              <div
-                className={
+            <div className="rounded-2xl border border-border bg-secondary/30 p-4 sm:p-5">
+              <p
+                className={`text-3xl font-black ${
                   totals.missingEssential > 0
-                    ? 'text-2xl font-bold text-amber-400'
-                    : 'text-2xl font-bold text-emerald-400'
-                }
+                    ? 'text-amber-500'
+                    : 'text-emerald-400'
+                }`}
               >
                 {totals.missingEssential}
-              </div>
-
-              <div className="mt-1 text-xs text-slate-300">
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
                 essenziali mancanti
+              </p>
+              <div className="mt-4 h-2 overflow-hidden rounded-full bg-secondary">
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${
+                    totals.missingEssential > 0
+                      ? 'bg-amber-500'
+                      : 'bg-emerald-500'
+                  }`}
+                  style={{
+                    width:
+                      totals.missingEssential > 0 ? '35%' : '100%',
+                  }}
+                />
               </div>
             </div>
-          </div>
-
-          <div className="mt-5 h-2.5 overflow-hidden rounded-full bg-white/10">
-            <div
-              className="h-full rounded-full bg-amber-400 transition-all duration-500"
-              style={{
-                width: `${totals.percentage}%`,
-              }}
-            />
           </div>
         </div>
       </section>
 
       {totals.missingEssential > 0 && (
-        <section className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-amber-900">
-          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
-
+        <section className="flex items-start gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-4 text-amber-300 sm:px-5">
+          <AlertTriangle className="mt-0.5 size-5 shrink-0 text-amber-500" />
           <div>
-            <div className="font-semibold">
-              Mancano elementi essenziali
-            </div>
-
-            <p className="mt-1 text-sm text-amber-800">
-              Devi ancora preparare{' '}
-              {totals.missingEssential}{' '}
+            <p className="font-bold">Mancano elementi essenziali</p>
+            <p className="mt-1 text-sm text-amber-300/80">
+              Devi ancora preparare {totals.missingEssential}{' '}
               {totals.missingEssential === 1
                 ? 'elemento essenziale'
                 : 'elementi essenziali'}.
@@ -806,102 +693,86 @@ export default function TravelChecklist() {
       )}
 
       {sections.length === 0 ? (
-        <section className="rounded-[28px] border border-dashed border-slate-300 bg-slate-50 px-6 py-14 text-center">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-white shadow-sm">
-            <CheckCircle2 className="h-7 w-7 text-slate-400" />
+        <section className="rounded-3xl border border-dashed border-border bg-card px-6 py-14 text-center">
+          <div className="mx-auto flex size-14 items-center justify-center rounded-2xl border border-border bg-secondary/40">
+            <CheckCircle2 className="size-7 text-muted-foreground" />
           </div>
-
-          <h2 className="mt-5 text-xl font-bold text-slate-900">
+          <h2 className="mt-5 text-xl font-black text-foreground">
             La checklist è vuota
           </h2>
-
-          <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
-            Crea il primo capitolo, per esempio
-            Documenti, Moto, Abbigliamento oppure
-            Elettronica.
+          <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
+            Crea il primo capitolo, per esempio Documenti, Moto,
+            Abbigliamento oppure Elettronica.
           </p>
-
           <button
             type="button"
             onClick={openNewSectionForm}
-            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+            className="mt-6 inline-flex items-center gap-2 rounded-xl border border-border bg-secondary px-5 py-3 text-sm font-bold text-foreground transition hover:bg-secondary/80"
           >
-            <Plus className="h-4 w-4" />
+            <Plus className="size-4" />
             Crea il primo capitolo
           </button>
         </section>
       ) : (
         <div className="grid gap-5 xl:grid-cols-2">
           {sections.map((section) => {
-            const completedItems =
-              section.items.filter(
-                (item) => item.is_completed,
-              ).length
+            const completedItems = section.items.filter(
+              (item) => item.is_completed,
+            ).length
 
             return (
               <section
                 key={section.id}
-                className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm"
+                className="overflow-hidden rounded-3xl border border-border bg-card shadow-sm"
               >
-                <header className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-5">
+                <header className="flex items-start justify-between gap-4 border-b border-border px-5 py-5">
                   <div>
-                    <h2 className="text-base font-bold uppercase tracking-wide text-slate-900">
+                    <h2 className="text-sm font-black uppercase tracking-wide text-foreground">
                       {section.title}
                     </h2>
-
-                    <p className="mt-1 text-xs text-slate-500">
-                      {completedItems} di{' '}
-                      {section.items.length} completate
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {completedItems} di {section.items.length} completate
                     </p>
                   </div>
 
                   <div className="flex items-center gap-1">
                     <button
                       type="button"
-                      onClick={() =>
-                        openEditSectionForm(section)
-                      }
-                      className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-900"
+                      onClick={() => openEditSectionForm(section)}
+                      className="rounded-lg p-2 text-muted-foreground transition hover:bg-secondary hover:text-foreground"
                       aria-label="Modifica capitolo"
                     >
-                      <Pencil className="h-4 w-4" />
+                      <Pencil className="size-4" />
                     </button>
-
                     <button
                       type="button"
-                      onClick={() =>
-                        void deleteSection(section)
-                      }
-                      className="rounded-lg p-2 text-slate-400 transition hover:bg-red-50 hover:text-red-600"
+                      onClick={() => void deleteSection(section)}
+                      className="rounded-lg p-2 text-muted-foreground transition hover:bg-red-500/10 hover:text-red-400"
                       aria-label="Elimina capitolo"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="size-4" />
                     </button>
                   </div>
                 </header>
 
                 {section.items.length === 0 ? (
-                  <div className="px-5 py-8 text-center text-sm text-slate-500">
-                    Nessuna voce presente in questo
-                    capitolo.
+                  <div className="px-5 py-8 text-center text-sm text-muted-foreground">
+                    Nessuna voce presente in questo capitolo.
                   </div>
                 ) : (
-                  <div className="divide-y divide-slate-100">
+                  <div className="divide-y divide-border">
                     {section.items.map((item) => {
-                      const isUpdating =
-                        updatingItemId === item.id
+                      const isUpdating = updatingItemId === item.id
 
                       return (
                         <article
                           key={item.id}
-                          className="group flex items-start gap-3 px-5 py-4 transition hover:bg-slate-50"
+                          className="group flex items-start gap-3 px-5 py-4 transition hover:bg-secondary/30"
                         >
                           <button
                             type="button"
                             disabled={isUpdating}
-                            onClick={() =>
-                              void toggleItem(item)
-                            }
+                            onClick={() => void toggleItem(item)}
                             className="mt-0.5 shrink-0 disabled:opacity-50"
                             aria-label={
                               item.is_completed
@@ -910,11 +781,11 @@ export default function TravelChecklist() {
                             }
                           >
                             {isUpdating ? (
-                              <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+                              <Loader2 className="size-6 animate-spin text-muted-foreground" />
                             ) : item.is_completed ? (
-                              <CheckCircle2 className="h-6 w-6 text-emerald-600" />
+                              <CheckCircle2 className="size-6 text-emerald-500" />
                             ) : (
-                              <Circle className="h-6 w-6 text-slate-300" />
+                              <Circle className="size-6 text-muted-foreground/70" />
                             )}
                           </button>
 
@@ -923,23 +794,23 @@ export default function TravelChecklist() {
                               <p
                                 className={
                                   item.is_completed
-                                    ? 'text-sm text-slate-400 line-through'
-                                    : 'text-sm font-medium text-slate-800'
+                                    ? 'text-sm text-muted-foreground line-through'
+                                    : 'text-sm font-semibold text-foreground'
                                 }
                               >
                                 {item.text}
                               </p>
 
                               {item.is_essential && (
-                                <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-700">
-                                  <Star className="h-3 w-3 fill-current" />
+                                <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-amber-400">
+                                  <Star className="size-3 fill-current" />
                                   Essenziale
                                 </span>
                               )}
                             </div>
 
                             {item.notes && (
-                              <p className="mt-1.5 text-xs leading-5 text-slate-500">
+                              <p className="mt-1.5 text-xs leading-5 text-muted-foreground">
                                 {item.notes}
                               </p>
                             )}
@@ -948,24 +819,19 @@ export default function TravelChecklist() {
                           <div className="flex shrink-0 items-center gap-1 opacity-100 sm:opacity-0 sm:transition sm:group-hover:opacity-100">
                             <button
                               type="button"
-                              onClick={() =>
-                                openEditItemForm(item)
-                              }
-                              className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-900"
+                              onClick={() => openEditItemForm(item)}
+                              className="rounded-lg p-2 text-muted-foreground transition hover:bg-secondary hover:text-foreground"
                               aria-label="Modifica voce"
                             >
-                              <Pencil className="h-4 w-4" />
+                              <Pencil className="size-4" />
                             </button>
-
                             <button
                               type="button"
-                              onClick={() =>
-                                void deleteItem(item)
-                              }
-                              className="rounded-lg p-2 text-slate-400 transition hover:bg-red-50 hover:text-red-600"
+                              onClick={() => void deleteItem(item)}
+                              className="rounded-lg p-2 text-muted-foreground transition hover:bg-red-500/10 hover:text-red-400"
                               aria-label="Elimina voce"
                             >
-                              <Trash2 className="h-4 w-4" />
+                              <Trash2 className="size-4" />
                             </button>
                           </div>
                         </article>
@@ -974,15 +840,13 @@ export default function TravelChecklist() {
                   </div>
                 )}
 
-                <footer className="border-t border-slate-100 px-5 py-4">
+                <footer className="border-t border-border px-5 py-4">
                   <button
                     type="button"
-                    onClick={() =>
-                      openNewItemForm(section.id)
-                    }
-                    className="inline-flex items-center gap-2 text-sm font-semibold text-slate-700 transition hover:text-slate-950"
+                    onClick={() => openNewItemForm(section.id)}
+                    className="inline-flex items-center gap-2 text-sm font-bold text-muted-foreground transition hover:text-foreground"
                   >
-                    <Plus className="h-4 w-4" />
+                    <Plus className="size-4" />
                     Aggiungi voce
                   </button>
                 </footer>
@@ -996,41 +860,37 @@ export default function TravelChecklist() {
         <button
           type="button"
           onClick={openNewSectionForm}
-          className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
+          className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-5 py-3 text-sm font-bold text-foreground shadow-sm transition hover:bg-secondary"
         >
-          <Plus className="h-4 w-4" />
+          <Plus className="size-4" />
           Nuovo capitolo
         </button>
       )}
 
       {sectionForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md overflow-hidden rounded-[24px] bg-white shadow-2xl">
-            <header className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-              <h2 className="text-lg font-bold text-slate-900">
-                {sectionForm.id
-                  ? 'Modifica capitolo'
-                  : 'Nuovo capitolo'}
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md overflow-hidden rounded-3xl border border-border bg-card shadow-2xl">
+            <header className="flex items-center justify-between border-b border-border px-5 py-4">
+              <h2 className="text-lg font-black text-foreground">
+                {sectionForm.id ? 'Modifica capitolo' : 'Nuovo capitolo'}
               </h2>
-
               <button
                 type="button"
                 onClick={() => setSectionForm(null)}
-                className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-900"
+                className="rounded-lg p-2 text-muted-foreground hover:bg-secondary hover:text-foreground"
                 aria-label="Chiudi"
               >
-                <X className="h-5 w-5" />
+                <X className="size-5" />
               </button>
             </header>
 
             <div className="space-y-2 px-5 py-5">
               <label
                 htmlFor="section-title"
-                className="text-sm font-semibold text-slate-700"
+                className="text-sm font-bold text-foreground"
               >
                 Nome del capitolo
               </label>
-
               <input
                 id="section-title"
                 type="text"
@@ -1039,43 +899,33 @@ export default function TravelChecklist() {
                 onChange={(event) =>
                   setSectionForm((current) =>
                     current
-                      ? {
-                          ...current,
-                          title:
-                            event.target.value,
-                        }
+                      ? { ...current, title: event.target.value }
                       : null,
                   )
                 }
                 onKeyDown={(event) => {
-                  if (event.key === 'Enter') {
-                    void saveSection()
-                  }
+                  if (event.key === 'Enter') void saveSection()
                 }}
                 placeholder="Esempio: Documenti"
-                className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-950 focus:ring-2 focus:ring-slate-950/10"
+                className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/10"
               />
             </div>
 
-            <footer className="flex justify-end gap-3 border-t border-slate-100 bg-slate-50 px-5 py-4">
+            <footer className="flex justify-end gap-3 border-t border-border bg-secondary/20 px-5 py-4">
               <button
                 type="button"
                 onClick={() => setSectionForm(null)}
-                className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-200"
+                className="rounded-xl px-4 py-2.5 text-sm font-bold text-muted-foreground hover:bg-secondary hover:text-foreground"
               >
                 Annulla
               </button>
-
               <button
                 type="button"
                 disabled={saving}
                 onClick={() => void saveSection()}
-                className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-black text-black transition hover:bg-amber-400 disabled:opacity-50"
               >
-                {saving && (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                )}
-
+                {saving && <Loader2 className="size-4 animate-spin" />}
                 Salva
               </button>
             </footer>
@@ -1084,22 +934,19 @@ export default function TravelChecklist() {
       )}
 
       {itemForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg overflow-hidden rounded-[24px] bg-white shadow-2xl">
-            <header className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-              <h2 className="text-lg font-bold text-slate-900">
-                {itemForm.id
-                  ? 'Modifica voce'
-                  : 'Nuova voce'}
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg overflow-hidden rounded-3xl border border-border bg-card shadow-2xl">
+            <header className="flex items-center justify-between border-b border-border px-5 py-4">
+              <h2 className="text-lg font-black text-foreground">
+                {itemForm.id ? 'Modifica voce' : 'Nuova voce'}
               </h2>
-
               <button
                 type="button"
                 onClick={() => setItemForm(null)}
-                className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-900"
+                className="rounded-lg p-2 text-muted-foreground hover:bg-secondary hover:text-foreground"
                 aria-label="Chiudi"
               >
-                <X className="h-5 w-5" />
+                <X className="size-5" />
               </button>
             </header>
 
@@ -1107,11 +954,10 @@ export default function TravelChecklist() {
               <div className="space-y-2">
                 <label
                   htmlFor="item-text"
-                  className="text-sm font-semibold text-slate-700"
+                  className="text-sm font-bold text-foreground"
                 >
                   Cosa devi preparare?
                 </label>
-
                 <input
                   id="item-text"
                   type="text"
@@ -1120,27 +966,22 @@ export default function TravelChecklist() {
                   onChange={(event) =>
                     setItemForm((current) =>
                       current
-                        ? {
-                            ...current,
-                            text:
-                              event.target.value,
-                          }
+                        ? { ...current, text: event.target.value }
                         : null,
                     )
                   }
                   placeholder="Esempio: Caricabatterie del telefono"
-                  className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-950 focus:ring-2 focus:ring-slate-950/10"
+                  className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/10"
                 />
               </div>
 
               <div className="space-y-2">
                 <label
                   htmlFor="item-notes"
-                  className="text-sm font-semibold text-slate-700"
+                  className="text-sm font-bold text-foreground"
                 >
                   Note facoltative
                 </label>
-
                 <textarea
                   id="item-notes"
                   rows={3}
@@ -1148,20 +989,16 @@ export default function TravelChecklist() {
                   onChange={(event) =>
                     setItemForm((current) =>
                       current
-                        ? {
-                            ...current,
-                            notes:
-                              event.target.value,
-                          }
+                        ? { ...current, notes: event.target.value }
                         : null,
                     )
                   }
                   placeholder="Marca, quantità, posizione nel bagaglio..."
-                  className="w-full resize-none rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-950 focus:ring-2 focus:ring-slate-950/10"
+                  className="w-full resize-none rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/10"
                 />
               </div>
 
-              <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-4">
+              <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-secondary/30 px-4 py-4">
                 <input
                   type="checkbox"
                   checked={itemForm.isEssential}
@@ -1170,49 +1007,42 @@ export default function TravelChecklist() {
                       current
                         ? {
                             ...current,
-                            isEssential:
-                              event.target.checked,
+                            isEssential: event.target.checked,
                           }
                         : null,
                     )
                   }
-                  className="mt-0.5 h-4 w-4 rounded border-slate-300"
+                  className="mt-0.5 size-4 rounded border-border bg-background accent-amber-500"
                 />
 
                 <div>
-                  <div className="flex items-center gap-2 text-sm font-semibold text-slate-800">
-                    <Star className="h-4 w-4 text-amber-500" />
+                  <div className="flex items-center gap-2 text-sm font-bold text-foreground">
+                    <Star className="size-4 text-amber-500" />
                     Elemento essenziale
                   </div>
-
-                  <p className="mt-1 text-xs leading-5 text-slate-500">
-                    Usa questa opzione per documenti,
-                    chiavi, medicinali o elementi che
-                    non puoi dimenticare.
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                    Usa questa opzione per documenti, chiavi, medicinali o
+                    elementi che non puoi dimenticare.
                   </p>
                 </div>
               </label>
             </div>
 
-            <footer className="flex justify-end gap-3 border-t border-slate-100 bg-slate-50 px-5 py-4">
+            <footer className="flex justify-end gap-3 border-t border-border bg-secondary/20 px-5 py-4">
               <button
                 type="button"
                 onClick={() => setItemForm(null)}
-                className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-200"
+                className="rounded-xl px-4 py-2.5 text-sm font-bold text-muted-foreground hover:bg-secondary hover:text-foreground"
               >
                 Annulla
               </button>
-
               <button
                 type="button"
                 disabled={saving}
                 onClick={() => void saveItem()}
-                className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-black text-black transition hover:bg-amber-400 disabled:opacity-50"
               >
-                {saving && (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                )}
-
+                {saving && <Loader2 className="size-4 animate-spin" />}
                 Salva
               </button>
             </footer>
