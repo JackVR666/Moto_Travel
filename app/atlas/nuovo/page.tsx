@@ -426,7 +426,7 @@ export default function NuovoLuogoPage() {
             </div>
 
             {/* Data visita */}
-            <div className="min-w-0">
+            <div className="min-w-0 overflow-hidden">
               <label
                 htmlFor="visitedAt"
                 className="mb-1.5 flex items-center gap-1.5 text-[10px] font-bold text-foreground"
@@ -458,7 +458,18 @@ export default function NuovoLuogoPage() {
                   focus:border-primary
                   focus:ring-1
                   focus:ring-primary
+                  appearance-none
+                  [inline-size:100%]
+                  [max-inline-size:100%]
+                  [min-inline-size:0]
                 "
+                style={{
+                  boxSizing: "border-box",
+                  width: "100%",
+                  minWidth: 0,
+                  maxWidth: "100%",
+                  WebkitAppearance: "none",
+                }}
               />
             </div>
 
