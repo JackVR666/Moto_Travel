@@ -5,15 +5,17 @@ import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   CalendarDays,
-  Check,
+  CheckCircle2,
   ExternalLink,
   Loader2,
   LocateFixed,
   MapPin,
   Save,
+  Star,
 } from "lucide-react";
 
 import { supabase } from "@/lib/supabase";
+import { Button } from "@/components/ui/button";
 
 type Coordinates = {
   latitude: number;
@@ -28,9 +30,11 @@ export default function NuovoLuogoPage() {
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+
   const [visitedAt, setVisitedAt] = useState(
     new Date().toISOString().split("T")[0],
   );
+
   const [transportType, setTransportType] = useState("");
   const [category, setCategory] = useState("");
   const [tripGroup, setTripGroup] = useState("");
@@ -48,7 +52,7 @@ export default function NuovoLuogoPage() {
     setSuccess("");
 
     if (!navigator.geolocation) {
-      setError("Il dispositivo non supporta la geolocalizzazione.");
+      setError("Questo dispositivo non supporta la geolocalizzazione.");
       return;
     }
 
@@ -64,14 +68,18 @@ export default function NuovoLuogoPage() {
 
         setIsLocating(false);
       },
+
       (geolocationError) => {
-        console.error("Errore geolocalizzazione:", geolocationError);
+        console.error(
+          "Errore durante la geolocalizzazione:",
+          geolocationError,
+        );
 
         let message = "Non è stato possibile rilevare la posizione.";
 
         if (geolocationError.code === geolocationError.PERMISSION_DENIED) {
           message =
-            "Permesso per la posizione negato. Abilita la localizzazione nelle impostazioni del browser.";
+            "Permesso posizione negato. Abilita la localizzazione nelle impostazioni del browser.";
         }
 
         if (geolocationError.code === geolocationError.POSITION_UNAVAILABLE) {
@@ -86,6 +94,7 @@ export default function NuovoLuogoPage() {
         setError(message);
         setIsLocating(false);
       },
+
       {
         enableHighAccuracy: true,
         timeout: 20000,
@@ -139,75 +148,87 @@ export default function NuovoLuogoPage() {
 
     if (insertError) {
       console.error("Errore salvataggio luogo:", insertError);
+
       setError(`Errore durante il salvataggio: ${insertError.message}`);
       return;
     }
 
-    setSuccess("Luogo salvato correttamente.");
+    setSuccess("Luogo registrato correttamente.");
 
     setTimeout(() => {
-      router.push("/atlas");
-    }, 1000);
+      router.push("/");
+    }, 1200);
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white">
-      <div className="mx-auto max-w-3xl px-4 py-6 sm:px-6">
-        <button
+    <main className="min-h-screen bg-background text-foreground">
+      <div className="mx-auto w-full max-w-2xl px-3 py-4 sm:px-5 sm:py-6">
+        {/* Pulsante indietro */}
+        <Button
           type="button"
-          onClick={() => router.push("/atlas")}
-          className="mb-6 inline-flex items-center gap-2 text-sm text-slate-400 transition hover:text-white"
+          variant="ghost"
+          size="sm"
+          onClick={() => router.push("/")}
+          className="mb-4 h-8 gap-2 px-2 text-[11px] text-muted-foreground"
         >
-          <ArrowLeft size={18} />
-          Torna all&apos;atlante
-        </button>
+          <ArrowLeft className="size-3.5" />
+          Torna all&apos;app
+        </Button>
 
-        <div className="mb-8">
-          <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-sm text-cyan-300">
-            <MapPin size={16} />
-            Nuovo luogo
+        {/* Intestazione */}
+        <section className="mb-4 rounded-xl border border-border bg-card p-4 shadow-sm sm:p-5">
+          <div className="flex items-start gap-3">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <MapPin className="size-4" />
+            </div>
+
+            <div className="min-w-0">
+              <p className="text-[9px] font-bold uppercase tracking-wider text-primary">
+                Atlante dei luoghi
+              </p>
+
+              <h1 className="mt-1 text-base font-black sm:text-lg">
+                Registra un luogo visitato
+              </h1>
+
+              <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground sm:text-xs">
+                Rileva la posizione e aggiungi le informazioni del luogo.
+              </p>
+            </div>
           </div>
+        </section>
 
-          <h1 className="text-3xl font-semibold tracking-tight">
-            Registra un luogo visitato
-          </h1>
-
-          <p className="mt-2 text-slate-400">
-            Rileva la posizione, aggiungi i dettagli e salva il ricordo nel tuo
-            atlante.
-          </p>
-        </div>
-
-        <section className="mb-6 rounded-3xl border border-white/10 bg-white/5 p-5">
+        {/* Posizione GPS */}
+        <section className="mb-4 rounded-xl border border-border bg-card p-4 shadow-sm">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="font-medium">Posizione geografica</h2>
+            <div className="min-w-0">
+              <p className="text-xs font-black">Posizione GPS</p>
 
               {!coordinates ? (
-                <p className="mt-1 text-sm text-slate-400">
-                  Le coordinate non sono ancora state rilevate.
+                <p className="mt-1 text-[10px] text-muted-foreground">
+                  Coordinate non ancora rilevate.
                 </p>
               ) : (
-                <div className="mt-2 space-y-1 text-sm text-slate-300">
-                  <p>
-                    Latitudine:{" "}
-                    <span className="font-medium text-white">
+                <div className="mt-2 space-y-1 text-[10px]">
+                  <p className="text-muted-foreground">
+                    Latitudine:
+                    <span className="ml-1 font-bold text-foreground">
                       {coordinates.latitude.toFixed(6)}
                     </span>
                   </p>
 
-                  <p>
-                    Longitudine:{" "}
-                    <span className="font-medium text-white">
+                  <p className="text-muted-foreground">
+                    Longitudine:
+                    <span className="ml-1 font-bold text-foreground">
                       {coordinates.longitude.toFixed(6)}
                     </span>
                   </p>
 
                   {coordinates.accuracy !== null && (
-                    <p>
-                      Precisione: circa{" "}
-                      <span className="font-medium text-white">
-                        {Math.round(coordinates.accuracy)} metri
+                    <p className="text-muted-foreground">
+                      Precisione:
+                      <span className="ml-1 font-bold text-foreground">
+                        circa {Math.round(coordinates.accuracy)} metri
                       </span>
                     </p>
                   )}
@@ -215,45 +236,48 @@ export default function NuovoLuogoPage() {
               )}
             </div>
 
-            <button
+            <Button
               type="button"
+              size="sm"
               onClick={detectPosition}
               disabled={isLocating}
-              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-cyan-500 px-5 font-medium text-slate-950 transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-60"
+              className="h-9 shrink-0 gap-2 rounded-lg px-3 text-[11px] font-bold"
             >
               {isLocating ? (
                 <>
-                  <Loader2 size={20} className="animate-spin" />
+                  <Loader2 className="size-3.5 animate-spin" />
                   Rilevamento...
                 </>
               ) : coordinates ? (
                 <>
-                  <LocateFixed size={20} />
+                  <LocateFixed className="size-3.5" />
                   Rileva di nuovo
                 </>
               ) : (
                 <>
-                  <LocateFixed size={20} />
-                  Usa la mia posizione
+                  <LocateFixed className="size-3.5" />
+                  Usa posizione
                 </>
               )}
-            </button>
+            </Button>
           </div>
 
           {coordinates && (
-            <div className="mt-4 flex items-center gap-2 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-300">
-              <Check size={18} />
+            <div className="mt-3 flex items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+              <CheckCircle2 className="size-3.5 shrink-0" />
               Posizione rilevata correttamente
             </div>
           )}
         </section>
 
-        <section className="rounded-3xl border border-white/10 bg-white/5 p-5">
-          <div className="space-y-5">
+        {/* Form */}
+        <section className="rounded-xl border border-border bg-card p-4 shadow-sm sm:p-5">
+          <div className="space-y-4">
+            {/* Nome */}
             <div>
               <label
                 htmlFor="name"
-                className="mb-2 block text-sm font-medium text-slate-200"
+                className="mb-1.5 block text-[10px] font-bold text-foreground"
               >
                 Nome del luogo *
               </label>
@@ -264,14 +288,31 @@ export default function NuovoLuogoPage() {
                 value={name}
                 onChange={(event) => setName(event.target.value)}
                 placeholder="Esempio: Grand-Place di Bruxelles"
-                className="w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-400"
+                className="
+                  h-9
+                  w-full
+                  rounded-lg
+                  border
+                  border-input
+                  bg-background
+                  px-3
+                  text-[11px]
+                  text-foreground
+                  outline-none
+                  transition
+                  placeholder:text-muted-foreground
+                  focus:border-primary
+                  focus:ring-1
+                  focus:ring-primary
+                "
               />
             </div>
 
+            {/* Descrizione */}
             <div>
               <label
                 htmlFor="description"
-                className="mb-2 block text-sm font-medium text-slate-200"
+                className="mb-1.5 block text-[10px] font-bold text-foreground"
               >
                 Descrizione
               </label>
@@ -280,18 +321,36 @@ export default function NuovoLuogoPage() {
                 id="description"
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
-                placeholder="Scrivi un ricordo, una nota o una descrizione..."
-                rows={4}
-                className="w-full resize-none rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-400"
+                placeholder="Scrivi un ricordo o una nota..."
+                rows={3}
+                className="
+                  w-full
+                  resize-none
+                  rounded-lg
+                  border
+                  border-input
+                  bg-background
+                  px-3
+                  py-2
+                  text-[11px]
+                  text-foreground
+                  outline-none
+                  transition
+                  placeholder:text-muted-foreground
+                  focus:border-primary
+                  focus:ring-1
+                  focus:ring-primary
+                "
               />
             </div>
 
+            {/* Data visita */}
             <div>
               <label
                 htmlFor="visitedAt"
-                className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-200"
+                className="mb-1.5 flex items-center gap-1.5 text-[10px] font-bold text-foreground"
               >
-                <CalendarDays size={17} />
+                <CalendarDays className="size-3.5" />
                 Data della visita *
               </label>
 
@@ -300,15 +359,31 @@ export default function NuovoLuogoPage() {
                 type="date"
                 value={visitedAt}
                 onChange={(event) => setVisitedAt(event.target.value)}
-                className="w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none transition focus:border-cyan-400"
+                className="
+                  h-9
+                  w-full
+                  rounded-lg
+                  border
+                  border-input
+                  bg-background
+                  px-3
+                  text-[11px]
+                  text-foreground
+                  outline-none
+                  transition
+                  focus:border-primary
+                  focus:ring-1
+                  focus:ring-primary
+                "
               />
             </div>
 
-            <div className="grid gap-5 sm:grid-cols-2">
+            {/* Mezzo e categoria */}
+            <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label
                   htmlFor="transportType"
-                  className="mb-2 block text-sm font-medium text-slate-200"
+                  className="mb-1.5 block text-[10px] font-bold text-foreground"
                 >
                   Mezzo di trasporto
                 </label>
@@ -316,8 +391,24 @@ export default function NuovoLuogoPage() {
                 <select
                   id="transportType"
                   value={transportType}
-                  onChange={(event) => setTransportType(event.target.value)}
-                  className="w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none transition focus:border-cyan-400"
+                  onChange={(event) =>
+                    setTransportType(event.target.value)
+                  }
+                  className="
+                    h-9
+                    w-full
+                    rounded-lg
+                    border
+                    border-input
+                    bg-background
+                    px-3
+                    text-[11px]
+                    text-foreground
+                    outline-none
+                    focus:border-primary
+                    focus:ring-1
+                    focus:ring-primary
+                  "
                 >
                   <option value="">Non specificato</option>
                   <option value="moto">Moto</option>
@@ -333,7 +424,7 @@ export default function NuovoLuogoPage() {
               <div>
                 <label
                   htmlFor="category"
-                  className="mb-2 block text-sm font-medium text-slate-200"
+                  className="mb-1.5 block text-[10px] font-bold text-foreground"
                 >
                   Categoria
                 </label>
@@ -342,7 +433,21 @@ export default function NuovoLuogoPage() {
                   id="category"
                   value={category}
                   onChange={(event) => setCategory(event.target.value)}
-                  className="w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none transition focus:border-cyan-400"
+                  className="
+                    h-9
+                    w-full
+                    rounded-lg
+                    border
+                    border-input
+                    bg-background
+                    px-3
+                    text-[11px]
+                    text-foreground
+                    outline-none
+                    focus:border-primary
+                    focus:ring-1
+                    focus:ring-primary
+                  "
                 >
                   <option value="">Non specificata</option>
                   <option value="città">Città</option>
@@ -360,10 +465,11 @@ export default function NuovoLuogoPage() {
               </div>
             </div>
 
+            {/* Gruppo */}
             <div>
               <label
                 htmlFor="tripGroup"
-                className="mb-2 block text-sm font-medium text-slate-200"
+                className="mb-1.5 block text-[10px] font-bold text-foreground"
               >
                 Vacanza o gruppo
               </label>
@@ -373,17 +479,34 @@ export default function NuovoLuogoPage() {
                 type="text"
                 value={tripGroup}
                 onChange={(event) => setTripGroup(event.target.value)}
-                placeholder="Esempio: Portogallo 2026"
-                className="w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-400"
+                placeholder="Esempio: Fiandre 2026"
+                className="
+                  h-9
+                  w-full
+                  rounded-lg
+                  border
+                  border-input
+                  bg-background
+                  px-3
+                  text-[11px]
+                  text-foreground
+                  outline-none
+                  transition
+                  placeholder:text-muted-foreground
+                  focus:border-primary
+                  focus:ring-1
+                  focus:ring-primary
+                "
               />
             </div>
 
+            {/* Google Foto */}
             <div>
               <label
                 htmlFor="googlePhotosUrl"
-                className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-200"
+                className="mb-1.5 flex items-center gap-1.5 text-[10px] font-bold text-foreground"
               >
-                <ExternalLink size={17} />
+                <ExternalLink className="size-3.5" />
                 Link album Google Foto
               </label>
 
@@ -391,58 +514,87 @@ export default function NuovoLuogoPage() {
                 id="googlePhotosUrl"
                 type="url"
                 value={googlePhotosUrl}
-                onChange={(event) => setGooglePhotosUrl(event.target.value)}
+                onChange={(event) =>
+                  setGooglePhotosUrl(event.target.value)
+                }
                 placeholder="https://photos.app.goo.gl/..."
-                className="w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-400"
+                className="
+                  h-9
+                  w-full
+                  rounded-lg
+                  border
+                  border-input
+                  bg-background
+                  px-3
+                  text-[11px]
+                  text-foreground
+                  outline-none
+                  transition
+                  placeholder:text-muted-foreground
+                  focus:border-primary
+                  focus:ring-1
+                  focus:ring-primary
+                "
               />
             </div>
 
-            <label className="flex cursor-pointer items-center gap-3 rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3">
+            {/* Preferito */}
+            <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-border bg-secondary/30 px-3 py-2.5">
               <input
                 type="checkbox"
                 checked={isFavorite}
-                onChange={(event) => setIsFavorite(event.target.checked)}
-                className="h-5 w-5 accent-cyan-500"
+                onChange={(event) =>
+                  setIsFavorite(event.target.checked)
+                }
+                className="size-4 accent-primary"
               />
 
-              <span>
-                <span className="block font-medium">Luogo preferito</span>
-                <span className="block text-sm text-slate-400">
-                  Evidenzia questo posto nel tuo atlante
+              <Star className="size-3.5 text-muted-foreground" />
+
+              <span className="min-w-0">
+                <span className="block text-[10px] font-bold">
+                  Luogo preferito
+                </span>
+
+                <span className="block text-[9px] text-muted-foreground">
+                  Evidenzia questo posto nell&apos;Atlante
                 </span>
               </span>
             </label>
 
+            {/* Errori */}
             {error && (
-              <div className="rounded-2xl border border-red-400/20 bg-red-400/10 px-4 py-3 text-sm text-red-300">
+              <div className="rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2 text-[10px] font-medium text-destructive">
                 {error}
               </div>
             )}
 
+            {/* Successo */}
             {success && (
-              <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-300">
+              <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
                 {success}
               </div>
             )}
 
-            <button
+            {/* Salva */}
+            <Button
               type="button"
               onClick={savePlace}
               disabled={isSaving}
-              className="inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-cyan-500 px-6 font-semibold text-slate-950 transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-60"
+              className="h-10 w-full gap-2 rounded-lg text-xs font-black"
             >
               {isSaving ? (
                 <>
-                  <Loader2 size={21} className="animate-spin" />
+                  <Loader2 className="size-4 animate-spin" />
                   Salvataggio...
                 </>
               ) : (
                 <>
-                  <Save size={21} />
+                  <Save className="size-4" />
                   Salva luogo
                 </>
               )}
-            </button>
+            </Button>
           </div>
         </section>
       </div>
