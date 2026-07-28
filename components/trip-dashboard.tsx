@@ -8,6 +8,7 @@ import { StatisticsView } from '@/components/v2/StatisticsView'
 import { MapExplorerView } from '@/components/v2/MapExplorerView'
 import { GoldWingManagerView } from '@/components/v2/GoldWingManagerView'
 import TravelChecklist from '@/components/checklist/TravelChecklist'
+import { AtlasHome } from '@/components/atlas/AtlasHome'
 import {
   Bike,
   Route,
@@ -36,6 +37,7 @@ import {
   Settings,
   ChevronRight,
   ListChecks,
+  MapPin,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { GpxUploader } from '@/components/gpx-uploader'
@@ -74,6 +76,7 @@ type FoundationView =
   | 'mapExplorer'
   | 'statistics'
   | 'motorcycle'
+  | 'atlas'
   | 'settings'
 
 function tripStatusLabel(status: TripStatus): string {
@@ -1341,6 +1344,11 @@ for (const p of pointsData ?? []) {
       icon: Wrench,
     },
     {
+      id: 'atlas' as const,
+      label: 'Atlante',
+      icon: MapPin,
+    },
+    {
       id: 'settings' as const,
       label: 'Impostazioni',
       icon: Settings,
@@ -1627,6 +1635,11 @@ for (const p of pointsData ?? []) {
         {mode === 'select' &&
           foundationView === 'motorcycle' && (
             <GoldWingManagerView />
+          )}
+
+        {mode === 'select' &&
+          foundationView === 'atlas' && (
+            <AtlasHome />
           )}
 
         {mode === 'select' &&
