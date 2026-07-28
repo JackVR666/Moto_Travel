@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -12,6 +12,7 @@ import {
   MapPin,
   Save,
   Star,
+  Plus,
 } from "lucide-react";
 
 import { supabase } from "@/lib/supabase";
@@ -22,6 +23,15 @@ type Coordinates = {
   longitude: number;
   accuracy: number | null;
 };
+
+
+type Vacation = {
+  id: string;
+  name: string;
+  start_date: string | null;
+  end_date: string | null;
+};
+
 
 export default function NuovoLuogoPage() {
   const router = useRouter();
@@ -37,7 +47,13 @@ export default function NuovoLuogoPage() {
 
   const [transportType, setTransportType] = useState("");
   const [category, setCategory] = useState("");
-  const [tripGroup, setTripGroup] = useState("");
+
+  const [vacations, setVacations] = useState<Vacation[]>([]);
+  const [selectedVacationId, setSelectedVacationId] = useState("");
+  const [newVacationName, setNewVacationName] = useState("");
+  const [showNewVacation, setShowNewVacation] = useState(false);
+  const [isCreatingVacation, setIsCreatingVacation] = useState(false);
+
   const [googlePhotosUrl, setGooglePhotosUrl] = useState("");
   const [isFavorite, setIsFavorite] = useState(false);
 
@@ -46,6 +62,70 @@ export default function NuovoLuogoPage() {
 
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+
+  useEffect(() => {
+    void fetchVacations();
+  }, []);
+
+  async function fetchVacations() {
+    const { data, error } = await supabase
+      .from("vacations")
+      .select("id, name, start_date, end_date")
+      .order("start_date", { ascending: false, nullsFirst: false })
+      .order("name", { ascending: true });
+
+    if (error) {
+      console.error("Errore caricamento vacanze:", error);
+      setError(`Errore caricamento vacanze: ${error.message}`);
+      return;
+    }
+
+    setVacations((data ?? []) as Vacation[]);
+  }
+
+  async function createVacation() {
+    const normalizedName = newVacationName.trim();
+
+    if (!normalizedName) {
+      setError("Inserisci il nome della nuova vacanza.");
+      return;
+    }
+
+    setError("");
+    setIsCreatingVacation(true);
+
+    const { data, error } = await supabase
+      .from("vacations")
+      .insert({
+        name: normalizedName,
+      })
+      .select("id, name, start_date, end_date")
+      .single();
+
+    setIsCreatingVacation(false);
+
+    if (error) {
+      if (error.code === "23505") {
+        setError("Esiste già una vacanza con questo nome.");
+      } else {
+        setError(`Errore creazione vacanza: ${error.message}`);
+      }
+
+      return;
+    }
+
+    const createdVacation = data as Vacation;
+
+    setVacations((current) =>
+      [...current, createdVacation].sort((a, b) =>
+        a.name.localeCompare(b.name, "it"),
+      ),
+    );
+
+    setSelectedVacationId(createdVacation.id);
+    setNewVacationName("");
+    setShowNewVacation(false);
+  }
 
   function detectPosition() {
     setError("");
@@ -138,7 +218,8 @@ export default function NuovoLuogoPage() {
 
         transport_type: transportType || null,
         category: category || null,
-        trip_group: tripGroup.trim() || null,
+
+        vacation_id: selectedVacationId || null,
 
         google_photos_url: googlePhotosUrl.trim() || null,
         is_favorite: isFavorite,
@@ -349,34 +430,42 @@ export default function NuovoLuogoPage() {
               <label
                 htmlFor="visitedAt"
                 className="mb-1.5 flex items-center gap-1.5 text-[10px] font-bold text-foreground"
-              >
-                <CalendarDays className="size-3.5" />
-                Data della visita *
-              </label>
+                >
+              <div className="min-w-0">
+                <label
+                  htmlFor="visitedAt"
+                  className="mb-1.5 flex items-center gap-1.5 text-[10px] font-bold text-foreground"
+                >
+                  <CalendarDays className="size-3.5 shrink-0" />
+                  Data della visita *
+                </label>
 
-              <input
-                id="visitedAt"
-                type="date"
-                value={visitedAt}
-                onChange={(event) => setVisitedAt(event.target.value)}
-                className="
-                  h-9
-                  w-full
-                  rounded-lg
-                  border
-                  border-input
-                  bg-background
-                  px-3
-                  text-[11px]
-                  text-foreground
-                  outline-none
-                  transition
-                  focus:border-primary
-                  focus:ring-1
-                  focus:ring-primary
-                "
-              />
-            </div>
+                <input
+                  id="visitedAt"
+                  type="date"
+                  value={visitedAt}
+                  onChange={(event) => setVisitedAt(event.target.value)}
+                  className="
+                    block
+                    h-9
+                    min-w-0
+                    max-w-full
+                    w-full
+                    rounded-lg
+                    border
+                    border-input
+                    bg-background
+                    px-3
+                    text-[11px]
+                    text-foreground
+                    outline-none
+                    transition
+                    focus:border-primary
+                    focus:ring-1
+                    focus:ring-primary
+                  "
+                />
+              </div>
 
             {/* Mezzo e categoria */}
             <div className="grid gap-4 sm:grid-cols-2">
@@ -467,21 +556,43 @@ export default function NuovoLuogoPage() {
 
             {/* Gruppo */}
             <div>
-              <label
-                htmlFor="tripGroup"
-                className="mb-1.5 block text-[10px] font-bold text-foreground"
-              >
-                Vacanza o gruppo
-              </label>
+              <div className="mb-1.5 flex items-center justify-between gap-3">
+                <label
+                  htmlFor="vacationId"
+                  className="text-[10px] font-bold text-foreground"
+                >
+                  Vacanza
+                </label>
 
-              <input
-                id="tripGroup"
-                type="text"
-                value={tripGroup}
-                onChange={(event) => setTripGroup(event.target.value)}
-                placeholder="Esempio: Fiandre 2026"
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowNewVacation((current) => !current);
+                    setError("");
+                  }}
+                  className="
+                    flex
+                    items-center
+                    gap-1
+                    text-[9px]
+                    font-bold
+                    text-primary
+                    hover:underline
+                  "
+                >
+                  <Plus className="size-3" />
+                  Nuova vacanza
+                </button>
+              </div>
+
+              <select
+                id="vacationId"
+                value={selectedVacationId}
+                onChange={(event) => setSelectedVacationId(event.target.value)}
                 className="
+                  block
                   h-9
+                  min-w-0
                   w-full
                   rounded-lg
                   border
@@ -491,13 +602,82 @@ export default function NuovoLuogoPage() {
                   text-[11px]
                   text-foreground
                   outline-none
-                  transition
-                  placeholder:text-muted-foreground
                   focus:border-primary
                   focus:ring-1
                   focus:ring-primary
                 "
-              />
+              >
+                <option value="">Nessuna vacanza</option>
+
+                {vacations.map((vacation) => (
+                  <option key={vacation.id} value={vacation.id}>
+                    {vacation.name}
+                  </option>
+                ))}
+              </select>
+
+              {showNewVacation && (
+                <div className="mt-2 rounded-lg border border-border bg-secondary/30 p-3">
+                  <label
+                    htmlFor="newVacationName"
+                    className="mb-1.5 block text-[9px] font-bold text-foreground"
+                  >
+                    Nome della nuova vacanza
+                  </label>
+
+                  <div className="flex min-w-0 gap-2">
+                    <input
+                      id="newVacationName"
+                      type="text"
+                      value={newVacationName}
+                      onChange={(event) => setNewVacationName(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          event.preventDefault();
+                          void createVacation();
+                        }
+                      }}
+                      placeholder="Esempio: Fiandre 2026"
+                      className="
+                        h-9
+                        min-w-0
+                        flex-1
+                        rounded-lg
+                        border
+                        border-input
+                        bg-background
+                        px-3
+                        text-[11px]
+                        text-foreground
+                        outline-none
+                        placeholder:text-muted-foreground
+                        focus:border-primary
+                        focus:ring-1
+                        focus:ring-primary
+                      "
+                    />
+
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => void createVacation()}
+                      disabled={isCreatingVacation}
+                      className="h-9 shrink-0 px-3 text-[10px] font-bold"
+                    >
+                      {isCreatingVacation ? (
+                        <Loader2 className="size-3.5 animate-spin" />
+                      ) : (
+                        "Crea"
+                      )}
+                    </Button>
+                  </div>
+
+                  <p className="mt-2 text-[9px] leading-relaxed text-muted-foreground">
+                    Una volta creata, la vacanza potrà essere selezionata per tutti gli
+                    altri luoghi visitati.
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Google Foto */}
