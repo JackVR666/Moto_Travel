@@ -17,6 +17,11 @@ import {
   X,
 } from "lucide-react";
 
+import {
+  ATLAS_CATEGORIES,
+  DEFAULT_ATLAS_CATEGORY,
+} from "@/lib/atlasCategories";
+
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 
