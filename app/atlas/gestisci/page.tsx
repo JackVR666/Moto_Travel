@@ -467,18 +467,14 @@ export default function GestisciLuoghiPage() {
                     className={inputClassName}
                   >
                     <option value="">Non specificata</option>
-                    <option value="città">Città</option>
-                    <option value="borgo">Borgo</option>
-                    <option value="monumento">Monumento</option>
-                    <option value="museo">Museo</option>
-                    <option value="castello">Castello</option>
-                    <option value="passo">Passo</option>
-                    <option value="panorama">Panorama</option>
-                    <option value="spiaggia">Spiaggia</option>
-                    <option value="ristorante">Ristorante</option>
-                    <option value="hotel">Hotel</option>
-                    <option value="Lavoro">Lavoro</option>
-                    <option value="altro">Altro</option>
+
+                    {Object.entries(ATLAS_CATEGORIES).map(
+                      ([value, config]) => (
+                        <option key={value} value={value}>
+                          {config.label}
+                        </option>
+                      )
+                    )}
                   </select>
                 </div>
               </div>
