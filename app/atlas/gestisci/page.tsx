@@ -297,7 +297,7 @@ export default function GestisciLuoghiPage() {
             type="button"
             variant="ghost"
             size="sm"
-            onClick={() => router.push("/")}
+            onClick={() => router.push("/?view=atlas")}
             className="h-8 gap-2 px-2 text-[11px] text-muted-foreground"
           >
             <ArrowLeft className="size-3.5" />

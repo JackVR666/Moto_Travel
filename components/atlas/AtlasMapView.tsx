@@ -326,7 +326,7 @@ export function AtlasMapView() {
               variant="outline"
               size="icon"
               className="h-9 w-9 shrink-0"
-              onClick={() => router.push("/")}
+              onClick={() => router.push("/?view=atlas")}
               aria-label="Torna all'Atlante"
             >
               <ArrowLeft className="h-4 w-4" />

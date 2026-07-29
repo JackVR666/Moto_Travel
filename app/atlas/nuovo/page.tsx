@@ -237,7 +237,7 @@ export default function NuovoLuogoPage() {
     setSuccess("Luogo registrato correttamente.");
 
     setTimeout(() => {
-      router.push("/");
+      router.push("/?view=atlas")
     }, 1200);
   }
 
@@ -249,7 +249,7 @@ export default function NuovoLuogoPage() {
           type="button"
           variant="ghost"
           size="sm"
-          onClick={() => router.push("/")}
+          onClick={() => router.push("/?view=atlas")}
           className="mb-4 h-8 gap-2 px-2 text-[11px] text-muted-foreground"
         >
           <ArrowLeft className="size-3.5" />

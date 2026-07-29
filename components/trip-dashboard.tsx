@@ -112,6 +112,16 @@ export function TripDashboard() {
     useState<FoundationView>('dashboard')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const requestedView = params.get('view')
+
+    if (requestedView === 'atlas') {
+      setMode('select')
+      setFoundationView('atlas')
+    }
+  }, [])
+
   const [trip, setTrip] = useState<ParsedTrip | null>(null)
   const [customName, setCustomName] = useState<string>('')
   const [customDate, setCustomDate] = useState<string>('')
@@ -1302,6 +1312,10 @@ for (const p of pointsData ?? []) {
     setFoundationView(view)
     setMobileMenuOpen(false)
 
+    if (typeof window !== 'undefined') {
+      window.history.replaceState({}, '', '/')
+    }
+
     if (mode !== 'select') {
       setMode('select')
       setTrip(null)
@@ -1310,7 +1324,7 @@ for (const p of pointsData ?? []) {
       setSaveState('idle')
       setHasNewGpxLoaded(false)
     }
-  }
+}
 
   const foundationNavigation = [
     {
