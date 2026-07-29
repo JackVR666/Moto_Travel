@@ -30,6 +30,13 @@ import "leaflet/dist/leaflet.css";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 
+import { renderToStaticMarkup } from "react-dom/server";
+
+import {
+  ATLAS_CATEGORIES,
+  DEFAULT_ATLAS_CATEGORY,
+} from "@/lib/atlasCategories";
+
 type Place = {
   id: string;
   name: string;
@@ -55,39 +62,108 @@ type UserPosition = {
 
 const ITALY_CENTER: LatLngExpression = [42.8, 12.8];
 
-const defaultMarkerIcon = L.icon({
-  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  iconRetinaUrl:
-    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-  shadowUrl:
-    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
-});
+const categoryMarkerCache = new Map<string, L.DivIcon>();
 
-const favoriteMarkerIcon = L.divIcon({
-  className: "",
-  html: `
-    <div style="
-      width: 34px;
-      height: 34px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 9999px;
-      background: #f59e0b;
-      border: 3px solid white;
-      box-shadow: 0 3px 10px rgba(0,0,0,.35);
-      color: white;
-      font-size: 17px;
-    ">★</div>
-  `,
-  iconSize: [34, 34],
-  iconAnchor: [17, 17],
-  popupAnchor: [0, -18],
-});
+function getCategoryConfig(category: string | null) {
+  const categoryValue = (category ?? "").trim();
+
+  if (!categoryValue) {
+    return DEFAULT_ATLAS_CATEGORY;
+  }
+
+  const exactCategory =
+    ATLAS_CATEGORIES[
+      categoryValue as keyof typeof ATLAS_CATEGORIES
+    ];
+
+  if (exactCategory) {
+    return exactCategory;
+  }
+
+  const lowercaseCategory =
+    ATLAS_CATEGORIES[
+      categoryValue.toLowerCase() as keyof typeof ATLAS_CATEGORIES
+    ];
+
+  return lowercaseCategory ?? DEFAULT_ATLAS_CATEGORY;
+}
+
+function createCategoryMarkerIcon(
+  category: string | null,
+  isFavorite: boolean,
+) {
+  const cacheKey = `${category ?? "default"}-${isFavorite}`;
+
+  const cachedIcon = categoryMarkerCache.get(cacheKey);
+
+  if (cachedIcon) {
+    return cachedIcon;
+  }
+
+  const categoryConfig = getCategoryConfig(category);
+  const CategoryIcon = categoryConfig.icon;
+
+  const iconSvg = renderToStaticMarkup(
+    <CategoryIcon
+      size={20}
+      strokeWidth={2.4}
+      color="white"
+    />,
+  );
+
+  const markerIcon = L.divIcon({
+    className: "",
+    html: `
+      <div style="
+        position: relative;
+        width: 38px;
+        height: 38px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        background: ${categoryConfig.color};
+        border: 3px solid white;
+        box-shadow: 0 3px 10px rgba(0,0,0,.35);
+      ">
+        ${iconSvg}
+
+        ${
+          isFavorite
+            ? `
+              <div style="
+                position: absolute;
+                top: -7px;
+                right: -7px;
+                width: 18px;
+                height: 18px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border-radius: 50%;
+                background: #f59e0b;
+                border: 2px solid white;
+                color: white;
+                font-size: 10px;
+                line-height: 1;
+                box-shadow: 0 2px 5px rgba(0,0,0,.3);
+              ">
+                ★
+              </div>
+            `
+            : ""
+        }
+      </div>
+    `,
+    iconSize: [38, 38],
+    iconAnchor: [19, 19],
+    popupAnchor: [0, -22],
+  });
+
+  categoryMarkerCache.set(cacheKey, markerIcon);
+
+  return markerIcon;
+}
 
 const userMarkerIcon = L.divIcon({
   className: "",
@@ -508,7 +584,10 @@ export function AtlasMapView() {
               <Marker
                 key={place.id}
                 position={[Number(place.latitude), Number(place.longitude)]}
-                icon={place.is_favorite ? favoriteMarkerIcon : defaultMarkerIcon}
+                icon={createCategoryMarkerIcon(
+                  place.category,
+                  Boolean(place.is_favorite),
+                )}
               >
                 <Popup minWidth={240} maxWidth={290}>
                   <div style={{ minWidth: 220 }}>
