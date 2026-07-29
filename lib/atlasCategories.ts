@@ -35,7 +35,7 @@ export const ATLAS_CATEGORIES = {
 
   museo: {
     label: "Museo",
-    icon: Museum,
+    icon: University,
     color: "#9333ea",
   },
 
