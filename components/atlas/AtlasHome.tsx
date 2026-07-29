@@ -198,7 +198,7 @@ export function AtlasHome() {
           title="Mappa"
           description="Visualizza tutti i luoghi"
           icon={<MapIcon className="size-4" />}
-          disabled
+          onClick={() => router.push("/atlas/mappa")}
         />
 
         <ActionCard
