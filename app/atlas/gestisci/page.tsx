@@ -680,7 +680,7 @@ export default function GestisciLuoghiPage() {
                       type="button"
                       variant="outline"
                       onClick={() => openMap(place)}
-                      className="h-8 gap-1.5 px-2 text-[9px]"
+                      className="h-8 gap-1 px-2 text-[8px]"
                     >
                       <ExternalLink className="size-3" />
                       Mappa
@@ -690,7 +690,7 @@ export default function GestisciLuoghiPage() {
                       type="button"
                       variant="outline"
                       onClick={() => startEditing(place)}
-                      className="h-8 gap-1.5 px-2 text-[9px]"
+                      className="h-8 gap-1 px-2 text-[8px]"
                     >
                       <Edit3 className="size-3" />
                       Modifica
@@ -701,7 +701,7 @@ export default function GestisciLuoghiPage() {
                       variant="outline"
                       onClick={() => void deletePlace(place)}
                       disabled={deletingId === place.id}
-                      className="h-8 gap-1.5 px-2 text-[9px] text-destructive hover:text-destructive"
+                      className="h-8 gap-1 px-2 text-[8px] text-destructive hover:text-destructive"
                     >
                       {deletingId === place.id ? (
                         <Loader2 className="size-3 animate-spin" />
