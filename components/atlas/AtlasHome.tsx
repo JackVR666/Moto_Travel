@@ -8,7 +8,7 @@ import {
   Edit3,
   Heart,
   Loader2,
-  Map,
+  Map as MapIcon,
   MapPin,
   Plus,
   Star,
@@ -197,7 +197,7 @@ export function AtlasHome() {
         <ActionCard
           title="Mappa"
           description="Visualizza tutti i luoghi"
-          icon={<Map className="size-4" />}
+          icon={<MapIcon className="size-4" />}
           disabled
         />
 
