@@ -43,6 +43,13 @@ export default function NuovoLuogoPage() {
 
   const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
 
+
+  const [coordinateMode, setCoordinateMode] =
+  useState<"gps" | "manual">("gps");
+
+  const [manualLatitude, setManualLatitude] = useState("");
+  const [manualLongitude, setManualLongitude] = useState("");
+  
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
 
@@ -188,6 +195,45 @@ export default function NuovoLuogoPage() {
     );
   }
 
+  function applyManualCoordinates() {
+    setError("");
+    setSuccess("");
+
+    const latitude = Number(
+      manualLatitude.trim().replace(",", "."),
+    );
+
+    const longitude = Number(
+      manualLongitude.trim().replace(",", "."),
+    );
+
+    if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) {
+      setError(
+        "Inserisci una latitudine valida compresa tra -90 e 90.",
+      );
+      return;
+    }
+
+    if (
+      !Number.isFinite(longitude) ||
+      longitude < -180 ||
+      longitude > 180
+    ) {
+      setError(
+        "Inserisci una longitudine valida compresa tra -180 e 180.",
+      );
+      return;
+    }
+
+    setCoordinates({
+      latitude,
+      longitude,
+      accuracy: null,
+    });
+
+    setSuccess("Coordinate manuali impostate correttamente.");
+  }
+
   async function savePlace() {
     setError("");
     setSuccess("");
@@ -198,7 +244,7 @@ export default function NuovoLuogoPage() {
     }
 
     if (!coordinates) {
-      setError("Prima devi rilevare la posizione.");
+      setError("Rileva la posizione.");
       return;
     }
 
@@ -284,74 +330,184 @@ export default function NuovoLuogoPage() {
           </div>
         </section>
 
-        {/* Posizione GPS */}
+        {/* Posizione */}
         <section className="mb-4 rounded-xl border border-border bg-card p-4 shadow-sm">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0">
-              <p className="text-xs font-black">Posizione GPS</p>
+          <div className="mb-4">
+            <p className="text-xs font-black">Posizione del luogo</p>
 
-              {!coordinates ? (
-                <p className="mt-1 text-[10px] text-muted-foreground">
-                  Coordinate non ancora rilevate.
-                </p>
-              ) : (
-                <div className="mt-2 space-y-1 text-[10px]">
-                  <p className="text-muted-foreground">
-                    Latitudine:
-                    <span className="ml-1 font-bold text-foreground">
-                      {coordinates.latitude.toFixed(6)}
-                    </span>
-                  </p>
+            <p className="mt-1 text-[10px] text-muted-foreground">
+              Usa la posizione attuale oppure inserisci manualmente le coordinate.
+            </p>
+          </div>
 
-                  <p className="text-muted-foreground">
-                    Longitudine:
-                    <span className="ml-1 font-bold text-foreground">
-                      {coordinates.longitude.toFixed(6)}
-                    </span>
-                  </p>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setCoordinateMode("gps");
+                setError("");
+                setSuccess("");
+              }}
+              className={[
+                "flex h-9 items-center justify-center gap-2 rounded-lg border px-3 text-[10px] font-bold transition",
+                coordinateMode === "gps"
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border bg-background text-muted-foreground hover:border-primary/40",
+              ].join(" ")}
+            >
+              <LocateFixed className="size-3.5" />
+              Posizione attuale
+            </button>
 
-                  {coordinates.accuracy !== null && (
-                    <p className="text-muted-foreground">
-                      Precisione:
-                      <span className="ml-1 font-bold text-foreground">
-                        circa {Math.round(coordinates.accuracy)} metri
-                      </span>
+            <button
+              type="button"
+              onClick={() => {
+                setCoordinateMode("manual");
+                setError("");
+                setSuccess("");
+              }}
+              className={[
+                "flex h-9 items-center justify-center gap-2 rounded-lg border px-3 text-[10px] font-bold transition",
+                coordinateMode === "manual"
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border bg-background text-muted-foreground hover:border-primary/40",
+              ].join(" ")}
+            >
+              <MapPin className="size-3.5" />
+              Coordinate manuali
+            </button>
+          </div>
+
+          {coordinateMode === "gps" ? (
+            <div className="mt-4">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  {!coordinates ? (
+                    <p className="text-[10px] text-muted-foreground">
+                      Coordinate non ancora rilevate.
                     </p>
+                  ) : (
+                    <div className="space-y-1 text-[10px]">
+                      <p className="text-muted-foreground">
+                        Latitudine:
+                        <span className="ml-1 font-bold text-foreground">
+                          {coordinates.latitude.toFixed(6)}
+                        </span>
+                      </p>
+
+                      <p className="text-muted-foreground">
+                        Longitudine:
+                        <span className="ml-1 font-bold text-foreground">
+                          {coordinates.longitude.toFixed(6)}
+                        </span>
+                      </p>
+
+                      {coordinates.accuracy !== null && (
+                        <p className="text-muted-foreground">
+                          Precisione:
+                          <span className="ml-1 font-bold text-foreground">
+                            circa {Math.round(coordinates.accuracy)} metri
+                          </span>
+                        </p>
+                      )}
+                    </div>
                   )}
                 </div>
-              )}
-            </div>
 
-            <Button
-              type="button"
-              size="sm"
-              onClick={detectPosition}
-              disabled={isLocating}
-              className="h-9 shrink-0 gap-2 rounded-lg px-3 text-[11px] font-bold"
-            >
-              {isLocating ? (
-                <>
-                  <Loader2 className="size-3.5 animate-spin" />
-                  Rilevamento...
-                </>
-              ) : coordinates ? (
-                <>
-                  <LocateFixed className="size-3.5" />
-                  Rileva di nuovo
-                </>
-              ) : (
-                <>
-                  <LocateFixed className="size-3.5" />
-                  Usa posizione
-                </>
-              )}
-            </Button>
-          </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={detectPosition}
+                  disabled={isLocating}
+                  className="h-9 shrink-0 gap-2 rounded-lg px-3 text-[11px] font-bold"
+                >
+                  {isLocating ? (
+                    <>
+                      <Loader2 className="size-3.5 animate-spin" />
+                      Rilevamento...
+                    </>
+                  ) : coordinates ? (
+                    <>
+                      <LocateFixed className="size-3.5" />
+                      Rileva di nuovo
+                    </>
+                  ) : (
+                    <>
+                      <LocateFixed className="size-3.5" />
+                      Usa posizione
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="mt-4 space-y-3">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label
+                    htmlFor="manualLatitude"
+                    className="mb-1.5 block text-[10px] font-bold text-foreground"
+                  >
+                    Latitudine
+                  </label>
+
+                  <input
+                    id="manualLatitude"
+                    type="text"
+                    inputMode="decimal"
+                    value={manualLatitude}
+                    onChange={(event) =>
+                      setManualLatitude(event.target.value)
+                    }
+                    placeholder="Esempio: 45.438400"
+                    className="h-9 w-full rounded-lg border border-input bg-background px-3 text-[11px] text-foreground outline-none placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="manualLongitude"
+                    className="mb-1.5 block text-[10px] font-bold text-foreground"
+                  >
+                    Longitudine
+                  </label>
+
+                  <input
+                    id="manualLongitude"
+                    type="text"
+                    inputMode="decimal"
+                    value={manualLongitude}
+                    onChange={(event) =>
+                      setManualLongitude(event.target.value)
+                    }
+                    placeholder="Esempio: 10.991600"
+                    className="h-9 w-full rounded-lg border border-input bg-background px-3 text-[11px] text-foreground outline-none placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+              </div>
+
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={applyManualCoordinates}
+                className="h-9 w-full gap-2 rounded-lg text-[10px] font-bold"
+              >
+                <MapPin className="size-3.5" />
+                Usa queste coordinate
+              </Button>
+            </div>
+          )}
 
           {coordinates && (
             <div className="mt-3 flex items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
               <CheckCircle2 className="size-3.5 shrink-0" />
-              Posizione rilevata correttamente
+
+              <span>
+                Coordinate impostate:{" "}
+                {coordinates.latitude.toFixed(6)},{" "}
+                {coordinates.longitude.toFixed(6)}
+              </span>
             </div>
           )}
         </section>
