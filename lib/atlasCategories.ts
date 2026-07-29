@@ -6,7 +6,7 @@ import {
   Landmark,
   MapPin,
   Mountain,
-  Museum,
+  University,
   BriefcaseBusiness,
   Camera,
   Store,
