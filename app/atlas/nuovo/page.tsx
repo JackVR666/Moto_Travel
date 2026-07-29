@@ -555,6 +555,7 @@ export default function NuovoLuogoPage() {
                   <option value="spiaggia">Spiaggia</option>
                   <option value="ristorante">Ristorante</option>
                   <option value="hotel">Hotel</option>
+                  <option value="hotel">Lavoro</option>
                   <option value="altro">Altro</option>
                 </select>
               </div>
