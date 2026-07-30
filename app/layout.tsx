@@ -7,10 +7,37 @@ const geistSans = Geist({ subsets: ['latin'], variable: '--font-geist-sans' })
 const geistMono = Geist_Mono({ subsets: ['latin'], variable: '--font-geist-mono' })
 
 export const metadata: Metadata = {
-  title: 'GoldWing Rides — Diario di viaggio',
+  title: '/=\\Viaggi',
   description:
-    'Dashboard per motociclisti: carica le tue tracce GPS, visualizzale su mappa e salva i tuoi viaggi in moto sulla Honda Goldwing.',
+    'Applicazione per tracciare e pianificare i viaggi',
   generator: 'v0.app',
+
+  icons: {
+    icon: [
+      {
+        url: '/icons/favicon-32.png',
+        sizes: '32x32',
+        type: 'image/png',
+      },
+      {
+        url: '/icons/icon-192.png',
+        sizes: '192x192',
+        type: 'image/png',
+      },
+      {
+        url: '/icons/icon-512.png',
+        sizes: '512x512',
+        type: 'image/png',
+      },
+    ],
+    apple: [
+      {
+        url: '/icons/apple-touch-icon.png',
+        sizes: '180x180',
+        type: 'image/png',
+      },
+    ],
+  },
 }
 
 export const viewport: Viewport = {

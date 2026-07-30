@@ -2,10 +2,10 @@ import type { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Moto /=\\ Viaggi',
-    short_name: 'Moto Viaggi',
+    name: '/=Viaggi',
+    short_name: 'Viaggi',
     description:
-      'Roadbook, pianificazione, spese, pernottamenti e tracce GPX per i tuoi viaggi in moto.',
+      'Roadbook, pianificazione, spese, pernottamenti e tracce GPX per i tuoi viaggi',
     start_url: '/',
     display: 'standalone',
     background_color: '#080808',
