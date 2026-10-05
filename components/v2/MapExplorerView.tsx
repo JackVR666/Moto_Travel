@@ -358,7 +358,7 @@ export function MapExplorerView() {
   return (
     <div className="space-y-4 sm:space-y-6">
       <section className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-        <div className="bg-gradient-to-br from-zinc-950 via-black to-amber-950/70 p-5 sm:p-7">
+        <div className="bg-gradient-to-br from-[#071523] via-[#0b1d31] to-[#12355b] p-5 sm:p-7">
           <div className="flex items-start gap-3">
             <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-400/15 text-amber-300">
               <Compass className="size-5" />
