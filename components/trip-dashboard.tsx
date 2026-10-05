@@ -1414,7 +1414,7 @@ for (const p of pointsData ?? []) {
           <div className="flex items-center justify-between border-b border-border px-4 py-4">
             <div className="flex min-w-0 items-center gap-2.5">
               <Image
-                src="/logo/logo-square.png"
+                src="/viaggi-logo.png"
                 alt="Travel"
                 width={44}
                 height={44}
@@ -1704,7 +1704,7 @@ for (const p of pointsData ?? []) {
             <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
               <div className="flex items-center justify-center bg-black px-4 py-3 sm:py-4">
                 <Image
-                  src="/logo/logo-horizontal.png"
+                  src="/viaggi-logo.png"
                   alt="Travel"
                   width={700}
                   height={180}
