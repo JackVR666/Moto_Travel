@@ -42,16 +42,16 @@ type Place = {
   name: string;
   visited_at: string | null;
   category: string | null;
-  vacation_id: string | null;
+  trip_id: string | null;
   is_favorite: boolean | null;
   latitude: number | null;
   longitude: number | null;
   google_photos_url: string | null;
 };
 
-type Vacation = {
+type Trip = {
   id: string;
-  name: string;
+  title: string;
 };
 
 type UserPosition = {
@@ -186,9 +186,9 @@ export function AtlasMapView() {
   const mapRef = useRef<LeafletMap | null>(null);
 
   const [places, setPlaces] = useState<Place[]>([]);
-  const [vacations, setVacations] = useState<Vacation[]>([]);
+  const [trips, setTrips] = useState<Trip[]>([]);
   const [searchText, setSearchText] = useState("");
-  const [selectedVacationId, setSelectedVacationId] = useState("all");
+  const [selectedTripId, setSelectedTripId] = useState("all");
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [nearbyOnly, setNearbyOnly] = useState(false);
   const [nearbyRadius, setNearbyRadius] = useState(25);
@@ -206,20 +206,20 @@ export function AtlasMapView() {
     setIsLoading(true);
     setError("");
 
-    const [placesResult, vacationsResult] = await Promise.all([
+    const [placesResult, tripsResult] = await Promise.all([
       supabase
         .from("places_visited")
         .select(
-          "id, name, visited_at, category, vacation_id, is_favorite, latitude, longitude, google_photos_url",
+          "id, name, visited_at, category, trip_id, is_favorite, latitude, longitude, google_photos_url",
         )
         .not("latitude", "is", null)
         .not("longitude", "is", null)
         .order("visited_at", { ascending: false }),
 
       supabase
-        .from("vacations")
-        .select("id, name")
-        .order("name", { ascending: true }),
+        .from("trips")
+        .select("id, title")
+        .order("trip_date", { ascending: false }),
     ]);
 
     if (placesResult.error) {
@@ -229,23 +229,19 @@ export function AtlasMapView() {
       setPlaces((placesResult.data ?? []) as Place[]);
     }
 
-    if (vacationsResult.error) {
-      console.error(vacationsResult.error);
-      setError((current) =>
-        current
-          ? `${current} — Vacanze: ${vacationsResult.error.message}`
-          : `Errore caricamento vacanze: ${vacationsResult.error.message}`,
-      );
+    if (tripsResult.error) {
+      console.error(tripsResult.error);
+      setError((current) => current ? `${current} — Viaggi: ${tripsResult.error.message}` : `Errore caricamento viaggi: ${tripsResult.error.message}`);
     } else {
-      setVacations((vacationsResult.data ?? []) as Vacation[]);
+      setTrips((tripsResult.data ?? []) as Trip[]);
     }
 
     setIsLoading(false);
   }
 
-  const vacationNames = useMemo(
-    () => new Map(vacations.map((vacation) => [vacation.id, vacation.name])),
-    [vacations],
+  const tripNames = useMemo(
+    () => new Map(trips.map((trip) => [trip.id, trip.title])),
+    [trips],
   );
 
   const filteredPlaces = useMemo(() => {
@@ -261,8 +257,8 @@ export function AtlasMapView() {
       }
 
       if (
-        selectedVacationId !== "all" &&
-        place.vacation_id !== selectedVacationId
+        selectedTripId !== "all" &&
+        place.trip_id !== selectedTripId
       ) {
         return false;
       }
@@ -293,7 +289,7 @@ export function AtlasMapView() {
   }, [
     places,
     searchText,
-    selectedVacationId,
+    selectedTripId,
     favoritesOnly,
     nearbyOnly,
     nearbyRadius,
@@ -381,14 +377,14 @@ export function AtlasMapView() {
 
   function resetFilters() {
     setSearchText("");
-    setSelectedVacationId("all");
+    setSelectedTripId("all");
     setFavoritesOnly(false);
     setNearbyOnly(false);
   }
 
   const hasFilters =
     searchText.trim() !== "" ||
-    selectedVacationId !== "all" ||
+    selectedTripId !== "all" ||
     favoritesOnly ||
     nearbyOnly;
 
@@ -458,14 +454,14 @@ export function AtlasMapView() {
           </div>
 
           <select
-            value={selectedVacationId}
-            onChange={(event) => setSelectedVacationId(event.target.value)}
+            value={selectedTripId}
+            onChange={(event) => setSelectedTripId(event.target.value)}
             className="h-10 min-w-0 rounded-xl border bg-background px-3 text-[11px] outline-none focus:border-primary"
           >
-            <option value="all">Tutte le vacanze</option>
-            {vacations.map((vacation) => (
-              <option key={vacation.id} value={vacation.id}>
-                {vacation.name}
+            <option value="all">Tutti i viaggi</option>
+            {trips.map((trip) => (
+              <option key={trip.id} value={trip.id}>
+                {trip.title}
               </option>
             ))}
           </select>
@@ -574,8 +570,8 @@ export function AtlasMapView() {
           {filteredPlaces.map((place) => {
             if (place.latitude == null || place.longitude == null) return null;
 
-            const vacationName = place.vacation_id
-              ? vacationNames.get(place.vacation_id)
+            const tripName = place.trip_id
+              ? tripNames.get(place.trip_id)
               : null;
 
             const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${place.latitude},${place.longitude}`;
@@ -617,7 +613,7 @@ export function AtlasMapView() {
                           }}
                         >
                           {formatDate(place.visited_at)}
-                          {vacationName ? ` · ${vacationName}` : ""}
+                          {tripName ? ` · ${tripName}` : ""}
                         </div>
                       </div>
 
