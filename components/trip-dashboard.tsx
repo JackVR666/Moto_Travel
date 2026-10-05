@@ -1568,7 +1568,7 @@ for (const p of pointsData ?? []) {
           <div className="space-y-4 sm:space-y-6">
             <section className="relative min-h-[360px] overflow-hidden rounded-3xl border border-border bg-[#071523] shadow-[0_18px_50px_rgba(0,0,0,0.32)] sm:min-h-[430px]">
               <Image
-                src="/viaggi-splash.jpg"
+                src="/viaggi-dashboard-hero.png"
                 alt="Viaggi, ogni viaggio è una nuova storia"
                 fill
                 priority
