@@ -27,6 +27,8 @@ const MapExplorerMap = dynamic(
   },
 )
 
+type TravelType = 'moto' | 'auto' | 'aereo' | 'misto' | 'altro'
+
 type TripStatus =
   | 'pianificato'
   | 'in_corso'
@@ -38,6 +40,7 @@ type TripRow = {
   trip_date: string | null
   trip_end_date: string | null
   total_km: number | null
+  travel_type: TravelType | null
   status: TripStatus | null
 }
 
@@ -170,6 +173,7 @@ export function MapExplorerView() {
     useState('tutti')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
+  const [travelTypeFilter, setTravelTypeFilter] = useState<'tutti' | TravelType>('tutti')
   const [showCompleted, setShowCompleted] = useState(true)
   const [showActive, setShowActive] = useState(false)
   const [showPlanned, setShowPlanned] = useState(false)
@@ -185,7 +189,7 @@ export function MapExplorerView() {
         const { data, error } = await supabase
           .from('trips')
           .select(
-            'id, title, trip_date, trip_end_date, total_km, status',
+            'id, title, trip_date, trip_end_date, total_km, travel_type, status',
           )
           .order('trip_date', { ascending: true })
 
@@ -206,6 +210,7 @@ export function MapExplorerView() {
               tripDate: trip.trip_date,
               tripEndDate: trip.trip_end_date,
               totalKm: Number(trip.total_km || 0),
+              travelType: trip.travel_type || 'moto',
               status:
                 trip.status || 'pianificato',
               color:
@@ -262,6 +267,10 @@ export function MapExplorerView() {
 
       if (!statusVisible) return false
 
+      if (travelTypeFilter !== 'tutti' && trip.travelType !== travelTypeFilter) {
+        return false
+      }
+
       const tripStart = trip.tripDate?.slice(0, 10) || ''
       const tripEnd =
         (trip.tripEndDate || trip.tripDate)?.slice(0, 10) ||
@@ -284,6 +293,7 @@ export function MapExplorerView() {
     showCompleted,
     showActive,
     showPlanned,
+    travelTypeFilter,
   ])
 
   const visibleTrips = useMemo(() => {
@@ -363,7 +373,7 @@ export function MapExplorerView() {
               </h2>
               <p className="mt-2 max-w-2xl text-[10px] leading-relaxed text-zinc-300 sm:text-sm">
                 Tutte le tracce archiviate sulla stessa cartina,
-                filtrabili per stato, periodo e singolo viaggio.
+                filtrabili per tipologia, stato, periodo e singolo viaggio.
               </p>
             </div>
           </div>
@@ -372,7 +382,7 @@ export function MapExplorerView() {
 
       <section className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
         <div className="grid gap-4 xl:grid-cols-[1fr_auto] xl:items-end">
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <label className="min-w-0">
               <span className="text-[8px] font-bold uppercase tracking-wider text-muted-foreground sm:text-[10px]">
                 Viaggio
@@ -389,9 +399,25 @@ export function MapExplorerView() {
                 </option>
                 {filteredTrips.map((trip) => (
                   <option key={trip.id} value={trip.id}>
-                    {trip.title}
+                    {trip.travelType === 'moto' ? '🏍️ ' : trip.travelType === 'auto' ? '🚗 ' : trip.travelType === 'aereo' ? '✈️ ' : trip.travelType === 'misto' ? '🔀 ' : '🌍 '}{trip.title}
                   </option>
                 ))}
+              </select>
+            </label>
+
+            <label className="min-w-0">
+              <span className="text-[8px] font-bold uppercase tracking-wider text-muted-foreground sm:text-[10px]">Tipologia</span>
+              <select
+                value={travelTypeFilter}
+                onChange={(event) => setTravelTypeFilter(event.target.value as 'tutti' | TravelType)}
+                className="mt-1 h-10 w-full min-w-0 rounded-xl border border-border bg-background px-3 text-[10px] font-bold text-foreground sm:text-xs"
+              >
+                <option value="tutti">Tutte le tipologie</option>
+                <option value="moto">🏍️ Moto</option>
+                <option value="auto">🚗 Auto</option>
+                <option value="aereo">✈️ Aereo</option>
+                <option value="misto">🔀 Misto</option>
+                <option value="altro">🌍 Altro</option>
               </select>
             </label>
 
@@ -436,6 +462,7 @@ export function MapExplorerView() {
               setStartDate('')
               setEndDate('')
               setSelectedTripId('tutti')
+              setTravelTypeFilter('tutti')
             }}
             className="h-10 rounded-xl border border-border bg-background px-4 text-[9px] font-bold hover:bg-secondary sm:text-[11px]"
           >
