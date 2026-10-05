@@ -25,9 +25,11 @@ import {
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 
-type Vacation = {
+type Trip = {
   id: string;
-  name: string;
+  title: string;
+  trip_date: string | null;
+  travel_type: string | null;
 };
 
 type Place = {
@@ -40,7 +42,7 @@ type Place = {
   visited_at: string;
   transport_type: string | null;
   category: string | null;
-  vacation_id: string | null;
+  trip_id: string | null;
   google_photos_url: string | null;
   is_favorite: boolean;
   created_at?: string | null;
@@ -52,7 +54,7 @@ type EditForm = {
   visitedAt: string;
   transportType: string;
   category: string;
-  vacationId: string;
+  tripId: string;
   googlePhotosUrl: string;
   isFavorite: boolean;
 };
@@ -63,7 +65,7 @@ const EMPTY_FORM: EditForm = {
   visitedAt: "",
   transportType: "",
   category: "",
-  vacationId: "",
+  tripId: "",
   googlePhotosUrl: "",
   isFavorite: false,
 };
@@ -72,10 +74,10 @@ export default function GestisciLuoghiPage() {
   const router = useRouter();
 
   const [places, setPlaces] = useState<Place[]>([]);
-  const [vacations, setVacations] = useState<Vacation[]>([]);
+  const [trips, setTrips] = useState<Trip[]>([]);
 
   const [searchText, setSearchText] = useState("");
-  const [vacationFilter, setVacationFilter] = useState("");
+  const [tripFilter, setTripFilter] = useState("");
 
   const [editingPlace, setEditingPlace] = useState<Place | null>(null);
   const [form, setForm] = useState<EditForm>(EMPTY_FORM);
@@ -95,18 +97,18 @@ export default function GestisciLuoghiPage() {
     setIsLoading(true);
     setError("");
 
-    const [placesResult, vacationsResult] = await Promise.all([
+    const [placesResult, tripsResult] = await Promise.all([
       supabase
         .from("places_visited")
         .select(
-          "id, name, description, latitude, longitude, location_accuracy, visited_at, transport_type, category, vacation_id, google_photos_url, is_favorite, created_at",
+          "id, name, description, latitude, longitude, location_accuracy, visited_at, transport_type, category, trip_id, google_photos_url, is_favorite, created_at",
         )
         .order("visited_at", { ascending: false })
         .order("created_at", { ascending: false }),
       supabase
-        .from("vacations")
-        .select("id, name")
-        .order("name", { ascending: true }),
+        .from("trips")
+        .select("id, title, trip_date, travel_type")
+        .order("trip_date", { ascending: false }),
     ]);
 
     if (placesResult.error) {
@@ -116,39 +118,35 @@ export default function GestisciLuoghiPage() {
       setPlaces((placesResult.data ?? []) as Place[]);
     }
 
-    if (vacationsResult.error) {
-      console.error("Errore caricamento vacanze:", vacationsResult.error);
-      setError((current) =>
-        current
-          ? `${current} — Vacanze: ${vacationsResult.error.message}`
-          : `Errore caricamento vacanze: ${vacationsResult.error.message}`,
-      );
+    if (tripsResult.error) {
+      console.error("Errore caricamento viaggi:", tripsResult.error);
+      setError((current) => current ? `${current} — Viaggi: ${tripsResult.error.message}` : `Errore caricamento viaggi: ${tripsResult.error.message}`);
     } else {
-      setVacations((vacationsResult.data ?? []) as Vacation[]);
+      setTrips((tripsResult.data ?? []) as Trip[]);
     }
 
     setIsLoading(false);
   }
 
-  const vacationNames = useMemo(
-    () => new Map(vacations.map((vacation) => [vacation.id, vacation.name])),
-    [vacations],
+  const tripNames = useMemo(
+    () => new Map(trips.map((trip) => [trip.id, trip.title])),
+    [trips],
   );
 
   const filteredPlaces = useMemo(() => {
     const normalizedSearch = searchText.trim().toLocaleLowerCase("it");
 
     return places.filter((place) => {
-      const matchesVacation =
-        !vacationFilter || place.vacation_id === vacationFilter;
+      const matchesTrip =
+        !tripFilter || place.trip_id === tripFilter;
 
       const searchableText = [
         place.name,
         place.description ?? "",
         place.category ?? "",
         place.transport_type ?? "",
-        place.vacation_id
-          ? vacationNames.get(place.vacation_id) ?? ""
+        place.trip_id
+          ? tripNames.get(place.trip_id) ?? ""
           : "",
       ]
         .join(" ")
@@ -157,9 +155,9 @@ export default function GestisciLuoghiPage() {
       const matchesSearch =
         !normalizedSearch || searchableText.includes(normalizedSearch);
 
-      return matchesVacation && matchesSearch;
+      return matchesTrip && matchesSearch;
     });
-  }, [places, searchText, vacationFilter, vacationNames]);
+  }, [places, searchText, tripFilter, tripNames]);
 
   function startEditing(place: Place) {
     setError("");
@@ -172,7 +170,7 @@ export default function GestisciLuoghiPage() {
       visitedAt: place.visited_at,
       transportType: place.transport_type ?? "",
       category: place.category ?? "",
-      vacationId: place.vacation_id ?? "",
+      tripId: place.trip_id ?? "",
       googlePhotosUrl: place.google_photos_url ?? "",
       isFavorite: place.is_favorite,
     });
@@ -213,13 +211,13 @@ export default function GestisciLuoghiPage() {
         visited_at: form.visitedAt,
         transport_type: form.transportType || null,
         category: form.category || null,
-        vacation_id: form.vacationId || null,
+        trip_id: form.tripId || null,
         google_photos_url: form.googlePhotosUrl.trim() || null,
         is_favorite: form.isFavorite,
       })
       .eq("id", editingPlace.id)
       .select(
-        "id, name, description, latitude, longitude, location_accuracy, visited_at, transport_type, category, vacation_id, google_photos_url, is_favorite, created_at",
+        "id, name, description, latitude, longitude, location_accuracy, visited_at, transport_type, category, trip_id, google_photos_url, is_favorite, created_at",
       )
       .single();
 
@@ -485,22 +483,22 @@ export default function GestisciLuoghiPage() {
               </div>
 
               <div>
-                <FieldLabel htmlFor="edit-vacation">Vacanza</FieldLabel>
+                <FieldLabel htmlFor="edit-trip">Viaggio</FieldLabel>
                 <select
-                  id="edit-vacation"
-                  value={form.vacationId}
+                  id="edit-trip"
+                  value={form.tripId}
                   onChange={(event) =>
                     setForm((current) => ({
                       ...current,
-                      vacationId: event.target.value,
+                      tripId: event.target.value,
                     }))
                   }
                   className={inputClassName}
                 >
-                  <option value="">Nessuna vacanza</option>
-                  {vacations.map((vacation) => (
-                    <option key={vacation.id} value={vacation.id}>
-                      {vacation.name}
+                  <option value="">Nessuna viaggio</option>
+                  {trips.map((trip) => (
+                    <option key={trip.id} value={trip.id}>
+                      {trip.title}
                     </option>
                   ))}
                 </select>
@@ -584,14 +582,14 @@ export default function GestisciLuoghiPage() {
             </div>
 
             <select
-              value={vacationFilter}
-              onChange={(event) => setVacationFilter(event.target.value)}
+              value={tripFilter}
+              onChange={(event) => setTripFilter(event.target.value)}
               className={inputClassName}
             >
-              <option value="">Tutte le vacanze</option>
-              {vacations.map((vacation) => (
-                <option key={vacation.id} value={vacation.id}>
-                  {vacation.name}
+              <option value="">Tutti i viaggi</option>
+              {trips.map((trip) => (
+                <option key={trip.id} value={trip.id}>
+                  {trip.title}
                 </option>
               ))}
             </select>
@@ -630,8 +628,8 @@ export default function GestisciLuoghiPage() {
         ) : (
           <div className="space-y-3">
             {filteredPlaces.map((place) => {
-              const vacationName = place.vacation_id
-                ? vacationNames.get(place.vacation_id)
+              const tripName = place.trip_id
+                ? tripNames.get(place.trip_id)
                 : null;
 
               return (
@@ -652,7 +650,7 @@ export default function GestisciLuoghiPage() {
 
                       <p className="mt-1 text-[9px] text-muted-foreground">
                         {formatDate(place.visited_at)}
-                        {vacationName ? ` · ${vacationName}` : ""}
+                        {tripName ? ` · ${tripName}` : ""}
                       </p>
                     </div>
 
