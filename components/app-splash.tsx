@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
 
-const SPLASH_SESSION_KEY = 'mototravel-splash-shown'
+const SPLASH_SESSION_KEY = 'viaggi-splash-shown'
 
 export function AppSplash() {
   const [visible, setVisible] = useState(false)
@@ -45,7 +45,7 @@ export function AppSplash() {
     >
       <div className="relative h-full w-full p-3 sm:p-6 lg:p-10">
         <Image
-          src="/splash/splash-iphone.png"
+          src="/viaggi-splash.jpg"
           alt=""
           fill
           priority
