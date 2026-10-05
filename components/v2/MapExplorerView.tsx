@@ -357,21 +357,21 @@ export function MapExplorerView() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <section className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+      <section className="overflow-hidden rounded-2xl border border-border bg-card/90 shadow-[0_12px_32px_rgba(0,0,0,0.18)]">
         <div className="bg-gradient-to-br from-[#071523] via-[#0b1d31] to-[#12355b] p-5 sm:p-7">
           <div className="flex items-start gap-3">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-400/15 text-amber-300">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
               <Compass className="size-5" />
             </div>
 
             <div>
-              <p className="text-[9px] font-black uppercase tracking-wider text-amber-300">
+              <p className="text-[9px] font-black uppercase tracking-wider text-primary">
                 Versione 2.2 · Explorer
               </p>
               <h2 className="mt-1 text-xl font-black text-white sm:text-3xl">
                 La mappa delle tue avventure
               </h2>
-              <p className="mt-2 max-w-2xl text-[10px] leading-relaxed text-zinc-300 sm:text-sm">
+              <p className="mt-2 max-w-2xl text-[10px] leading-relaxed text-slate-300 sm:text-sm">
                 Tutte le tracce archiviate sulla stessa cartina,
                 filtrabili per tipologia, stato, periodo e singolo viaggio.
               </p>
@@ -380,7 +380,7 @@ export function MapExplorerView() {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
+      <section className="rounded-2xl border border-border bg-card/90 p-4 shadow-[0_12px_32px_rgba(0,0,0,0.18)] sm:p-5">
         <div className="grid gap-4 xl:grid-cols-[1fr_auto] xl:items-end">
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <label className="min-w-0">
@@ -519,7 +519,7 @@ export function MapExplorerView() {
       </section>
 
       <section className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-4">
-        <div className="rounded-xl border border-border bg-card p-3 shadow-sm sm:p-5">
+        <div className="rounded-2xl border border-border bg-card/90 p-3 shadow-[0_12px_32px_rgba(0,0,0,0.18)] sm:p-5">
           <p className="text-[7px] font-bold uppercase tracking-wider text-muted-foreground sm:text-[10px]">
             Viaggi visibili
           </p>
@@ -528,7 +528,7 @@ export function MapExplorerView() {
           </p>
         </div>
 
-        <div className="rounded-xl border border-border bg-card p-3 shadow-sm sm:p-5">
+        <div className="rounded-2xl border border-border bg-card/90 p-3 shadow-[0_12px_32px_rgba(0,0,0,0.18)] sm:p-5">
           <p className="text-[7px] font-bold uppercase tracking-wider text-muted-foreground sm:text-[10px]">
             Km rappresentati
           </p>
@@ -537,7 +537,7 @@ export function MapExplorerView() {
           </p>
         </div>
 
-        <div className="rounded-xl border border-border bg-card p-3 shadow-sm sm:p-5">
+        <div className="rounded-2xl border border-border bg-card/90 p-3 shadow-[0_12px_32px_rgba(0,0,0,0.18)] sm:p-5">
           <p className="text-[7px] font-bold uppercase tracking-wider text-muted-foreground sm:text-[10px]">
             Punti semplificati
           </p>
@@ -546,7 +546,7 @@ export function MapExplorerView() {
           </p>
         </div>
 
-        <div className="rounded-xl border border-border bg-card p-3 shadow-sm sm:p-5">
+        <div className="rounded-2xl border border-border bg-card/90 p-3 shadow-[0_12px_32px_rgba(0,0,0,0.18)] sm:p-5">
           <p className="text-[7px] font-bold uppercase tracking-wider text-muted-foreground sm:text-[10px]">
             Soste rilevate
           </p>
@@ -557,7 +557,7 @@ export function MapExplorerView() {
       </section>
 
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_310px]">
-        <div className="relative h-[430px] min-h-[430px] overflow-hidden rounded-2xl border border-border bg-card shadow-sm sm:h-[600px] sm:min-h-[600px]">
+        <div className="relative h-[430px] min-h-[430px] overflow-hidden rounded-2xl border border-border bg-card/90 shadow-[0_12px_32px_rgba(0,0,0,0.18)] sm:h-[600px] sm:min-h-[600px]">
           {visibleTrips.length > 0 ? (
             <MapExplorerMap
               trips={visibleTrips}
@@ -580,7 +580,7 @@ export function MapExplorerView() {
           )}
         </div>
 
-        <aside className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
+        <aside className="rounded-2xl border border-border bg-card/90 p-4 shadow-[0_12px_32px_rgba(0,0,0,0.18)] sm:p-5">
           <div className="flex items-center gap-2">
             <Route className="size-4 text-primary" />
             <h3 className="text-xs font-black sm:text-base">
