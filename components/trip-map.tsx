@@ -1,11 +1,21 @@
 'use client'
 
 import { useEffect, useMemo } from 'react'
-import { MapContainer, TileLayer, Polyline, CircleMarker, Tooltip, useMap } from 'react-leaflet'
+import { MapContainer, TileLayer, Polyline, CircleMarker, Tooltip, Popup, useMap } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import type { TrackPoint } from '@/lib/gpx-parser'
 
 type LatLng = [number, number]
+
+type ManualPlace = {
+  id: string
+  name: string
+  description?: string | null
+  lat: number
+  lon: number
+  category?: string | null
+  visitedAt?: string | null
+}
 
 function FitBounds({ positions }: { positions: LatLng[] }) {
   const map = useMap()
@@ -26,16 +36,27 @@ function FitBounds({ positions }: { positions: LatLng[] }) {
   return null
 }
 
-export default function TripMap({ points }: { points: TrackPoint[] }) {
+export default function TripMap({
+  points,
+  manualPlaces = [],
+}: {
+  points: TrackPoint[]
+  manualPlaces?: ManualPlace[]
+}) {
   const track = useMemo(
     () => points.filter((p) => !p.isWaypoint).map((p) => [p.lat, p.lon] as LatLng),
     [points],
   )
   const waypoints = useMemo(() => points.filter((p) => p.isWaypoint), [points])
-  const positions = useMemo(
-    () => (track.length ? track : points.map((p) => [p.lat, p.lon] as LatLng)),
-    [track, points],
-  )
+  const positions = useMemo(() => {
+    const trackPositions = track.length
+      ? track
+      : points.map((p) => [p.lat, p.lon] as LatLng)
+    const manualPositions = manualPlaces.map(
+      (place) => [place.lat, place.lon] as LatLng,
+    )
+    return [...trackPositions, ...manualPositions]
+  }, [track, points, manualPlaces])
 
   const start = track[0]
   const end = track[track.length - 1]
@@ -88,6 +109,34 @@ export default function TripMap({ points }: { points: TrackPoint[] }) {
           pathOptions={{ color: '#0b0d13', weight: 2, fillColor: '#e8b23a', fillOpacity: 1 }}
         >
           <Tooltip>Waypoint {i + 1}</Tooltip>
+        </CircleMarker>
+      ))}
+
+      {manualPlaces.map((place) => (
+        <CircleMarker
+          key={`manual-${place.id}`}
+          center={[place.lat, place.lon]}
+          radius={8}
+          pathOptions={{
+            color: '#071523',
+            weight: 3,
+            fillColor: '#1689ff',
+            fillOpacity: 1,
+          }}
+        >
+          <Tooltip>{place.name}</Tooltip>
+          <Popup>
+            <div className="min-w-[150px]">
+              <strong>{place.name}</strong>
+              {place.category && <div>{place.category}</div>}
+              {place.description && <div>{place.description}</div>}
+              {place.visitedAt && (
+                <div>
+                  {new Date(place.visitedAt).toLocaleDateString('it-IT')}
+                </div>
+              )}
+            </div>
+          </Popup>
         </CircleMarker>
       ))}
 
