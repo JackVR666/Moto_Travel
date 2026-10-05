@@ -115,7 +115,7 @@ export function AtlasHome() {
   return (
     <div className="space-y-4">
       {/* Hero */}
-      <section className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+      <section className="overflow-hidden rounded-2xl border border-border bg-card/90 shadow-[0_12px_32px_rgba(0,0,0,0.18)]">
         <div className="relative p-5 sm:p-6">
           <div className="absolute right-0 top-0 size-40 rounded-full bg-primary/10 blur-3xl" />
 
@@ -211,7 +211,7 @@ export function AtlasHome() {
       )}
 
       {/* Ultimi luoghi */}
-      <section className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
+      <section className="rounded-2xl border border-border bg-card/90 p-4 shadow-[0_12px_32px_rgba(0,0,0,0.18)] sm:p-5">
         <div className="mb-4 flex items-center justify-between gap-3">
           <div>
             <p className="text-[9px] font-bold uppercase tracking-wider text-primary">
