@@ -67,6 +67,7 @@ const TripMap = dynamic(() => import('@/components/trip-map'), {
 
 type SaveState = 'idle' | 'saving' | 'saved'
 type TripStatus = 'pianificato' | 'in_corso' | 'completato'
+type TravelType = 'moto' | 'auto' | 'aereo' | 'misto' | 'altro'
 type AppMode = 'select' | 'live' | 'gpx' | 'edit_expenses'
 type ActiveTab = TripTab
 type FoundationView =
@@ -83,6 +84,14 @@ function tripStatusLabel(status: TripStatus): string {
   if (status === 'in_corso') return 'In corso'
   if (status === 'completato') return 'Completato'
   return 'Pianificato'
+}
+
+function travelTypeLabel(type: TravelType): string {
+  if (type === 'auto') return '🚗 Auto'
+  if (type === 'aereo') return '✈️ Aereo'
+  if (type === 'misto') return '🔀 Misto'
+  if (type === 'altro') return '🌍 Altro'
+  return '🏍️ Moto'
 }
 
 function tripStatusClasses(status: TripStatus): string {
@@ -128,6 +137,8 @@ export function TripDashboard() {
   const [customEndDate, setCustomEndDate] = useState<string>('')
   const [tripStatus, setTripStatus] =
     useState<TripStatus>('pianificato')
+  const [travelType, setTravelType] = useState<TravelType>('moto')
+  const [flightKm, setFlightKm] = useState<string>('0')
   
   const [expenseCategories, setExpenseCategories] = useState<any[]>([])
   const [allTrips, setAllTrips] = useState<any[]>([])
@@ -199,6 +210,8 @@ export function TripDashboard() {
         trip_date,
         trip_end_date,
         total_km,
+        flight_km,
+        travel_type,
         notes,
         moving_time_minutes,
         average_moving_speed_kmh,
@@ -221,6 +234,8 @@ export function TripDashboard() {
             ? 0
             : Number(t.total_km),
         status: (t.status || 'pianificato') as TripStatus,
+        travel_type: (t.travel_type || 'moto') as TravelType,
+        flight_km: Number(t.flight_km || 0),
       }))
       setAllTrips(sanitizedTrips)
     }
@@ -716,10 +731,12 @@ const removeTripDay = async (dayId: string) => {
     const today = new Date().toISOString().slice(0, 10)
     setMode('live')
     setActiveTab('planning')
-    setCustomName('Nuovo Giro Goldwing')
+    setCustomName('Nuovo viaggio')
     setCustomDate(today)
     setCustomEndDate(today)
     setTripStatus('pianificato')
+    setTravelType('moto')
+    setFlightKm('0')
     setExpenseDate(today)
     setExpenses([])
     setTrip(null)
@@ -750,6 +767,8 @@ const removeTripDay = async (dayId: string) => {
     setTripStatus(
       (currentTripData?.status || 'pianificato') as TripStatus
     )
+    setTravelType((currentTripData?.travel_type || 'moto') as TravelType)
+    setFlightKm(String(Number(currentTripData?.flight_km || 0)))
 
     const { data: stopsData, error: stopsError } = await supabase
       .from('trip_stops')
@@ -954,6 +973,8 @@ for (const p of pointsData ?? []) {
             trip_date: customDate,
             trip_end_date: customEndDate,
             total_km: finalKm,
+            flight_km: Math.max(0, Number(flightKm) || 0),
+            travel_type: travelType,
             notes: tripNotes.trim() || null,
             moving_time_minutes: trip?.movingTimeMinutes ?? null,
             average_moving_speed_kmh: trip?.averageMovingSpeedKmh ?? null,
@@ -1010,7 +1031,7 @@ for (const p of pointsData ?? []) {
 
       } else {
         // RAMO NUOVO INSERIMENTO (Invariato e stabile)
-        const titleToSave = customName.trim() || 'Giro Goldwing'
+        const titleToSave = customName.trim() || 'Nuovo viaggio'
         const startToSave = customDate || new Date().toISOString().slice(0, 10)
         const endToSave = customEndDate || startToSave
         const kmToSave = trip ? trip.totalKm : 0
@@ -1023,6 +1044,8 @@ for (const p of pointsData ?? []) {
             trip_date: startToSave,
             trip_end_date: endToSave,
             total_km: kmToSave,
+            flight_km: Math.max(0, Number(flightKm) || 0),
+            travel_type: travelType,
             notes: tripNotes.trim() || null,
             moving_time_minutes: trip?.movingTimeMinutes ?? null,
             average_moving_speed_kmh: trip?.averageMovingSpeedKmh ?? null,
@@ -1737,7 +1760,7 @@ for (const p of pointsData ?? []) {
                         </div>
 
                         <p className="flex min-w-0 flex-wrap items-center gap-1 text-[9px] text-muted-foreground sm:text-[11px]">
-                          {formatDate(t.trip_date)} • <span className="max-w-full truncate rounded bg-secondary/60 px-1 py-0.5 font-mono font-medium text-foreground">{t.total_km > 0 ? `${t.total_km.toFixed(1)} km` : 'Solo Spese'}</span>
+                          {formatDate(t.trip_date)} • {travelTypeLabel((t.travel_type || 'moto') as TravelType)} • <span className="max-w-full truncate rounded bg-secondary/60 px-1 py-0.5 font-mono font-medium text-foreground">{t.total_km > 0 ? `${t.total_km.toFixed(1)} km` : 'Solo Spese'}</span>
                         </p>
                       </div>
                       <Button
@@ -1762,7 +1785,7 @@ for (const p of pointsData ?? []) {
           <div className="space-y-4">
             
             <section className="w-full min-w-0 max-w-full overflow-hidden rounded-xl border border-border bg-card p-3 shadow-sm sm:p-4">
-              <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-6">
                 <div className="min-w-0 space-y-1">
                   <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground sm:text-[11px]">Titolo viaggio</span>
                   <input
@@ -1791,6 +1814,33 @@ for (const p of pointsData ?? []) {
                     value={customEndDate}
                     onChange={(e) => setCustomEndDate(e.target.value)}
                     className="block h-9 w-full min-w-0 max-w-full appearance-none rounded-lg border border-border bg-secondary/10 px-2.5 text-[11px] text-foreground focus:border-primary focus:outline-none sm:h-10 sm:px-3 sm:text-xs"
+                  />
+                </div>
+
+                <div className="min-w-0 space-y-1">
+                  <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground sm:text-[11px]">Tipo viaggio</span>
+                  <select
+                    value={travelType}
+                    onChange={(event) => setTravelType(event.target.value as TravelType)}
+                    className="block h-9 w-full min-w-0 rounded-lg border border-border bg-secondary/10 px-2.5 text-[11px] font-bold text-foreground focus:border-primary focus:outline-none sm:h-10 sm:px-3 sm:text-xs"
+                  >
+                    <option value="moto">🏍️ Moto</option>
+                    <option value="auto">🚗 Auto</option>
+                    <option value="aereo">✈️ Aereo</option>
+                    <option value="misto">🔀 Misto</option>
+                    <option value="altro">🌍 Altro</option>
+                  </select>
+                </div>
+
+                <div className="min-w-0 space-y-1">
+                  <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground sm:text-[11px]">Km volo</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={flightKm}
+                    onChange={(event) => setFlightKm(event.target.value)}
+                    className="block h-9 w-full min-w-0 rounded-lg border border-border bg-secondary/10 px-2.5 text-[11px] font-bold text-foreground focus:border-primary focus:outline-none sm:h-10 sm:px-3 sm:text-xs"
                   />
                 </div>
 
