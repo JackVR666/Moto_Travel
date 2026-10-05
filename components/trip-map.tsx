@@ -1,9 +1,12 @@
 'use client'
 
 import { useEffect, useMemo } from 'react'
-import { MapContainer, TileLayer, Polyline, CircleMarker, Tooltip, Popup, useMap } from 'react-leaflet'
+import { MapContainer, TileLayer, Polyline, CircleMarker, Marker, Tooltip, Popup, useMap } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import type { TrackPoint } from '@/lib/gpx-parser'
+import L from 'leaflet'
+import { renderToStaticMarkup } from 'react-dom/server'
+import { ATLAS_CATEGORIES, DEFAULT_ATLAS_CATEGORY } from '@/lib/atlasCategories'
 
 type LatLng = [number, number]
 
@@ -15,6 +18,31 @@ type ManualPlace = {
   lon: number
   category?: string | null
   visitedAt?: string | null
+}
+
+const categoryMarkerCache = new Map<string, L.DivIcon>()
+
+function getCategoryConfig(category?: string | null) {
+  const value = (category ?? '').trim().toLowerCase()
+  return ATLAS_CATEGORIES[value as keyof typeof ATLAS_CATEGORIES] ?? DEFAULT_ATLAS_CATEGORY
+}
+
+function createCategoryMarkerIcon(category?: string | null) {
+  const key = (category ?? 'default').trim().toLowerCase() || 'default'
+  const cached = categoryMarkerCache.get(key)
+  if (cached) return cached
+  const config = getCategoryConfig(category)
+  const CategoryIcon = config.icon
+  const iconSvg = renderToStaticMarkup(<CategoryIcon size={20} strokeWidth={2.4} color="white" />)
+  const icon = L.divIcon({
+    className: '',
+    html: `<div style="width:38px;height:38px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:${config.color};border:3px solid white;box-shadow:0 3px 10px rgba(0,0,0,.35)">${iconSvg}</div>`,
+    iconSize: [38, 38],
+    iconAnchor: [19, 19],
+    popupAnchor: [0, -22],
+  })
+  categoryMarkerCache.set(key, icon)
+  return icon
 }
 
 function FitBounds({ positions }: { positions: LatLng[] }) {
@@ -112,33 +140,26 @@ export default function TripMap({
         </CircleMarker>
       ))}
 
-      {manualPlaces.map((place) => (
-        <CircleMarker
-          key={`manual-${place.id}`}
-          center={[place.lat, place.lon]}
-          radius={8}
-          pathOptions={{
-            color: '#071523',
-            weight: 3,
-            fillColor: '#1689ff',
-            fillOpacity: 1,
-          }}
-        >
-          <Tooltip>{place.name}</Tooltip>
-          <Popup>
-            <div className="min-w-[150px]">
-              <strong>{place.name}</strong>
-              {place.category && <div>{place.category}</div>}
-              {place.description && <div>{place.description}</div>}
-              {place.visitedAt && (
-                <div>
-                  {new Date(place.visitedAt).toLocaleDateString('it-IT')}
-                </div>
-              )}
-            </div>
-          </Popup>
-        </CircleMarker>
-      ))}
+      {manualPlaces.map((place) => {
+        const categoryConfig = getCategoryConfig(place.category)
+        return (
+          <Marker
+            key={`manual-${place.id}`}
+            position={[place.lat, place.lon]}
+            icon={createCategoryMarkerIcon(place.category)}
+          >
+            <Tooltip>{place.name} · {categoryConfig.label}</Tooltip>
+            <Popup>
+              <div className="min-w-[150px]">
+                <strong>{place.name}</strong>
+                <div>{categoryConfig.label}</div>
+                {place.description && <div>{place.description}</div>}
+                {place.visitedAt && <div>{new Date(place.visitedAt).toLocaleDateString('it-IT')}</div>}
+              </div>
+            </Popup>
+          </Marker>
+        )
+      })}
 
       <FitBounds positions={positions} />
     </MapContainer>
