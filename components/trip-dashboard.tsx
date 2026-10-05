@@ -1407,7 +1407,7 @@ for (const p of pointsData ?? []) {
         )}
 
         <aside
-          className={`fixed inset-y-0 left-0 z-[80] flex w-[250px] flex-col border-r border-border bg-card shadow-2xl transition-transform duration-200 lg:translate-x-0 ${
+          className={`fixed inset-y-0 left-0 z-[80] flex w-[250px] flex-col border-r border-sidebar-border bg-sidebar shadow-2xl transition-transform duration-200 lg:translate-x-0 ${
             mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
         >
@@ -1415,7 +1415,7 @@ for (const p of pointsData ?? []) {
             <div className="flex min-w-0 items-center gap-2.5">
               <Image
                 src="/viaggi-logo.png"
-                alt="Travel"
+                alt="Viaggi"
                 width={44}
                 height={44}
                 priority
@@ -1423,11 +1423,9 @@ for (const p of pointsData ?? []) {
               />
 
               <div className="min-w-0">
-                <p className="truncate text-sm font-black">
-                  Travel
-                </p>
+                <p className="truncate text-sm font-black">Viaggi</p>
                 <p className="text-[9px] font-bold uppercase tracking-wider text-primary">
-                  Versione 2 Preview
+                  I miei viaggi
                 </p>
               </div>
             </div>
@@ -1452,9 +1450,9 @@ for (const p of pointsData ?? []) {
                   key={item.id}
                   type="button"
                   onClick={() => selectFoundationView(item.id)}
-                  className={`flex h-10 w-full items-center gap-3 rounded-lg px-3 text-left text-xs font-bold transition-colors ${
+                  className={`flex h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-xs font-bold transition-all ${
                     active
-                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      ? 'bg-primary text-primary-foreground shadow-[0_8px_22px_rgba(22,137,255,0.28)]'
                       : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
                   }`}
                 >
@@ -1503,7 +1501,7 @@ for (const p of pointsData ?? []) {
                   </h1>
 
                   <p className="hidden text-[10px] text-muted-foreground sm:block">
-                    Travel · I miei viaggi
+                    Viaggi · I miei viaggi
                   </p>
                 </div>
               </div>
@@ -1532,23 +1530,18 @@ for (const p of pointsData ?? []) {
           <main className="w-full px-3 py-4 pb-24 sm:px-6 sm:py-6 sm:pb-6 lg:px-8">
         {mode === 'select' && foundationView === 'dashboard' && (
           <div className="space-y-4 sm:space-y-6">
-            <section className="relative h-[430px] overflow-hidden rounded-2xl border border-border bg-black shadow-sm sm:h-[520px]">
+            <section className="relative h-[390px] overflow-hidden rounded-3xl border border-border bg-black shadow-[0_18px_50px_rgba(0,0,0,0.32)] sm:h-[470px]">
               <Image
-                src="/images/dashboard-hero.jpg"
+                src="/viaggi-splash.jpg"
                 alt="Panorama di viaggio"
                 fill
                 priority
                 sizes="(max-width: 640px) 100vw, 1200px"
-                className="
-                  object-contain
-                  object-center
-                  sm:object-cover
-                  sm:object-center
-                "
+                className="object-cover object-center"
               />
 
               {/* Sfumatura inferiore */}
-              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-black/5" />
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#06111f]/85 via-[#06111f]/15 to-transparent" />
 
               {/* Pulsante creato dal codice */}
               <div className="absolute inset-x-0 bottom-5 flex justify-center px-5 sm:bottom-8">
@@ -1561,14 +1554,14 @@ for (const p of pointsData ?? []) {
                     max-w-[440px]
                     gap-3
                     rounded-2xl
-                    bg-white/95
+                    bg-primary
                     px-5
                     text-base
                     font-black
-                    text-black
+                    text-primary-foreground
                     shadow-2xl
                     backdrop-blur-xl
-                    hover:bg-white
+                    hover:bg-primary/90
                     sm:h-16
                     sm:px-6
                     sm:text-lg
@@ -1581,7 +1574,7 @@ for (const p of pointsData ?? []) {
             </section>
 
             <section className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-4">
-              <div className="rounded-xl border border-border bg-card p-3 shadow-sm sm:p-5">
+              <div className="rounded-2xl border border-border bg-card/90 p-3 shadow-[0_12px_32px_rgba(0,0,0,0.18)] sm:p-5">
                 <p className="text-[8px] font-bold uppercase tracking-wider text-muted-foreground sm:text-[10px]">
                   Viaggi archiviati
                 </p>
@@ -1590,7 +1583,7 @@ for (const p of pointsData ?? []) {
                 </p>
               </div>
 
-              <div className="rounded-xl border border-border bg-card p-3 shadow-sm sm:p-5">
+              <div className="rounded-2xl border border-border bg-card/90 p-3 shadow-[0_12px_32px_rgba(0,0,0,0.18)] sm:p-5">
                 <p className="text-[8px] font-bold uppercase tracking-wider text-muted-foreground sm:text-[10px]">
                   Km su strada
                 </p>
@@ -1599,7 +1592,7 @@ for (const p of pointsData ?? []) {
                 </p>
               </div>
 
-              <div className="col-span-2 rounded-xl border border-border bg-card p-3 shadow-sm sm:col-span-1 sm:p-5">
+              <div className="col-span-2 rounded-2xl border border-border bg-card/90 p-3 shadow-[0_12px_32px_rgba(0,0,0,0.18)] sm:col-span-1 sm:p-5">
                 <p className="text-[8px] font-bold uppercase tracking-wider text-muted-foreground sm:text-[10px]">
                   Ultimo viaggio
                 </p>
@@ -1615,7 +1608,7 @@ for (const p of pointsData ?? []) {
             </section>
 
             {foundationStats.latestTrip && (
-              <section className="rounded-xl border border-border bg-card p-3 shadow-sm sm:p-5">
+              <section className="rounded-2xl border border-border bg-card/90 p-3 shadow-[0_12px_32px_rgba(0,0,0,0.18)] sm:p-5">
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-[8px] font-bold uppercase tracking-wider text-primary sm:text-[10px]">
@@ -1714,7 +1707,7 @@ for (const p of pointsData ?? []) {
               </div>
             </div>
             <div className="grid gap-4">
-              <div className="flex flex-col justify-between space-y-3 rounded-xl border border-border bg-card p-3 shadow-sm sm:space-y-4 sm:p-5">
+              <div className="flex flex-col justify-between space-y-3 rounded-2xl border border-border bg-card/90 p-3 shadow-[0_12px_32px_rgba(0,0,0,0.18)] sm:space-y-4 sm:p-5">
                 <div className="space-y-2">
                   <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary sm:size-10">
                     <Play className="size-4 sm:size-5" />
@@ -1730,7 +1723,7 @@ for (const p of pointsData ?? []) {
               </div>
             </div>
 
-            <div className="space-y-2.5 rounded-xl border border-border bg-card p-3 shadow-sm sm:space-y-3 sm:p-4">
+            <div className="space-y-2.5 rounded-2xl border border-border bg-card/90 p-3 shadow-[0_12px_32px_rgba(0,0,0,0.18)] sm:space-y-3 sm:p-4">
               <div className="flex items-center gap-1.5 border-b border-border/60 pb-2 text-muted-foreground sm:gap-2">
                 <FolderHeart className="size-4 text-primary sm:size-4.5" />
                 <h3 className="text-xs font-bold text-foreground sm:text-sm">I miei viaggi</h3>
@@ -1784,7 +1777,7 @@ for (const p of pointsData ?? []) {
         {(mode === 'live' || mode === 'gpx' || mode === 'edit_expenses') && (
           <div className="space-y-4">
             
-            <section className="w-full min-w-0 max-w-full overflow-hidden rounded-xl border border-border bg-card p-3 shadow-sm sm:p-4">
+            <section className="w-full min-w-0 max-w-full overflow-hidden rounded-2xl border border-border bg-card/90 p-3 shadow-[0_12px_32px_rgba(0,0,0,0.18)] sm:p-4">
               <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-6">
                 <div className="min-w-0 space-y-1">
                   <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground sm:text-[11px]">Titolo viaggio</span>
@@ -1969,7 +1962,7 @@ for (const p of pointsData ?? []) {
                 <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-4 xl:grid-cols-[minmax(0,1fr)_420px]">
 
                   <div className="min-w-0 space-y-3 sm:space-y-4">
-                    <div className="space-y-3 rounded-xl border border-border bg-card p-3 shadow-sm sm:p-4">
+                    <div className="space-y-3 rounded-2xl border border-border bg-card/90 p-3 shadow-[0_12px_32px_rgba(0,0,0,0.18)] sm:p-4">
                       <div className="flex items-center gap-1.5 text-muted-foreground">
                         <Plus className="size-3.5 text-primary sm:size-4" />
                         <h4 className="text-[9px] font-bold uppercase tracking-wider text-foreground sm:text-xs">
@@ -2052,7 +2045,7 @@ for (const p of pointsData ?? []) {
                       </div>
                     </div>
 
-                    <div className="space-y-2 rounded-xl border border-border bg-card p-3 shadow-sm sm:p-4">
+                    <div className="space-y-2 rounded-2xl border border-border bg-card/90 p-3 shadow-[0_12px_32px_rgba(0,0,0,0.18)] sm:p-4">
                       <h4 className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground sm:text-xs">
                         Lista voci inserite ({expenses.length})
                       </h4>
@@ -2115,7 +2108,7 @@ for (const p of pointsData ?? []) {
                   </div>
 
                   <div className="min-w-0 space-y-3 sm:space-y-4">
-                    <div className="rounded-xl border border-border bg-card p-3 shadow-sm sm:p-4">
+                    <div className="rounded-2xl border border-border bg-card/90 p-3 shadow-[0_12px_32px_rgba(0,0,0,0.18)] sm:p-4">
                       <div className="mb-3 flex min-w-0 items-center justify-between gap-3 border-b border-border/50 pb-2">
                         <span className="min-w-0 text-[9px] font-bold uppercase tracking-wider text-muted-foreground sm:text-xs">
                           Totale speso
@@ -2152,7 +2145,7 @@ for (const p of pointsData ?? []) {
               {activeTab === 'map' && (
                 <div className="space-y-4">
                   {trip && assignedTrackPoints.length > 0 && (
-                    <div className="rounded-xl border border-border bg-card p-3 shadow-sm sm:p-4">
+                    <div className="rounded-2xl border border-border bg-card/90 p-3 shadow-[0_12px_32px_rgba(0,0,0,0.18)] sm:p-4">
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                         <div className="min-w-0 flex-1">
                           <label className="text-[8px] font-bold uppercase tracking-wider text-muted-foreground sm:text-[10px]">
@@ -2274,7 +2267,7 @@ for (const p of pointsData ?? []) {
                   )}
 
                   {trip?.stops && (
-                    <div className="space-y-2.5 rounded-xl border border-border bg-card p-3 shadow-sm sm:space-y-3 sm:p-4">
+                    <div className="space-y-2.5 rounded-2xl border border-border bg-card/90 p-3 shadow-[0_12px_32px_rgba(0,0,0,0.18)] sm:space-y-3 sm:p-4">
                       <div className="flex items-center gap-2">
                         <Coffee className="size-4 text-primary" />
 
@@ -2371,7 +2364,7 @@ for (const p of pointsData ?? []) {
                     )}
                   </div>
 
-                  <div className="space-y-2 rounded-xl border border-border bg-card p-3 shadow-sm sm:p-4">
+                  <div className="space-y-2 rounded-2xl border border-border bg-card/90 p-3 shadow-[0_12px_32px_rgba(0,0,0,0.18)] sm:p-4">
                     <div className="flex items-center gap-1.5 text-muted-foreground">
                       <CloudUpload className="size-4 text-primary" />
                       <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">
