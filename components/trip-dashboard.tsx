@@ -1566,28 +1566,23 @@ for (const p of pointsData ?? []) {
           <main className="w-full px-3 py-4 pb-24 sm:px-6 sm:py-6 sm:pb-6 lg:px-8">
         {mode === 'select' && foundationView === 'dashboard' && (
           <div className="space-y-4 sm:space-y-6">
-            <section className="relative min-h-[360px] overflow-hidden rounded-3xl border border-border bg-[#071523] shadow-[0_18px_50px_rgba(0,0,0,0.32)] sm:min-h-[430px]">
-              <Image
-                src="/viaggi-dashboard-hero.png"
-                alt="Viaggi, ogni viaggio è una nuova storia"
-                fill
-                priority
-                sizes="(max-width: 640px) 100vw, 1400px"
-                className="object-cover object-center opacity-70"
-              />
-              <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#06111f]/95 via-[#06111f]/65 to-[#06111f]/15" />
-              <div className="relative z-10 flex min-h-[360px] max-w-xl flex-col justify-center p-6 sm:min-h-[430px] sm:p-10">
-                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-primary">Viaggi</p>
-                <h2 className="mt-3 text-3xl font-black leading-[0.95] tracking-tight text-white sm:text-5xl">
-                  Ogni viaggio<br />è una nuova storia
-                </h2>
-                <p className="mt-4 max-w-md text-xs leading-relaxed text-slate-200 sm:text-sm">
-                  Organizza i tuoi viaggi, pianifica le tappe, tieni traccia di spese e pernottamenti e rivivi ogni avventura sulla mappa.
-                </p>
-                <Button type="button" onClick={() => setFoundationView('trips')} className="mt-6 h-11 w-fit gap-2 rounded-xl bg-primary px-5 font-black text-primary-foreground shadow-[0_10px_28px_rgba(22,137,255,0.32)] hover:bg-primary/90">
-                  <Luggage className="size-4" /> Apri i miei viaggi <ChevronRight className="size-4" />
-                </Button>
-              </div>
+            <section className="relative overflow-hidden rounded-3xl border border-border bg-[#071523] shadow-[0_18px_50px_rgba(0,0,0,0.32)]">
+              <button
+                type="button"
+                onClick={() => setFoundationView('trips')}
+                className="block w-full overflow-hidden rounded-3xl text-left"
+                aria-label="Apri i miei viaggi"
+              >
+                <Image
+                  src="/viaggi-dashboard-hero.png"
+                  alt="Viaggi, ogni viaggio è una nuova storia"
+                  width={1695}
+                  height={377}
+                  priority
+                  sizes="(max-width: 640px) 100vw, 1400px"
+                  className="h-auto w-full object-contain"
+                />
+              </button>
             </section>
 
             <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
@@ -1608,8 +1603,24 @@ for (const p of pointsData ?? []) {
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 {foundationStats.recentTrips.map((recentTrip) => (
                   <button key={recentTrip.id} type="button" onClick={() => startEditingExpenses(recentTrip.id, recentTrip.title, recentTrip.trip_date, recentTrip.trip_end_date)} className="group overflow-hidden rounded-2xl border border-border bg-card text-left shadow-[0_12px_30px_rgba(0,0,0,0.2)] transition hover:-translate-y-0.5 hover:border-primary/60">
-                    <div className="flex h-24 items-center justify-center bg-gradient-to-br from-[#12355b] via-[#0b2743] to-[#071523]">
-                      {recentTrip.travel_type === 'aereo' ? <Plane className="size-9 text-primary" /> : recentTrip.travel_type === 'auto' ? <Car className="size-9 text-primary" /> : <Bike className="size-9 text-primary" />}
+                    <div className="relative h-24 overflow-hidden bg-[#0b2743]">
+                      <Image
+                        src="/viaggi-dashboard-hero.png"
+                        alt=""
+                        fill
+                        sizes="(max-width: 640px) 100vw, 25vw"
+                        className={`object-cover transition duration-300 group-hover:scale-105 ${
+                          recentTrip.travel_type === 'auto'
+                            ? 'object-right'
+                            : recentTrip.travel_type === 'aereo'
+                              ? 'object-center'
+                              : 'object-[72%_center]'
+                        }`}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-[#071523]/65 to-transparent" />
+                      <div className="absolute left-3 top-3 flex size-8 items-center justify-center rounded-lg bg-[#071523]/75 text-primary backdrop-blur-sm">
+                        {recentTrip.travel_type === 'aereo' ? <Plane className="size-4" /> : recentTrip.travel_type === 'auto' ? <Car className="size-4" /> : <Bike className="size-4" />}
+                      </div>
                     </div>
                     <div className="p-4">
                       <p className="truncate text-sm font-black">{recentTrip.title}</p>
