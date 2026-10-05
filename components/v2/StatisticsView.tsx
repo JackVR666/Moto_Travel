@@ -11,6 +11,7 @@ import {
   Hotel,
   Loader2,
   MapPinned,
+  Plane,
   Receipt,
   Route,
   RotateCcw,
@@ -18,12 +19,16 @@ import {
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
+type TravelType = 'moto' | 'auto' | 'aereo' | 'misto' | 'altro'
+
 type TripRow = {
   id: string
   title: string
   trip_date: string | null
   trip_end_date: string | null
   total_km: number | null
+  flight_km: number | null
+  travel_type: TravelType
   moving_time_minutes: number | null
   average_moving_speed_kmh: number | null
   status: 'pianificato' | 'in_corso' | 'completato'
@@ -174,6 +179,7 @@ export function StatisticsView() {
   const [filterEndDate, setFilterEndDate] = useState('')
   const [includeUncompletedTrips, setIncludeUncompletedTrips] =
     useState(false)
+  const [travelTypeFilter, setTravelTypeFilter] = useState<'all' | TravelType>('all')
 
   useEffect(() => {
     let cancelled = false
@@ -193,7 +199,7 @@ export function StatisticsView() {
           supabase
             .from('trips')
             .select(
-              'id, title, trip_date, trip_end_date, total_km, moving_time_minutes, average_moving_speed_kmh, status',
+              'id, title, trip_date, trip_end_date, total_km, flight_km, travel_type, moving_time_minutes, average_moving_speed_kmh, status',
             )
             .order('trip_date', { ascending: true }),
           supabase
@@ -262,8 +268,12 @@ export function StatisticsView() {
         includeUncompletedTrips ||
         trip.status === 'completato'
 
+      const typeAllowed =
+        travelTypeFilter === 'all' || trip.travel_type === travelTypeFilter
+
       return (
         statusAllowed &&
+        typeAllowed &&
         tripOverlapsPeriod(
           trip,
           filterStartDate,
@@ -301,11 +311,17 @@ export function StatisticsView() {
     filterStartDate,
     filterEndDate,
     includeUncompletedTrips,
+    travelTypeFilter,
   ])
 
   const statistics = useMemo(() => {
     const totalKm = filteredData.trips.reduce(
       (sum, trip) => sum + Number(trip.total_km || 0),
+      0,
+    )
+
+    const totalFlightKm = filteredData.trips.reduce(
+      (sum, trip) => sum + Number(trip.flight_km || 0),
       0,
     )
 
@@ -451,6 +467,7 @@ export function StatisticsView() {
 
     return {
       totalKm,
+      totalFlightKm,
       totalTravelDays,
       totalMovingMinutes,
       totalExpenses,
@@ -607,7 +624,7 @@ export function StatisticsView() {
           </label>
         </div>
 
-        <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr_auto] xl:items-end">
           <label className="min-w-0">
             <span className="text-[8px] font-bold uppercase tracking-wider text-muted-foreground sm:text-[10px]">
               Dal
@@ -644,13 +661,32 @@ export function StatisticsView() {
             </span>
           </label>
 
+          <label className="min-w-0">
+            <span className="text-[8px] font-bold uppercase tracking-wider text-muted-foreground sm:text-[10px]">
+              Tipo viaggio
+            </span>
+            <select
+              value={travelTypeFilter}
+              onChange={(event) => setTravelTypeFilter(event.target.value as 'all' | TravelType)}
+              className="mt-1 block h-10 w-full rounded-xl border border-border bg-background px-3 text-xs font-bold text-foreground outline-none sm:text-sm"
+            >
+              <option value="all">Tutti i viaggi</option>
+              <option value="moto">🏍️ Moto</option>
+              <option value="auto">🚗 Auto</option>
+              <option value="aereo">✈️ Aereo</option>
+              <option value="misto">🔀 Misto</option>
+              <option value="altro">🌍 Altro</option>
+            </select>
+          </label>
+
           <button
             type="button"
             onClick={() => {
               setFilterStartDate('')
               setFilterEndDate('')
+              setTravelTypeFilter('all')
             }}
-            disabled={!filterStartDate && !filterEndDate}
+            disabled={!filterStartDate && !filterEndDate && travelTypeFilter === 'all'}
             className="flex h-10 items-center justify-center gap-2 rounded-xl border border-border bg-background px-4 text-[9px] font-bold hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-40 sm:text-[11px]"
           >
             <RotateCcw className="size-3.5" />
@@ -699,10 +735,16 @@ export function StatisticsView() {
             icon: Bike,
           },
           {
-            label: 'Km percorsi',
+            label: 'Km strada',
             value: formatNumber(statistics.totalKm),
             suffix: 'km',
             icon: Route,
+          },
+          {
+            label: 'Km volo',
+            value: formatNumber(statistics.totalFlightKm),
+            suffix: 'km',
+            icon: Plane,
           },
           {
             label: 'Giorni in viaggio',
