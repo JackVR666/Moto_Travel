@@ -15,6 +15,7 @@ import type { LatLngBoundsExpression } from 'leaflet'
 
 export type ExplorerMapTrip = {
   id: string
+  travelType: 'moto' | 'auto' | 'aereo' | 'misto' | 'altro'
   title: string
   tripDate: string | null
   tripEndDate: string | null
