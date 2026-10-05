@@ -131,7 +131,7 @@ export function AtlasHome() {
 
             <div className="min-w-0">
               <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-primary">
-                GoldWing Rides
+                Travel Atlas
               </p>
 
               <h1 className="mt-1 text-lg font-black tracking-tight sm:text-xl">
