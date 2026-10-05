@@ -23,20 +23,20 @@ type Place = {
   name: string;
   visited_at: string;
   category: string | null;
-  vacation_id: string | null;
+  trip_id: string | null;
   is_favorite: boolean;
 };
 
-type Vacation = {
+type Trip = {
   id: string;
-  name: string;
+  title: string;
 };
 
 export function AtlasHome() {
   const router = useRouter();
 
   const [places, setPlaces] = useState<Place[]>([]);
-  const [vacations, setVacations] = useState<Vacation[]>([]);
+  const [trips, setTrips] = useState<Trip[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -48,19 +48,19 @@ export function AtlasHome() {
     setIsLoading(true);
     setError("");
 
-    const [placesResult, vacationsResult] = await Promise.all([
+    const [placesResult, tripsResult] = await Promise.all([
       supabase
         .from("places_visited")
         .select(
-          "id, name, visited_at, category, vacation_id, is_favorite",
+          "id, name, visited_at, category, trip_id, is_favorite",
         )
         .order("visited_at", { ascending: false })
         .limit(1000),
 
       supabase
-        .from("vacations")
-        .select("id, name")
-        .order("name", { ascending: true }),
+        .from("trips")
+        .select("id, title")
+        .order("trip_date", { ascending: false }),
     ]);
 
     if (placesResult.error) {
@@ -70,24 +70,19 @@ export function AtlasHome() {
       setPlaces((placesResult.data ?? []) as Place[]);
     }
 
-    if (vacationsResult.error) {
-      console.error("Errore caricamento vacanze:", vacationsResult.error);
-
-      setError((current) =>
-        current
-          ? `${current} — Vacanze: ${vacationsResult.error.message}`
-          : `Errore caricamento vacanze: ${vacationsResult.error.message}`,
-      );
+    if (tripsResult.error) {
+      console.error("Errore caricamento viaggi:", tripsResult.error);
+      setError((current) => current ? `${current} — Viaggi: ${tripsResult.error.message}` : `Errore caricamento viaggi: ${tripsResult.error.message}`);
     } else {
-      setVacations((vacationsResult.data ?? []) as Vacation[]);
+      setTrips((tripsResult.data ?? []) as Trip[]);
     }
 
     setIsLoading(false);
   }
 
-  const vacationNames = useMemo(
-    () => new Map(vacations.map((vacation) => [vacation.id, vacation.name])),
-    [vacations],
+  const tripNames = useMemo(
+    () => new Map(trips.map((trip) => [trip.id, trip.title])),
+    [trips],
   );
 
   const favoriteCount = useMemo(
@@ -154,8 +149,8 @@ export function AtlasHome() {
             />
 
             <StatCard
-              label="Vacanze"
-              value={vacations.length}
+              label="Viaggi"
+              value={trips.length}
               icon={<CalendarDays className="size-3.5" />}
               isLoading={isLoading}
             />
@@ -269,8 +264,8 @@ export function AtlasHome() {
         ) : (
           <div className="divide-y divide-border">
             {recentPlaces.map((place) => {
-              const vacationName = place.vacation_id
-                ? vacationNames.get(place.vacation_id)
+              const tripName = place.trip_id
+                ? tripNames.get(place.trip_id)
                 : null;
 
               return (
@@ -297,7 +292,7 @@ export function AtlasHome() {
 
                     <p className="mt-0.5 truncate text-[9px] text-muted-foreground">
                       {formatDate(place.visited_at)}
-                      {vacationName ? ` · ${vacationName}` : ""}
+                      {tripName ? ` · ${tripName}` : ""}
                     </p>
                   </div>
 
