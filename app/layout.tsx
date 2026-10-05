@@ -7,33 +7,29 @@ const geistSans = Geist({ subsets: ['latin'], variable: '--font-geist-sans' })
 const geistMono = Geist_Mono({ subsets: ['latin'], variable: '--font-geist-mono' })
 
 export const metadata: Metadata = {
-  title: '/=\\Viaggi',
+  title: 'Viaggi',
   description:
     'Applicazione per tracciare e pianificare i viaggi',
-  generator: 'v0.app',
+  applicationName: 'Viaggi',
+  generator: 'Viaggi',
 
   icons: {
     icon: [
       {
-        url: '/icons/favicon-32.png',
+        url: '/viaggi-favicon.png',
         sizes: '32x32',
         type: 'image/png',
       },
       {
-        url: '/icons/icon-192.png',
-        sizes: '192x192',
-        type: 'image/png',
-      },
-      {
-        url: '/icons/icon-512.png',
-        sizes: '512x512',
+        url: '/viaggi-icon.png',
+        sizes: '1024x1024',
         type: 'image/png',
       },
     ],
     apple: [
       {
-        url: '/icons/apple-touch-icon.png',
-        sizes: '180x180',
+        url: '/viaggi-icon.png',
+        sizes: '1024x1024',
         type: 'image/png',
       },
     ],
