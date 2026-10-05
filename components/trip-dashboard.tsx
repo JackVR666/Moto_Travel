@@ -205,6 +205,7 @@ export function TripDashboard() {
   const [expenseCategories, setExpenseCategories] = useState<any[]>([])
   const [allTrips, setAllTrips] = useState<any[]>([])
   const [atlasPlaceCount, setAtlasPlaceCount] = useState(0)
+  const [manualTripPlaces, setManualTripPlaces] = useState<any[]>([])
   const [editingTripId, setEditingTripId] = useState<string | null>(null)
 
   // Stati singola spesa
@@ -812,6 +813,7 @@ const removeTripDay = async (dayId: string) => {
     setExpenseDate(today)
     setExpenses([])
     setTrip(null)
+    setManualTripPlaces([])
     setTripNotes('')
     setEditingTripId(null)
     setHasNewGpxLoaded(false)
@@ -833,6 +835,31 @@ const removeTripDay = async (dayId: string) => {
     
     setExpenses([]) 
     setTrip(null)
+    setManualTripPlaces([])
+
+    const { data: mappedPlaces, error: mappedPlacesError } = await supabase
+      .from('places_visited')
+      .select('id, name, description, latitude, longitude, category, visited_at')
+      .eq('trip_id', tripId)
+      .order('visited_at', { ascending: true })
+
+    if (mappedPlacesError) {
+      console.error('Errore caricamento punti manuali:', mappedPlacesError)
+    } else {
+      setManualTripPlaces(
+        (mappedPlaces || [])
+          .filter((place) => Number.isFinite(Number(place.latitude)) && Number.isFinite(Number(place.longitude)))
+          .map((place) => ({
+            id: place.id,
+            name: place.name,
+            description: place.description,
+            lat: Number(place.latitude),
+            lon: Number(place.longitude),
+            category: place.category,
+            visitedAt: place.visited_at,
+          }))
+      )
+    }
 
     const currentTripData = allTrips.find(t => t.id === tripId)
     setTripNotes(currentTripData?.notes || '')
@@ -2402,18 +2429,19 @@ for (const p of pointsData ?? []) {
                   )}
 
                   <div className="relative h-[300px] overflow-hidden rounded-xl border border-border bg-secondary/10 shadow-inner sm:h-[450px]">
-                    {hasValidPoints && trip && trip.points ? (
+                    {(hasValidPoints && trip?.points) || manualTripPlaces.length > 0 ? (
                       <TripMap
-                        key={`${selectedTrackDayId}-${displayedTrackPoints.length}`}
+                        key={`${selectedTrackDayId}-${displayedTrackPoints.length}-${manualTripPlaces.length}`}
                         points={displayedTrackPoints}
+                        manualPlaces={manualTripPlaces}
                       />
                     ) : (
                       <div className="flex h-full flex-col items-center justify-center gap-3 px-4 text-center bg-card/20 py-8">
                         <MapIcon className="size-6 text-primary animate-pulse" />
                         <div className="space-y-1">
-                          <p className="text-xs font-bold">Nessuna traccia GPS associata o dati non validi</p>
+                          <p className="text-xs font-bold">Nessuna traccia GPX o punto manuale associato</p>
                           <p className="max-w-xs text-[11px] text-muted-foreground leading-normal">
-                            Trascina o seleziona il file esportato dal navigatore qui sotto per mappare l'itinerario e calcolare i km.
+                            Carica una traccia GPX oppure associa al viaggio dei luoghi registrati nell'Atlante.
                           </p>
                         </div>
                       </div>
