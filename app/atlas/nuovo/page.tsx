@@ -244,7 +244,7 @@ export default function NuovoLuogoPage() {
     }
 
     if (!coordinates) {
-      setError("Rileva la posizione.");
+      setError("Rileva la posizione oppure inserisci le coordinate.");
       return;
     }
 
@@ -255,9 +255,8 @@ export default function NuovoLuogoPage() {
 
     setIsSaving(true);
 
-    const { error: insertError } = await supabase
-      .from("places_visited")
-      .insert({
+    try {
+      const payload = {
         name: name.trim(),
         description: description.trim() || null,
 
@@ -274,22 +273,53 @@ export default function NuovoLuogoPage() {
 
         google_photos_url: googlePhotosUrl.trim() || null,
         is_favorite: isFavorite,
-      });
+      };
 
-    setIsSaving(false);
+      console.log("ATLAS - payload salvataggio:", payload);
 
-    if (insertError) {
-      console.error("Errore salvataggio luogo:", insertError);
+      const { data, error: insertError } = await supabase
+        .from("places_visited")
+        .insert(payload)
+        .select("id")
+        .single();
 
-      setError(`Errore durante il salvataggio: ${insertError.message}`);
-      return;
+      if (insertError) {
+        console.error("ATLAS - errore Supabase:", {
+          message: insertError.message,
+          details: insertError.details,
+          hint: insertError.hint,
+          code: insertError.code,
+        });
+
+        setError(
+          `Errore Supabase: ${insertError.message}` +
+            (insertError.code ? ` [${insertError.code}]` : ""),
+        );
+
+        return;
+      }
+
+      console.log("ATLAS - luogo salvato:", data);
+      setSuccess("Luogo registrato correttamente.");
+
+      setTimeout(() => {
+        router.push("/?view=atlas");
+      }, 1200);
+    } catch (error) {
+      console.error("ATLAS - eccezione durante il salvataggio:", error);
+
+      if (error instanceof Error) {
+        setError(
+          `Errore di connessione durante il salvataggio: ${error.message}`,
+        );
+      } else {
+        setError(
+          "Errore di connessione sconosciuto durante il salvataggio.",
+        );
+      }
+    } finally {
+      setIsSaving(false);
     }
-
-    setSuccess("Luogo registrato correttamente.");
-
-    setTimeout(() => {
-      router.push("/?view=atlas")
-    }, 1200);
   }
 
   return (
