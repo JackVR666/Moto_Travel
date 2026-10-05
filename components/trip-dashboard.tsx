@@ -116,17 +116,62 @@ function formatDate(iso: string | null): string {
   return d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
-function DashboardMetric({ label, value, icon, action, onClick }: { label: string; value: string; icon: ReactNode; action: string; onClick: () => void }) {
+function DashboardMetric({ label, value, icon, action, onClick, kind }: { label: string; value: string; icon: ReactNode; action: string; onClick: () => void; kind: 'trips' | 'places' | 'road' | 'flight' }) {
+  const backdrop =
+    kind === 'places' ? <MapPinned className="size-24" /> :
+    kind === 'flight' ? <Plane className="size-24" /> :
+    <Route className="size-24" />
+
   return (
-    <button type="button" onClick={onClick} className="group rounded-2xl border border-border bg-card/90 p-4 text-left shadow-[0_12px_32px_rgba(0,0,0,0.18)] transition hover:-translate-y-0.5 hover:border-primary/60 sm:p-5">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex size-10 items-center justify-center rounded-xl bg-primary/12 text-primary">{icon}</div>
-        <ChevronRight className="size-4 text-muted-foreground transition group-hover:translate-x-0.5 group-hover:text-primary" />
+    <button type="button" onClick={onClick} className="group relative min-h-[112px] overflow-hidden rounded-2xl border border-[#1766a1] bg-gradient-to-br from-[#0c3c66] via-[#0a3155] to-[#08233e] p-4 text-left shadow-[0_12px_32px_rgba(0,0,0,0.2)] transition hover:-translate-y-0.5 hover:border-primary sm:p-5">
+      <div className="pointer-events-none absolute -bottom-7 -right-5 rotate-[-8deg] text-[#2d6b9c]/35">{backdrop}</div>
+      <div className="relative z-10 flex items-center gap-4">
+        <div className={`flex size-12 shrink-0 items-center justify-center rounded-xl ${kind === 'places' ? 'bg-orange-400/15 text-orange-400' : 'bg-primary/15 text-primary'}`}>{icon}</div>
+        <div className="min-w-0">
+          <p className="text-[10px] font-medium text-slate-300">{label}</p>
+          <p className="mt-1 text-2xl font-black tracking-tight text-white sm:text-3xl">{value}</p>
+          <p className="mt-2 flex items-center gap-1 text-[10px] font-bold text-primary">{action}<ChevronRight className="size-3" /></p>
+        </div>
       </div>
-      <p className="mt-4 text-[9px] font-bold uppercase tracking-[0.14em] text-muted-foreground">{label}</p>
-      <p className="mt-1 text-2xl font-black tracking-tight sm:text-3xl">{value}</p>
-      <p className="mt-3 text-[10px] font-bold text-primary">{action}</p>
     </button>
+  )
+}
+
+function TripTypeArtwork({ type }: { type: TravelType }) {
+  if (type === 'auto') {
+    return (
+      <div className="relative h-full w-full overflow-hidden bg-gradient-to-br from-sky-400 via-blue-500 to-[#0b3153]">
+        <div className="absolute inset-x-0 bottom-0 h-[48%] bg-[#19364b]" />
+        <div className="absolute -bottom-10 left-1/2 h-28 w-[120%] -translate-x-1/2 rotate-[-7deg] rounded-[50%] border-[18px] border-slate-300/80" />
+        <Car className="absolute bottom-5 left-1/2 size-14 -translate-x-1/2 text-white drop-shadow-lg" />
+        <div className="absolute left-5 top-4 h-12 w-24 rounded-[50%] bg-white/15 blur-xl" />
+      </div>
+    )
+  }
+  if (type === 'aereo') {
+    return (
+      <div className="relative h-full w-full overflow-hidden bg-gradient-to-br from-sky-300 via-blue-500 to-[#153b72]">
+        <div className="absolute left-6 top-5 h-7 w-20 rounded-full bg-white/30 blur-md" />
+        <div className="absolute right-3 top-10 h-8 w-24 rounded-full bg-white/20 blur-md" />
+        <Plane className="absolute left-1/2 top-1/2 size-16 -translate-x-1/2 -translate-y-1/2 -rotate-12 text-white drop-shadow-lg" />
+      </div>
+    )
+  }
+  if (type === 'misto' || type === 'altro') {
+    return (
+      <div className="relative flex h-full w-full items-center justify-center overflow-hidden bg-gradient-to-br from-cyan-500 via-blue-600 to-[#0a2948]">
+        <MapPinned className="size-16 text-white drop-shadow-lg" />
+        <Route className="absolute -bottom-7 -right-4 size-24 text-white/15" />
+      </div>
+    )
+  }
+  return (
+    <div className="relative h-full w-full overflow-hidden bg-gradient-to-br from-sky-400 via-[#2378b7] to-[#0b3153]">
+      <div className="absolute inset-x-0 bottom-0 h-[46%] bg-gradient-to-t from-[#12324a] to-[#2e6682]" />
+      <div className="absolute -bottom-12 left-1/2 h-32 w-[125%] -translate-x-1/2 rotate-[6deg] rounded-[50%] border-[18px] border-slate-300/80" />
+      <Bike className="absolute bottom-5 left-1/2 size-14 -translate-x-1/2 text-white drop-shadow-lg" />
+      <div className="absolute right-6 top-4 h-14 w-28 rounded-[50%] bg-white/15 blur-xl" />
+    </div>
   )
 }
 
@@ -1586,10 +1631,10 @@ for (const p of pointsData ?? []) {
             </section>
 
             <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-              <DashboardMetric label="Viaggi archiviati" value={String(foundationStats.tripCount)} icon={<Luggage className="size-5" />} action="Vedi tutti" onClick={() => setFoundationView('trips')} />
-              <DashboardMetric label="Luoghi visitati" value={String(foundationStats.placeCount)} icon={<MapPinned className="size-5" />} action="Vedi la mappa" onClick={() => setFoundationView('atlas')} />
-              <DashboardMetric label="Km su strada" value={foundationStats.totalKm.toLocaleString('it-IT', { maximumFractionDigits: 0 })} icon={<Route className="size-5" />} action="Vedi statistiche" onClick={() => setFoundationView('statistics')} />
-              <DashboardMetric label="Km volo" value={foundationStats.totalFlightKm.toLocaleString('it-IT', { maximumFractionDigits: 0 })} icon={<Plane className="size-5" />} action="Vedi dettagli" onClick={() => setFoundationView('statistics')} />
+              <DashboardMetric kind="trips" label="Viaggi archiviati" value={String(foundationStats.tripCount)} icon={<Route className="size-7" />} action="Vedi tutti" onClick={() => setFoundationView('trips')} />
+              <DashboardMetric kind="places" label="Luoghi visitati" value={String(foundationStats.placeCount)} icon={<MapPinned className="size-7" />} action="Vedi la mappa" onClick={() => setFoundationView('atlas')} />
+              <DashboardMetric kind="road" label="Km su strada" value={foundationStats.totalKm.toLocaleString('it-IT', { maximumFractionDigits: 0 })} icon={<Route className="size-7" />} action="Vedi statistiche" onClick={() => setFoundationView('statistics')} />
+              <DashboardMetric kind="flight" label="Km volo" value={foundationStats.totalFlightKm.toLocaleString('it-IT', { maximumFractionDigits: 0 })} icon={<Plane className="size-7" />} action="Vedi dettagli" onClick={() => setFoundationView('statistics')} />
             </section>
 
             <section>
@@ -1604,23 +1649,8 @@ for (const p of pointsData ?? []) {
                 {foundationStats.recentTrips.map((recentTrip) => (
                   <button key={recentTrip.id} type="button" onClick={() => startEditingExpenses(recentTrip.id, recentTrip.title, recentTrip.trip_date, recentTrip.trip_end_date)} className="group overflow-hidden rounded-2xl border border-border bg-card text-left shadow-[0_12px_30px_rgba(0,0,0,0.2)] transition hover:-translate-y-0.5 hover:border-primary/60">
                     <div className="relative h-24 overflow-hidden bg-[#0b2743]">
-                      <Image
-                        src="/viaggi-dashboard-hero.png"
-                        alt=""
-                        fill
-                        sizes="(max-width: 640px) 100vw, 25vw"
-                        className={`object-cover transition duration-300 group-hover:scale-105 ${
-                          recentTrip.travel_type === 'auto'
-                            ? 'object-right'
-                            : recentTrip.travel_type === 'aereo'
-                              ? 'object-center'
-                              : 'object-[72%_center]'
-                        }`}
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-[#071523]/65 to-transparent" />
-                      <div className="absolute left-3 top-3 flex size-8 items-center justify-center rounded-lg bg-[#071523]/75 text-primary backdrop-blur-sm">
-                        {recentTrip.travel_type === 'aereo' ? <Plane className="size-4" /> : recentTrip.travel_type === 'auto' ? <Car className="size-4" /> : <Bike className="size-4" />}
-                      </div>
+                      <TripTypeArtwork type={(recentTrip.travel_type || 'moto') as TravelType} />
+                      <div className="absolute inset-0 bg-gradient-to-t from-[#071523]/35 to-transparent" />
                     </div>
                     <div className="p-4">
                       <p className="truncate text-sm font-black">{recentTrip.title}</p>
