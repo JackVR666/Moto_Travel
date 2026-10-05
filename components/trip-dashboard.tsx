@@ -1751,17 +1751,16 @@ for (const p of pointsData ?? []) {
 
         {mode === 'select' && foundationView === 'trips' && (
           <div className="space-y-4 sm:space-y-6">
-            <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
-              <div className="flex items-center justify-center bg-black px-4 py-3 sm:py-4">
-                <Image
-                  src="/viaggi-logo.png"
-                  alt="Travel"
-                  width={700}
-                  height={180}
-                  priority
-                  className="h-auto w-full max-w-[620px] object-contain"
-                />
-              </div>
+            <div className="relative overflow-hidden rounded-3xl border border-border bg-[#071523] shadow-[0_18px_50px_rgba(0,0,0,0.28)]">
+              <Image
+                src="/viaggi-dashboard-hero.png"
+                alt="I miei viaggi"
+                width={1695}
+                height={377}
+                priority
+                sizes="(max-width: 640px) 100vw, 1400px"
+                className="h-auto w-full object-contain"
+              />
             </div>
             <div className="grid gap-4">
               <div className="flex flex-col justify-between space-y-3 rounded-2xl border border-border bg-card/90 p-3 shadow-[0_12px_32px_rgba(0,0,0,0.18)] sm:space-y-4 sm:p-5">
