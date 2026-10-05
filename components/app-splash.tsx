@@ -3,11 +3,23 @@
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
 
+const SPLASH_SESSION_KEY = 'mototravel-splash-shown'
+
 export function AppSplash() {
-  const [visible, setVisible] = useState(true)
+  const [visible, setVisible] = useState(false)
   const [closing, setClosing] = useState(false)
 
   useEffect(() => {
+    // Mostra lo splash una sola volta per sessione del browser.
+    // In questo modo i ritorni alla home da pagine interne (es. Atlante)
+    // non fanno ripartire l'immagine di apertura.
+    if (window.sessionStorage.getItem(SPLASH_SESSION_KEY) === '1') {
+      return
+    }
+
+    window.sessionStorage.setItem(SPLASH_SESSION_KEY, '1')
+    setVisible(true)
+
     const closeTimer = window.setTimeout(() => {
       setClosing(true)
     }, 1100)
