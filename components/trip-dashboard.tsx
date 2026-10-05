@@ -1415,7 +1415,7 @@ for (const p of pointsData ?? []) {
             <div className="flex min-w-0 items-center gap-2.5">
               <Image
                 src="/logo/logo-square.png"
-                alt="Moto /=\ Viaggi"
+                alt="Travel"
                 width={44}
                 height={44}
                 priority
@@ -1424,7 +1424,7 @@ for (const p of pointsData ?? []) {
 
               <div className="min-w-0">
                 <p className="truncate text-sm font-black">
-                  Moto /=\ Viaggi
+                  Travel
                 </p>
                 <p className="text-[9px] font-bold uppercase tracking-wider text-primary">
                   Versione 2 Preview
@@ -1503,7 +1503,7 @@ for (const p of pointsData ?? []) {
                   </h1>
 
                   <p className="hidden text-[10px] text-muted-foreground sm:block">
-                    Moto /=\ Viaggi 2.0 Foundation
+                    Travel · I miei viaggi
                   </p>
                 </div>
               </div>
@@ -1535,7 +1535,7 @@ for (const p of pointsData ?? []) {
             <section className="relative h-[430px] overflow-hidden rounded-2xl border border-border bg-black shadow-sm sm:h-[520px]">
               <Image
                 src="/images/dashboard-hero.jpg"
-                alt="GoldWing tra le montagne con coniglietto"
+                alt="Panorama di viaggio"
                 fill
                 priority
                 sizes="(max-width: 640px) 100vw, 1200px"
@@ -1592,7 +1592,7 @@ for (const p of pointsData ?? []) {
 
               <div className="rounded-xl border border-border bg-card p-3 shadow-sm sm:p-5">
                 <p className="text-[8px] font-bold uppercase tracking-wider text-muted-foreground sm:text-[10px]">
-                  Km complessivi
+                  Km su strada
                 </p>
                 <p className="mt-2 text-xl font-black sm:text-3xl">
                   {foundationStats.totalKm.toFixed(0)}
@@ -1705,7 +1705,7 @@ for (const p of pointsData ?? []) {
               <div className="flex items-center justify-center bg-black px-4 py-3 sm:py-4">
                 <Image
                   src="/logo/logo-horizontal.png"
-                  alt="Moto /=\ Viaggi"
+                  alt="Travel"
                   width={700}
                   height={180}
                   priority
@@ -1719,13 +1719,13 @@ for (const p of pointsData ?? []) {
                   <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary sm:size-10">
                     <Play className="size-4 sm:size-5" />
                   </div>
-                  <h3 className="text-sm font-bold sm:text-base">Viaggio Live (In sella)</h3>
+                  <h3 className="text-sm font-bold sm:text-base">Nuovo viaggio</h3>
                   <p className="text-[10px] leading-relaxed text-muted-foreground sm:text-xs">
-                    Inserisci spese, note e percorsi in tempo reale dal telefono. Potrai caricare la traccia GPX anche in un secondo momento.
+                    Pianifica e registra il viaggio dal telefono: tappe, spese, pernottamenti e percorso. Per moto e auto potrai caricare anche una traccia GPX.
                   </p>
                 </div>
                 <Button onClick={startLiveTrip} className="h-9 w-full gap-1.5 rounded-lg text-[11px] font-bold sm:h-10 sm:gap-2 sm:rounded-xl sm:text-xs">
-                  Nuovo viaggio 🏍️
+                  Nuovo viaggio
                 </Button>
               </div>
             </div>
@@ -1733,7 +1733,7 @@ for (const p of pointsData ?? []) {
             <div className="space-y-2.5 rounded-xl border border-border bg-card p-3 shadow-sm sm:space-y-3 sm:p-4">
               <div className="flex items-center gap-1.5 border-b border-border/60 pb-2 text-muted-foreground sm:gap-2">
                 <FolderHeart className="size-4 text-primary sm:size-4.5" />
-                <h3 className="text-xs font-bold text-foreground sm:text-sm">Diario delle Avventure</h3>
+                <h3 className="text-xs font-bold text-foreground sm:text-sm">I miei viaggi</h3>
               </div>
               
               {allTrips.length === 0 ? (
@@ -2401,7 +2401,7 @@ for (const p of pointsData ?? []) {
                   <textarea
                     value={tripNotes}
                     onChange={(e) => setTripNotes(e.target.value)}
-                    placeholder="Scrivi qui i dettagli del tuo viaggio in Goldwing..."
+                    placeholder="Scrivi qui i dettagli del tuo viaggio..."
                     rows={8}
                     className="w-full rounded-xl border border-border bg-secondary/10 py-3 px-4 text-xs text-foreground focus:outline-none focus:border-primary font-medium leading-relaxed resize-none"
                   />
