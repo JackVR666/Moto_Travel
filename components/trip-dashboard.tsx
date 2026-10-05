@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useMemo, useState, useEffect } from 'react'
+import { useCallback, useMemo, useState, useEffect, type ReactNode } from 'react'
 import dynamic from 'next/dynamic'
 import Image from 'next/image'
 import { AppSplash } from '@/components/app-splash'
@@ -38,6 +38,9 @@ import {
   ChevronRight,
   ListChecks,
   MapPin,
+  Plane,
+  Car,
+  MapPinned,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { GpxUploader } from '@/components/gpx-uploader'
@@ -113,7 +116,7 @@ function formatDate(iso: string | null): string {
   return d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
-function DashboardMetric({ label, value, icon, action, onClick }: { label: string; value: string; icon: React.ReactNode; action: string; onClick: () => void }) {
+function DashboardMetric({ label, value, icon, action, onClick }: { label: string; value: string; icon: ReactNode; action: string; onClick: () => void }) {
   return (
     <button type="button" onClick={onClick} className="group rounded-2xl border border-border bg-card/90 p-4 text-left shadow-[0_12px_32px_rgba(0,0,0,0.18)] transition hover:-translate-y-0.5 hover:border-primary/60 sm:p-5">
       <div className="flex items-start justify-between gap-3">
