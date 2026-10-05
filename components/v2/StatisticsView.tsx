@@ -527,21 +527,21 @@ export function StatisticsView() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <section className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+      <section className="overflow-hidden rounded-2xl border border-border bg-card/90 shadow-[0_12px_32px_rgba(0,0,0,0.18)]">
         <div className="bg-gradient-to-br from-[#071523] via-[#0b1d31] to-[#12355b] p-5 sm:p-7">
           <div className="flex items-start gap-3">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-400/15 text-amber-300">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
               <BarChart3 className="size-5" />
             </div>
 
             <div>
-              <p className="text-[9px] font-black uppercase tracking-wider text-amber-300">
+              <p className="text-[9px] font-black uppercase tracking-wider text-primary">
                 Versione 2.1 · Explorer
               </p>
               <h2 className="mt-1 text-xl font-black text-white sm:text-3xl">
                 Le tue avventure in numeri
               </h2>
-              <p className="mt-2 max-w-2xl text-[10px] leading-relaxed text-zinc-300 sm:text-sm">
+              <p className="mt-2 max-w-2xl text-[10px] leading-relaxed text-slate-300 sm:text-sm">
                 Chilometri, giornate, pernottamenti e costi calcolati
                 automaticamente dai viaggi già archiviati.
               </p>
@@ -550,7 +550,7 @@ export function StatisticsView() {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
+      <section className="rounded-2xl border border-border bg-card/90 p-4 shadow-[0_12px_32px_rgba(0,0,0,0.18)] sm:p-5">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div>
             <div className="flex items-center gap-2">
@@ -791,7 +791,7 @@ export function StatisticsView() {
           return (
             <div
               key={item.label}
-              className="min-w-0 rounded-xl border border-border bg-card p-3 shadow-sm sm:p-5"
+              className="min-w-0 rounded-2xl border border-border bg-card/90 p-3 shadow-[0_12px_32px_rgba(0,0,0,0.18)] sm:p-5"
             >
               <div className="flex items-center gap-2">
                 <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-secondary text-muted-foreground">
@@ -819,7 +819,7 @@ export function StatisticsView() {
       </section>
 
       <section className="grid gap-4 xl:grid-cols-[1.3fr_0.7fr]">
-        <div className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
+        <div className="rounded-2xl border border-border bg-card/90 p-4 shadow-[0_12px_32px_rgba(0,0,0,0.18)] sm:p-5">
           <div className="flex items-center gap-2">
             <MapPinned className="size-4 text-primary" />
             <h3 className="text-xs font-black sm:text-base">
@@ -868,7 +868,7 @@ export function StatisticsView() {
           )}
         </div>
 
-        <div className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
+        <div className="rounded-2xl border border-border bg-card/90 p-4 shadow-[0_12px_32px_rgba(0,0,0,0.18)] sm:p-5">
           <div className="flex items-center gap-2">
             <Euro className="size-4 text-primary" />
             <h3 className="text-xs font-black sm:text-base">
@@ -923,7 +923,7 @@ export function StatisticsView() {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
+      <section className="rounded-2xl border border-border bg-card/90 p-4 shadow-[0_12px_32px_rgba(0,0,0,0.18)] sm:p-5">
         <div className="flex items-center gap-2">
           <Route className="size-4 text-primary" />
           <h3 className="text-xs font-black sm:text-base">
