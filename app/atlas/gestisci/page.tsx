@@ -322,7 +322,7 @@ export default function GestisciLuoghiPage() {
           </Button>
         </div>
 
-        <section className="mb-4 rounded-xl border border-border bg-card p-4 shadow-sm sm:p-5">
+        <section className="mb-4 rounded-2xl border border-border bg-card/90 p-4 shadow-[0_12px_32px_rgba(0,0,0,0.18)] sm:p-5">
           <div className="flex items-start gap-3">
             <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
               <MapPin className="size-4" />
@@ -343,7 +343,7 @@ export default function GestisciLuoghiPage() {
         </section>
 
         {editingPlace && (
-          <section className="mb-4 rounded-xl border border-primary/30 bg-card p-4 shadow-sm sm:p-5">
+          <section className="mb-4 rounded-2xl border border-primary/30 bg-card/90 p-4 shadow-[0_12px_32px_rgba(0,0,0,0.18)] sm:p-5">
             <div className="mb-4 flex items-center justify-between gap-3">
               <div>
                 <p className="text-[9px] font-bold uppercase tracking-wider text-primary">
@@ -568,7 +568,7 @@ export default function GestisciLuoghiPage() {
           </section>
         )}
 
-        <section className="mb-4 rounded-xl border border-border bg-card p-4 shadow-sm">
+        <section className="mb-4 rounded-2xl border border-border bg-card/90 p-4 shadow-[0_12px_32px_rgba(0,0,0,0.18)]">
           <div className="grid gap-3 sm:grid-cols-[1fr_220px]">
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
@@ -618,7 +618,7 @@ export default function GestisciLuoghiPage() {
             <Loader2 className="size-6 animate-spin text-primary" />
           </div>
         ) : filteredPlaces.length === 0 ? (
-          <section className="rounded-xl border border-dashed border-border bg-card p-8 text-center">
+          <section className="rounded-2xl border border-dashed border-border bg-card/90 p-8 text-center">
             <MapPin className="mx-auto size-7 text-muted-foreground" />
             <p className="mt-3 text-xs font-bold">Nessun luogo trovato</p>
             <p className="mt-1 text-[10px] text-muted-foreground">
@@ -635,7 +635,7 @@ export default function GestisciLuoghiPage() {
               return (
                 <article
                   key={place.id}
-                  className="rounded-xl border border-border bg-card p-4 shadow-sm"
+                  className="rounded-2xl border border-border bg-card/90 p-4 shadow-[0_12px_32px_rgba(0,0,0,0.18)]"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
