@@ -747,6 +747,7 @@ const removeTripDay = async (dayId: string) => {
     if (mode === 'select') {
       fetchCategories()
       fetchAllTrips()
+      fetchAtlasPlaceCount()
     }
   }, [mode, saveState])
 
