@@ -752,7 +752,7 @@ const updateTripDay = async () => {
       title:
         dayTitle.trim() ||
         `${dayStartCity.trim() || 'Partenza'} → ${dayEndCity.trim() || 'Arrivo'}`,
-      notes: dayNotes.trim() || null,
+      notes: encodeDayNotes(dayNotes, dayWaypoints) || null,
     })
     .eq('id', editingDayId)
 
