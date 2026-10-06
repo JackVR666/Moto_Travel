@@ -201,6 +201,7 @@ export function TripDashboard() {
     useState<TripStatus>('pianificato')
   const [travelType, setTravelType] = useState<TravelType>('moto')
   const [flightKm, setFlightKm] = useState<string>('0')
+  const [roadKm, setRoadKm] = useState<string>('0')
   
   const [expenseCategories, setExpenseCategories] = useState<any[]>([])
   const [allTrips, setAllTrips] = useState<any[]>([])
@@ -810,6 +811,7 @@ const removeTripDay = async (dayId: string) => {
     setTripStatus('pianificato')
     setTravelType('moto')
     setFlightKm('0')
+    setRoadKm('0')
     setExpenseDate(today)
     setExpenses([])
     setTrip(null)
@@ -868,6 +870,7 @@ const removeTripDay = async (dayId: string) => {
     )
     setTravelType((currentTripData?.travel_type || 'moto') as TravelType)
     setFlightKm(String(Number(currentTripData?.flight_km || 0)))
+    setRoadKm(String(Number(currentTripData?.total_km || 0)))
 
     const { data: stopsData, error: stopsError } = await supabase
       .from('trip_stops')
@@ -1035,6 +1038,7 @@ for (const p of pointsData ?? []) {
         } else {
           const fileDate = parsed.date ? parsed.date.slice(0, 10) : new Date().toISOString().slice(0, 10)
           setTrip(parsed)
+          setRoadKm(String(parsed.totalKm))
           
           if (mode !== 'edit_expenses') {
             setCustomName(parsed.name)
@@ -1062,7 +1066,8 @@ for (const p of pointsData ?? []) {
       if (mode === 'edit_expenses' && editingTripId) {
         // 1. Determina i chilometri finali corretti
         const currentSavedKm = allTrips.find(t => t.id === editingTripId)?.total_km || 0
-        const finalKm = hasNewGpxLoaded && trip ? trip.totalKm : currentSavedKm
+        const manualRoadKm = Math.max(0, Number(roadKm) || 0)
+        const finalKm = hasNewGpxLoaded && trip ? trip.totalKm : (roadKm.trim() !== '' ? manualRoadKm : currentSavedKm)
 
         // 2. Aggiorna i dati base del viaggio
         const { error: updateTripError } = await supabase
@@ -1133,7 +1138,8 @@ for (const p of pointsData ?? []) {
         const titleToSave = customName.trim() || 'Nuovo viaggio'
         const startToSave = customDate || new Date().toISOString().slice(0, 10)
         const endToSave = customEndDate || startToSave
-        const kmToSave = trip ? trip.totalKm : 0
+        const manualRoadKm = Math.max(0, Number(roadKm) || 0)
+        const kmToSave = trip ? trip.totalKm : manualRoadKm
         const pointsToSave = trip ? trip.points : []
 
         const { data: tripData, error: tripError } = await supabase
@@ -1906,6 +1912,21 @@ for (const p of pointsData ?? []) {
                     <option value="misto">🔀 Misto</option>
                     <option value="altro">🌍 Altro</option>
                   </select>
+                </div>
+
+                <div className="min-w-0 space-y-1">
+                  <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground sm:text-[11px]">Km strada</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    value={roadKm}
+                    onChange={(event) => setRoadKm(event.target.value)}
+                    className="block h-9 w-full min-w-0 rounded-lg border border-border bg-secondary/10 px-2.5 text-[11px] font-bold text-foreground focus:border-primary focus:outline-none sm:h-10 sm:px-3 sm:text-xs"
+                  />
+                  <p className="text-[8px] leading-relaxed text-muted-foreground sm:text-[10px]">
+                    Inserisci i km manualmente se non usi un GPX. Caricando un nuovo GPX verranno sostituiti dai km calcolati dalla traccia.
+                  </p>
                 </div>
 
                 <div className="min-w-0 space-y-1">
