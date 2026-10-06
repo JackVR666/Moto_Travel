@@ -186,6 +186,7 @@ export function PlanningTab({
   const [mapError, setMapError] = useState<string | null>(null)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [mapDialogOpen, setMapDialogOpen] = useState(false)
+  const [mapDayFilter, setMapDayFilter] = useState<number | null>(null)
 
   useEffect(() => {
     if (
@@ -257,11 +258,23 @@ export function PlanningTab({
     })
   }, [tripDays])
 
+  const mapDayNumbers = useMemo(
+    () => Array.from(new Set(sortedTripDays.map((day) => Number(day.day_number)))).sort((a, b) => a - b),
+    [tripDays]
+  )
+
+  const displayedItineraryCities = useMemo(
+    () => mapDayFilter === null
+      ? itineraryCities
+      : itineraryCities.filter((item) => item.dayNumber === mapDayFilter),
+    [itineraryCities, mapDayFilter]
+  )
+
   useEffect(() => {
     let cancelled = false
     const timer = window.setTimeout(async () => {
       if (!mapDialogOpen) return
-      if (itineraryCities.length === 0) {
+      if (displayedItineraryCities.length === 0) {
         setMapPoints([])
         setPlannedRoute([])
         setMapError(null)
@@ -272,7 +285,7 @@ export function PlanningTab({
       setMapError(null)
       try {
         const located: PlannedMapPoint[] = []
-        for (const city of itineraryCities) {
+        for (const city of displayedItineraryCities) {
           const response = await fetch(
             `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(city.label)}`,
             { headers: { 'Accept-Language': 'it' } }
@@ -306,7 +319,7 @@ export function PlanningTab({
           setPlannedRoute([])
         }
 
-        if (located.length < itineraryCities.length) {
+        if (located.length < displayedItineraryCities.length) {
           setMapError('Alcune località non sono state trovate. Prova a specificare meglio città o nazione.')
         }
       } catch (error) {
@@ -323,7 +336,7 @@ export function PlanningTab({
       cancelled = true
       window.clearTimeout(timer)
     }
-  }, [itineraryCities, mapDialogOpen])
+  }, [displayedItineraryCities, mapDialogOpen])
 
   const getCoveredDays = (accommodation: Accommodation): TripDay[] => {
     const linkedDay = sortedTripDays.find(
@@ -605,7 +618,15 @@ export function PlanningTab({
             {mapPoints.length > 0 ? <PlanningMap points={mapPoints} route={plannedRoute} /> : <div className="flex h-[60vh] items-center justify-center text-xs text-muted-foreground">{mapLoading ? 'Sto calcolando il percorso…' : 'Nessuna località trovata.'}</div>}
           </div>
           <div className="border-t border-border p-3">
-            <div className="flex flex-wrap gap-1.5">{itineraryCities.map((city,index)=><span key={`${city.label}-${index}`} className="rounded-full border border-border bg-secondary/20 px-2 py-1 text-[9px] font-bold">{index+1}. {city.label}</span>)}</div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <button type="button" onClick={() => setMapDayFilter(null)} className={`rounded-full border px-3 py-1.5 text-[10px] font-bold transition-colors ${mapDayFilter === null ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-secondary/20 text-foreground hover:bg-secondary/40'}`}>Tutto il viaggio</button>
+              {mapDayNumbers.map((dayNumber) => (
+                <button key={dayNumber} type="button" onClick={() => setMapDayFilter(dayNumber)} className={`rounded-full border px-3 py-1.5 text-[10px] font-bold transition-colors ${mapDayFilter === dayNumber ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-secondary/20 text-foreground hover:bg-secondary/40'}`}>Giorno {dayNumber}</button>
+              ))}
+            </div>
+            {mapDayFilter !== null && (
+              <p className="mt-2 text-[10px] text-muted-foreground">Dettaglio Giorno {mapDayFilter}: {displayedItineraryCities.map((item) => item.label).join(' → ')}</p>
+            )}
             {mapError && <p className="mt-2 text-[10px] text-amber-500">{mapError}</p>}
           </div>
         </div>
