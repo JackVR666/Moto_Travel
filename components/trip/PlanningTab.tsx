@@ -183,6 +183,7 @@ export function PlanningTab({
   const [plannedRoute, setPlannedRoute] = useState<[number, number][]>([])
   const [mapLoading, setMapLoading] = useState(false)
   const [mapError, setMapError] = useState<string | null>(null)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
 
   useEffect(() => {
     if (
@@ -395,8 +396,47 @@ export function PlanningTab({
       )
     )
 
+  const openDayEditor = (day: TripDay) => {
+    startEditTripDay(day)
+    setEditDialogOpen(true)
+  }
+
+  const saveEditedDay = async () => {
+    await updateTripDay()
+    setEditDialogOpen(false)
+  }
+
   return (
   <div className="space-y-4">
+    {editDialogOpen && editingDayId && (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-3 backdrop-blur-sm">
+        <div className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-border bg-card p-4 shadow-2xl sm:p-6">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div>
+              <h3 className="text-base font-black text-foreground">Modifica giornata</h3>
+              <p className="text-[11px] text-muted-foreground">Modifica percorso, tappe intermedie e dettagli senza tornare in cima alla pagina.</p>
+            </div>
+            <button type="button" onClick={() => setEditDialogOpen(false)} className="rounded-md border border-border px-3 py-2 text-xs text-muted-foreground">Chiudi</button>
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <label className="space-y-1"><span className="text-[10px] font-bold uppercase text-muted-foreground">Data</span><input type="date" value={dayDate} onChange={(e) => setDayDate(e.target.value)} className="w-full rounded-md border border-border bg-background p-2 text-xs" /></label>
+            <label className="space-y-1"><span className="text-[10px] font-bold uppercase text-muted-foreground">Km previsti</span><input type="number" step="0.1" value={dayPlannedKm} onChange={(e) => setDayPlannedKm(e.target.value)} className="w-full rounded-md border border-border bg-background p-2 text-xs" /></label>
+            <label className="space-y-1"><span className="text-[10px] font-bold uppercase text-muted-foreground">Partenza</span><input value={dayStartCity} onChange={(e) => setDayStartCity(e.target.value)} className="w-full rounded-md border border-border bg-background p-2 text-xs" /></label>
+            <label className="space-y-1"><span className="text-[10px] font-bold uppercase text-muted-foreground">Arrivo</span><input value={dayEndCity} onChange={(e) => setDayEndCity(e.target.value)} className="w-full rounded-md border border-border bg-background p-2 text-xs" /></label>
+            <div className="space-y-2 sm:col-span-2">
+              <div className="flex items-center justify-between"><span className="text-[10px] font-bold uppercase text-muted-foreground">Tappe intermedie</span><Button type="button" variant="outline" size="sm" onClick={() => setDayWaypoints([...dayWaypoints, ''])} className="h-7 text-[10px]"><Plus className="mr-1 size-3" />Aggiungi tappa</Button></div>
+              {dayWaypoints.map((waypoint, index) => <div key={index} className="flex gap-2"><span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/15 text-[10px] font-black text-primary">{index + 1}</span><input value={waypoint} onChange={(e) => setDayWaypoints(dayWaypoints.map((v,i) => i === index ? e.target.value : v))} placeholder="Località intermedia" className="min-w-0 flex-1 rounded-md border border-border bg-background p-2 text-xs" /><button type="button" onClick={() => setDayWaypoints(dayWaypoints.filter((_,i) => i !== index))} className="rounded-md border border-border p-2 text-muted-foreground hover:text-destructive"><Trash2 className="size-4" /></button></div>)}
+            </div>
+            <label className="space-y-1 sm:col-span-2"><span className="text-[10px] font-bold uppercase text-muted-foreground">Titolo tappa</span><input value={dayTitle} onChange={(e) => setDayTitle(e.target.value)} className="w-full rounded-md border border-border bg-background p-2 text-xs" /></label>
+            <label className="space-y-1 sm:col-span-2"><span className="text-[10px] font-bold uppercase text-muted-foreground">Note</span><textarea value={dayNotes} onChange={(e) => setDayNotes(e.target.value)} rows={4} className="w-full rounded-md border border-border bg-background p-2 text-xs" /></label>
+          </div>
+          <div className="mt-5 flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>Annulla</Button>
+            <Button type="button" onClick={saveEditedDay}>Salva modifiche</Button>
+          </div>
+        </div>
+      </div>
+    )}
     <div className="rounded-xl border border-border bg-card p-4 shadow-sm space-y-3">
       <div className="flex items-center gap-1.5 text-muted-foreground">
         <Route className="size-4 text-primary" />
@@ -905,7 +945,7 @@ export function PlanningTab({
                 <div className="flex shrink-0 items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => startEditTripDay(day)}
+                    onClick={() => openDayEditor(day)}
                     className="rounded-md border border-border px-3 py-2 text-[11px] text-muted-foreground transition-colors hover:text-primary"
                   >
                     Modifica
