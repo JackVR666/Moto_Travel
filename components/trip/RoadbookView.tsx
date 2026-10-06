@@ -10,6 +10,7 @@ export type RoadbookTripDay = {
   end_city: string | null
   planned_km: number | null
   notes: string | null
+  waypoints?: string[]
 }
 
 export type RoadbookAccommodation = {
@@ -82,6 +83,10 @@ function bookingInfo(accommodation?: RoadbookAccommodation) {
   }
 
   return null
+}
+
+function dayRoute(day: RoadbookTripDay) {
+  return [day.start_city, ...(day.waypoints || []), day.end_city].filter(Boolean).join(' → ') || '—'
 }
 
 export function RoadbookView({
@@ -184,7 +189,7 @@ export function RoadbookView({
                     Giorno {day.day_number} · {formatDate(day.travel_date)}
                   </p>
                   <h3 className="mt-1 text-[11px] font-black leading-tight text-foreground">
-                    {day.start_city || '—'} → {day.end_city || '—'}
+                    {dayRoute(day)}
                   </h3>
                   {day.title && (
                     <p className="mt-1 text-[8px] text-muted-foreground">
@@ -389,9 +394,7 @@ export function RoadbookView({
                     </td>
                     <td className="px-3 py-3 font-bold text-foreground">
                       {index === 0
-                        ? `${day.start_city || '—'} → ${
-                            day.end_city || '—'
-                          }`
+                        ? dayRoute(day)
                         : '↳ altro pernottamento'}
                     </td>
                     <td className="px-3 py-3 text-muted-foreground">
