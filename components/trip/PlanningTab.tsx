@@ -205,18 +205,27 @@ export function PlanningTab({
   )
 
   const decodeWaypoints = (stored: string | null | undefined) => {
-    const match = (stored || '').match(/^\[\[WAYPOINTS:(.*?)\]\]\n?/)
-    if (!match) return [] as string[]
+    const value = stored || ''
+    const marker = '[[WAYPOINTS:'
+    const start = value.indexOf(marker)
+    const end = start >= 0 ? value.indexOf(']]', start) : -1
+    if (start < 0 || end < 0) return [] as string[]
     try {
-      const parsed = JSON.parse(match[1])
+      const parsed = JSON.parse(value.slice(start + marker.length, end))
       return Array.isArray(parsed) ? parsed.map(String).filter(Boolean) : []
     } catch {
       return []
     }
   }
 
-  const visibleDayNotes = (stored: string | null | undefined) =>
-    (stored || '').replace(/^\[\[WAYPOINTS:.*?\]\]\n?/, '')
+  const visibleDayNotes = (stored: string | null | undefined) => {
+    const value = stored || ''
+    const marker = '[[WAYPOINTS:'
+    const start = value.indexOf(marker)
+    const end = start >= 0 ? value.indexOf(']]', start) : -1
+    if (start < 0 || end < 0) return value
+    return (value.slice(0, start) + value.slice(end + 2)).trim()
+  }
 
   const itineraryCities = useMemo(() => {
     const result: { label: string; dayNumber: number; kind: 'start' | 'end' }[] = []
