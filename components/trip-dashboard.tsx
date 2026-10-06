@@ -327,7 +327,34 @@ export function TripDashboard() {
      return
    }
 
-  setTripDays(data || [])
+  const days = data || []
+  if (days.length === 0) {
+    setTripDays([])
+    return
+  }
+
+  const dayIds = days.map((day: any) => day.id)
+  const { data: waypointRows, error: waypointError } = await supabase
+    .from('trip_day_waypoints')
+    .select('id, trip_day_id, name, display_order')
+    .in('trip_day_id', dayIds)
+    .order('display_order', { ascending: true })
+
+  if (waypointError) {
+    console.warn('Tappe intermedie non disponibili:', waypointError)
+  }
+
+  const waypointsByDay = new Map<string, string[]>()
+  ;(waypointRows || []).forEach((row: any) => {
+    const current = waypointsByDay.get(row.trip_day_id) || []
+    current.push(row.name)
+    waypointsByDay.set(row.trip_day_id, current)
+  })
+
+  setTripDays(days.map((day: any) => ({
+    ...day,
+    waypoints: waypointsByDay.get(day.id) || [],
+  })))
 }
 
 const fetchAccommodations = async (tripId: string) => {
@@ -688,7 +715,7 @@ const addTripDay = async () => {
       ? Math.max(...tripDays.map((d) => Number(d.day_number))) + 1
       : 1
 
-  const { error } = await supabase
+  const { data: insertedDay, error } = await supabase
     .from('trip_days')
     .insert([
       {
@@ -702,14 +729,30 @@ const addTripDay = async () => {
         start_city: dayStartCity.trim() || null,
         end_city: dayEndCity.trim() || null,
         planned_km: dayPlannedKm ? Number(dayPlannedKm) : null,
-        notes: encodeDayNotes(dayNotes, dayWaypoints) || null,
+        notes: dayNotes.replace(/\[\[WAYPOINTS:[\s\S]*?\]\]\s*/g, '').trim() || null,
       },
     ])
+    .select('id')
+    .single()
 
   if (error) {
     console.error('Errore inserimento giornata:', error)
     alert(`Errore inserimento giornata: ${error.message}`)
     return
+  }
+
+  const cleanWaypoints = dayWaypoints.map((name) => name.trim()).filter(Boolean)
+  if (insertedDay?.id && cleanWaypoints.length > 0) {
+    const { error: waypointError } = await supabase.from('trip_day_waypoints').insert(
+      cleanWaypoints.map((name, index) => ({
+        trip_day_id: insertedDay.id,
+        name,
+        display_order: index + 1,
+      }))
+    )
+    if (waypointError) {
+      alert(`Giornata salvata, ma errore tappe intermedie: ${waypointError.message}`)
+    }
   }
 
   try {
@@ -743,7 +786,7 @@ const startEditTripDay = (day: any) => {
   setDayTitle(day.title || '')
   const decodedDay = decodeDayNotes(day.notes)
   setDayNotes(decodedDay.notes)
-  setDayWaypoints(decodedDay.waypoints)
+  setDayWaypoints(Array.isArray(day.waypoints) && day.waypoints.length > 0 ? day.waypoints : decodedDay.waypoints)
 }
 
 const updateTripDay = async () => {
@@ -759,13 +802,38 @@ const updateTripDay = async () => {
       title:
         dayTitle.trim() ||
         `${dayStartCity.trim() || 'Partenza'} → ${dayEndCity.trim() || 'Arrivo'}`,
-      notes: encodeDayNotes(dayNotes, dayWaypoints) || null,
+      notes: dayNotes.replace(/\[\[WAYPOINTS:[\s\S]*?\]\]\s*/g, '').trim() || null,
     })
     .eq('id', editingDayId)
 
   if (error) {
     alert(`Errore aggiornamento giornata: ${error.message}`)
     return
+  }
+
+  const { error: deleteWaypointsError } = await supabase
+    .from('trip_day_waypoints')
+    .delete()
+    .eq('trip_day_id', editingDayId)
+
+  if (deleteWaypointsError) {
+    alert(`Errore aggiornamento tappe: ${deleteWaypointsError.message}`)
+    return
+  }
+
+  const cleanWaypoints = dayWaypoints.map((name) => name.trim()).filter(Boolean)
+  if (cleanWaypoints.length > 0) {
+    const { error: insertWaypointsError } = await supabase
+      .from('trip_day_waypoints')
+      .insert(cleanWaypoints.map((name, index) => ({
+        trip_day_id: editingDayId,
+        name,
+        display_order: index + 1,
+      })))
+    if (insertWaypointsError) {
+      alert(`Errore salvataggio tappe: ${insertWaypointsError.message}`)
+      return
+    }
   }
 
   try {
