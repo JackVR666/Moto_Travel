@@ -1,9 +1,13 @@
 'use client'
 
 import { ChevronDown, ChevronUp, Plus, Route, Trash2 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import dynamic from 'next/dynamic'
+import type { PlannedMapPoint } from '@/components/trip/PlanningMap'
 import { Button } from '@/components/ui/button'
 import { TripDayDiaryCard } from '@/components/trip/TripDayDiaryCard'
+const PlanningMap = dynamic(() => import('@/components/trip/PlanningMap'), { ssr: false })
+
 import {
   AccommodationCard,
   type Accommodation,
@@ -170,6 +174,10 @@ export function PlanningTab({
     deleteAccommodation,
 }: PlanningTabProps) {
   const [expandedDayId, setExpandedDayId] = useState<string | null>(null)
+  const [mapPoints, setMapPoints] = useState<PlannedMapPoint[]>([])
+  const [plannedRoute, setPlannedRoute] = useState<[number, number][]>([])
+  const [mapLoading, setMapLoading] = useState(false)
+  const [mapError, setMapError] = useState<string | null>(null)
 
   useEffect(() => {
     if (
@@ -189,6 +197,88 @@ export function PlanningTab({
   const sortedTripDays = [...tripDays].sort(
     (a, b) => Number(a.day_number) - Number(b.day_number)
   )
+
+  const itineraryCities = useMemo(() => {
+    const result: { label: string; dayNumber: number; kind: 'start' | 'end' }[] = []
+    sortedTripDays.forEach((day) => {
+      const start = day.start_city?.trim()
+      const end = day.end_city?.trim()
+      if (start && !result.some((item) => item.label.toLowerCase() === start.toLowerCase())) {
+        result.push({ label: start, dayNumber: Number(day.day_number), kind: 'start' })
+      }
+      if (end && !result.some((item) => item.label.toLowerCase() === end.toLowerCase())) {
+        result.push({ label: end, dayNumber: Number(day.day_number), kind: 'end' })
+      }
+    })
+    return result
+  }, [tripDays])
+
+  useEffect(() => {
+    let cancelled = false
+    const timer = window.setTimeout(async () => {
+      if (itineraryCities.length === 0) {
+        setMapPoints([])
+        setPlannedRoute([])
+        setMapError(null)
+        return
+      }
+
+      setMapLoading(true)
+      setMapError(null)
+      try {
+        const located: PlannedMapPoint[] = []
+        for (const city of itineraryCities) {
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(city.label)}`,
+            { headers: { 'Accept-Language': 'it' } }
+          )
+          if (!response.ok) throw new Error('Geocodifica non disponibile')
+          const matches = await response.json()
+          if (matches?.[0]) {
+            located.push({
+              ...city,
+              lat: Number(matches[0].lat),
+              lon: Number(matches[0].lon),
+            })
+          }
+        }
+        if (cancelled) return
+        setMapPoints(located)
+
+        if (located.length > 1) {
+          const coordinates = located.map((p) => `${p.lon},${p.lat}`).join(';')
+          const routeResponse = await fetch(
+            `https://router.project-osrm.org/route/v1/driving/${coordinates}?overview=full&geometries=geojson`
+          )
+          if (routeResponse.ok) {
+            const routeData = await routeResponse.json()
+            const coords = routeData?.routes?.[0]?.geometry?.coordinates ?? []
+            if (!cancelled) setPlannedRoute(coords.map((c: number[]) => [c[1], c[0]] as [number, number]))
+          } else {
+            setPlannedRoute([])
+          }
+        } else {
+          setPlannedRoute([])
+        }
+
+        if (located.length < itineraryCities.length) {
+          setMapError('Alcune località non sono state trovate. Prova a specificare meglio città o nazione.')
+        }
+      } catch (error) {
+        if (!cancelled) {
+          console.error('Errore mappa pianificazione:', error)
+          setMapError('Non riesco a calcolare la mappa in questo momento.')
+        }
+      } finally {
+        if (!cancelled) setMapLoading(false)
+      }
+    }, 500)
+
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
+    }
+  }, [itineraryCities])
 
   const getCoveredDays = (accommodation: Accommodation): TripDay[] => {
     const linkedDay = sortedTripDays.find(
@@ -381,6 +471,46 @@ export function PlanningTab({
           </Button>
         </div>
       </div>
+    </div>
+
+    <div className="rounded-xl border border-border bg-card p-4 shadow-sm space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <div className="flex items-center gap-1.5">
+            <Route className="size-4 text-primary" />
+            <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">Itinerario pianificato</h4>
+          </div>
+          <p className="mt-1 text-[10px] text-muted-foreground">Le tappe vengono posizionate automaticamente e collegate con il percorso stradale previsto.</p>
+        </div>
+        {mapLoading && <span className="text-[9px] font-bold text-primary">Calcolo percorso…</span>}
+      </div>
+
+      {itineraryCities.length === 0 ? (
+        <div className="flex h-40 items-center justify-center rounded-xl border border-dashed border-border bg-secondary/5 px-4 text-center text-[11px] text-muted-foreground">
+          Inserisci Partenza e Arrivo nelle giornate per creare automaticamente la mappa del viaggio.
+        </div>
+      ) : (
+        <>
+          <div className="h-[300px] overflow-hidden rounded-xl border border-border bg-secondary/10 sm:h-[420px]">
+            {mapPoints.length > 0 ? (
+              <PlanningMap points={mapPoints} route={plannedRoute} />
+            ) : (
+              <div className="flex h-full items-center justify-center text-[11px] text-muted-foreground">
+                {mapLoading ? 'Sto localizzando le tappe…' : 'Nessuna località trovata.'}
+              </div>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {itineraryCities.map((city, index) => (
+              <span key={`${city.label}-${index}`} className="rounded-full border border-border bg-secondary/20 px-2 py-1 text-[9px] font-bold text-foreground">
+                {index + 1}. {city.label}
+              </span>
+            ))}
+          </div>
+          {mapError && <p className="text-[10px] text-amber-500">{mapError}</p>}
+          <p className="text-[9px] text-muted-foreground">Mappa OpenStreetMap · percorso stradale calcolato con OSRM. Il percorso è pianificato e può differire da quello realmente percorso/registrato dal GPX.</p>
+        </>
+      )}
     </div>
 
     <div className="rounded-xl border border-border bg-card p-4 shadow-sm space-y-2">
