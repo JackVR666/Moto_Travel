@@ -64,6 +64,7 @@ type RoadbookViewProps = {
   expenses: RoadbookExpense[]
   expenseCategories: RoadbookExpenseCategory[]
   trackPoints: RoadbookTrackPoint[]
+  travelType: 'moto' | 'auto' | 'aereo' | 'misto' | 'altro'
   formatDate: (iso: string | null) => string
 }
 
@@ -99,6 +100,7 @@ export function RoadbookView({
   expenses,
   expenseCategories,
   trackPoints,
+  travelType,
   formatDate,
 }: RoadbookViewProps) {
   const totalHotelCost = accommodations.reduce(
@@ -134,6 +136,7 @@ export function RoadbookView({
             expenses={expenses}
             expenseCategories={expenseCategories}
             trackPoints={trackPoints}
+            travelType={travelType}
           />
         </div>
 
