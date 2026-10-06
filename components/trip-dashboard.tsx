@@ -2156,6 +2156,7 @@ for (const p of pointsData ?? []) {
                       expenses={expenses}
                       expenseCategories={expenseCategories}
                       trackPoints={assignedTrackPoints}
+                      travelType={travelType}
                       formatDate={formatDate}
                     />
                   )}
