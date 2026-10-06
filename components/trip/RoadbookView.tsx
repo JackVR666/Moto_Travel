@@ -196,6 +196,15 @@ export function RoadbookView({
                       {day.title}
                     </p>
                   )}
+                  {(day.waypoints?.length || 0) > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {day.waypoints!.map((waypoint, index) => (
+                        <span key={`${day.id}-wp-${index}`} className="rounded-full border border-primary/30 bg-primary/10 px-2 py-1 text-[7px] font-bold text-primary">
+                          Tappa {index + 1} · {waypoint}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {day.planned_km !== null && (
@@ -393,9 +402,20 @@ export function RoadbookView({
                       {index === 0 ? day.day_number : ''}
                     </td>
                     <td className="px-3 py-3 font-bold text-foreground">
-                      {index === 0
-                        ? dayRoute(day)
-                        : '↳ altro pernottamento'}
+                      {index === 0 ? (
+                        <div>
+                          <div>{dayRoute(day)}</div>
+                          {(day.waypoints?.length || 0) > 0 && (
+                            <div className="mt-1 flex flex-wrap gap-1">
+                              {day.waypoints!.map((waypoint, waypointIndex) => (
+                                <span key={`${day.id}-table-wp-${waypointIndex}`} className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[8px] font-semibold text-primary">
+                                  {waypointIndex + 1}. {waypoint}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ) : '↳ altro pernottamento'}
                     </td>
                     <td className="px-3 py-3 text-muted-foreground">
                       {index === 0 ? formatDate(day.travel_date) : ''}
