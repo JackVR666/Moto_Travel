@@ -17,8 +17,18 @@ function Fit({ points }: { points: PlannedMapPoint[] }) {
   const map = useMap()
   useEffect(() => {
     if (!points.length) return
-    const bounds = L.latLngBounds(points.map((p) => [p.lat, p.lon] as [number, number]))
-    map.fitBounds(bounds, { padding: [28, 28], maxZoom: 11 })
+    const refresh = () => {
+      map.invalidateSize({ pan: false })
+      const bounds = L.latLngBounds(points.map((p) => [p.lat, p.lon] as [number, number]))
+      map.fitBounds(bounds, { padding: [28, 28], maxZoom: 11 })
+    }
+    refresh()
+    const first = window.setTimeout(refresh, 100)
+    const second = window.setTimeout(refresh, 350)
+    return () => {
+      window.clearTimeout(first)
+      window.clearTimeout(second)
+    }
   }, [map, points])
   return null
 }
@@ -43,7 +53,7 @@ export default function PlanningMap({
   const center = useMemo<[number, number]>(() => points.length ? [points[0].lat, points[0].lon] : [45.5, 10.5], [points])
 
   return (
-    <MapContainer center={center} zoom={6} className="h-full w-full" scrollWheelZoom>
+    <MapContainer center={center} zoom={6} className="h-full w-full" style={{ minHeight: "55vh", width: "100%" }} scrollWheelZoom>
       <TileLayer attribution="&copy; OpenStreetMap contributors" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
       {route.length > 1 && <Polyline positions={route} pathOptions={{ color: '#1689ff', weight: 5, opacity: 0.85 }} />}
       {points.map((point, index) => (
