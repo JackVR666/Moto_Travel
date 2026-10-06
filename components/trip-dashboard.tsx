@@ -224,6 +224,7 @@ export function TripDashboard() {
   const [dayNotes, setDayNotes] = useState<string>('')
   const [dayStartCity, setDayStartCity] = useState<string>('')
   const [dayEndCity, setDayEndCity] = useState<string>('')
+  const [dayWaypoints, setDayWaypoints] = useState<string[]>([])
   const [dayPlannedKm, setDayPlannedKm] = useState<string>('')
   const [editingDayId, setEditingDayId] = useState<string | null>(null)
 
@@ -647,6 +648,23 @@ const renumberTripDaysByDate = async (tripId: string) => {
   }
 }
 
+const encodeDayNotes = (notes: string, waypoints: string[]) => {
+  const clean = waypoints.map((value) => value.trim()).filter(Boolean)
+  return `[[WAYPOINTS:${JSON.stringify(clean)}]]\n${notes.trim()}`.trim()
+}
+
+const decodeDayNotes = (stored: string | null | undefined) => {
+  const value = stored || ''
+  const match = value.match(/^\[\[WAYPOINTS:(.*?)\]\]\n?/)
+  if (!match) return { notes: value, waypoints: [] as string[] }
+  try {
+    const parsed = JSON.parse(match[1])
+    return { notes: value.slice(match[0].length), waypoints: Array.isArray(parsed) ? parsed.map(String) : [] }
+  } catch {
+    return { notes: value, waypoints: [] as string[] }
+  }
+}
+
 const addTripDay = async () => {
   if (!editingTripId) {
     alert('Prima salva il viaggio, poi potrai aggiungere le giornate.')
@@ -677,7 +695,7 @@ const addTripDay = async () => {
         start_city: dayStartCity.trim() || null,
         end_city: dayEndCity.trim() || null,
         planned_km: dayPlannedKm ? Number(dayPlannedKm) : null,
-        notes: dayNotes.trim() || null,
+        notes: encodeDayNotes(dayNotes, dayWaypoints) || null,
       },
     ])
 
@@ -703,6 +721,7 @@ const addTripDay = async () => {
   setDayNotes('')
   setDayStartCity('')
   setDayEndCity('')
+  setDayWaypoints([])
   setDayPlannedKm('')
 
   await fetchTripDays(editingTripId)
@@ -715,7 +734,9 @@ const startEditTripDay = (day: any) => {
   setDayEndCity(day.end_city || '')
   setDayPlannedKm(day.planned_km ? String(day.planned_km) : '')
   setDayTitle(day.title || '')
-  setDayNotes(day.notes || '')
+  const decodedDay = decodeDayNotes(day.notes)
+  setDayNotes(decodedDay.notes)
+  setDayWaypoints(decodedDay.waypoints)
 }
 
 const updateTripDay = async () => {
@@ -755,6 +776,7 @@ const updateTripDay = async () => {
   setDayDate('')
   setDayStartCity('')
   setDayEndCity('')
+  setDayWaypoints([])
   setDayPlannedKm('')
   setDayTitle('')
   setDayNotes('')
@@ -1998,6 +2020,8 @@ for (const p of pointsData ?? []) {
                   setDayStartCity={setDayStartCity}
                   dayEndCity={dayEndCity}
                   setDayEndCity={setDayEndCity}
+                  dayWaypoints={dayWaypoints}
+                  setDayWaypoints={setDayWaypoints}
                   dayPlannedKm={dayPlannedKm}
                   setDayPlannedKm={setDayPlannedKm}
 
