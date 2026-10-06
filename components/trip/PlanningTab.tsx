@@ -184,6 +184,7 @@ export function PlanningTab({
   const [mapLoading, setMapLoading] = useState(false)
   const [mapError, setMapError] = useState<string | null>(null)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [mapDialogOpen, setMapDialogOpen] = useState(false)
 
   useEffect(() => {
     if (
@@ -250,6 +251,7 @@ export function PlanningTab({
   useEffect(() => {
     let cancelled = false
     const timer = window.setTimeout(async () => {
+      if (!mapDialogOpen) return
       if (itineraryCities.length === 0) {
         setMapPoints([])
         setPlannedRoute([])
@@ -312,7 +314,7 @@ export function PlanningTab({
       cancelled = true
       window.clearTimeout(timer)
     }
-  }, [itineraryCities])
+  }, [itineraryCities, mapDialogOpen])
 
   const getCoveredDays = (accommodation: Accommodation): TripDay[] => {
     const linkedDay = sortedTripDays.find(
@@ -418,7 +420,7 @@ export function PlanningTab({
   return (
   <div className="space-y-4">
     {editDialogOpen && editingDayId && (
-      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-3 backdrop-blur-sm">
+      <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/80 p-3 backdrop-blur-sm">
         <div className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-border bg-card p-4 shadow-2xl sm:p-6">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
@@ -568,45 +570,38 @@ export function PlanningTab({
       </div>
     </div>
 
-    <div className="rounded-xl border border-border bg-card p-4 shadow-sm space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+    <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-1.5">
             <Route className="size-4 text-primary" />
-            <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">Mappa itinerario pianificato</h4>
+            <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">Itinerario pianificato</h4>
           </div>
-          <p className="mt-1 text-[10px] text-muted-foreground">Vista grafica delle tappe pianificate con percorso stradale previsto. Questa sezione è sempre visibile tra l'inserimento della giornata e l'elenco delle giornate.</p>
+          <p className="mt-1 text-[10px] text-muted-foreground">Apri la mappa solo quando vuoi consultare graficamente il percorso.</p>
         </div>
-        {mapLoading && <span className="text-[9px] font-bold text-primary">Calcolo percorso…</span>}
+        <Button type="button" onClick={() => setMapDialogOpen(true)} disabled={itineraryCities.length === 0} size="sm" className="h-8 text-xs">
+          <Route className="mr-1 size-3.5" /> Apri mappa itinerario
+        </Button>
       </div>
-
-      {itineraryCities.length === 0 ? (
-        <div className="flex h-40 items-center justify-center rounded-xl border border-dashed border-border bg-secondary/5 px-4 text-center text-[11px] text-muted-foreground">
-          Inserisci Partenza e Arrivo nelle giornate per creare automaticamente la mappa del viaggio.
-        </div>
-      ) : (
-        <>
-          <div className="h-[300px] overflow-hidden rounded-xl border border-border bg-secondary/10 sm:h-[420px]">
-            {mapPoints.length > 0 ? (
-              <PlanningMap points={mapPoints} route={plannedRoute} />
-            ) : (
-              <div className="flex h-full items-center justify-center text-[11px] text-muted-foreground">
-                {mapLoading ? 'Sto localizzando le tappe…' : 'Nessuna località trovata.'}
-              </div>
-            )}
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            {itineraryCities.map((city, index) => (
-              <span key={`${city.label}-${index}`} className="rounded-full border border-border bg-secondary/20 px-2 py-1 text-[9px] font-bold text-foreground">
-                {index + 1}. {city.label}
-              </span>
-            ))}
-          </div>
-          {mapError && <p className="text-[10px] text-amber-500">{mapError}</p>}
-          <p className="text-[9px] text-muted-foreground">Mappa OpenStreetMap · percorso stradale calcolato con OSRM. Il percorso è pianificato e può differire da quello realmente percorso/registrato dal GPX.</p>
-        </>
-      )}
     </div>
+
+    {mapDialogOpen && (
+      <div className="fixed inset-0 z-[11000] flex items-center justify-center bg-black/80 p-3 backdrop-blur-sm">
+        <div className="flex max-h-[94vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
+          <div className="flex items-center justify-between gap-3 border-b border-border p-4">
+            <div><h3 className="text-base font-black">Mappa itinerario pianificato</h3><p className="text-[10px] text-muted-foreground">Percorso stradale previsto attraverso tutte le tappe.</p></div>
+            <Button type="button" variant="outline" size="sm" onClick={() => setMapDialogOpen(false)}>Chiudi</Button>
+          </div>
+          <div className="min-h-[55vh] flex-1 bg-secondary/10">
+            {mapPoints.length > 0 ? <PlanningMap points={mapPoints} route={plannedRoute} /> : <div className="flex h-[60vh] items-center justify-center text-xs text-muted-foreground">{mapLoading ? 'Sto calcolando il percorso…' : 'Nessuna località trovata.'}</div>}
+          </div>
+          <div className="border-t border-border p-3">
+            <div className="flex flex-wrap gap-1.5">{itineraryCities.map((city,index)=><span key={`${city.label}-${index}`} className="rounded-full border border-border bg-secondary/20 px-2 py-1 text-[9px] font-bold">{index+1}. {city.label}</span>)}</div>
+            {mapError && <p className="mt-2 text-[10px] text-amber-500">{mapError}</p>}
+          </div>
+        </div>
+      </div>
+    )}
 
     <div className="rounded-xl border border-border bg-card p-4 shadow-sm space-y-2">
       <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
