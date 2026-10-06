@@ -898,6 +898,10 @@ export async function exportTripPdf({
         '—',
         '—',
         '—',
+        '—',
+        '—',
+        '—',
+        '—',
       ])
       continue
     }
@@ -976,7 +980,7 @@ export async function exportTripPdf({
     headStyles: {
       font: 'helvetica',
       fontStyle: 'bold',
-      fillColor: [30, 41, 59],
+      fillColor: [20, 116, 214],
       textColor: 255,
       halign: 'center',
     },
@@ -1125,48 +1129,73 @@ export async function exportTripPdf({
       }`,
     )
 
-    // Colonna sinistra: tappa e note
-    doc.setFillColor(246, 248, 250)
-    doc.roundedRect(10, 36, 88, 155, 2.5, 2.5, 'F')
+    // Colonna sinistra: percorso, tappe intermedie e note
+    doc.setFillColor(244, 248, 252)
+    doc.setDrawColor(214, 226, 238)
+    doc.roundedRect(10, 36, 88, 155, 3, 3, 'FD')
 
-    doc.setTextColor(35)
+    doc.setFillColor(20, 116, 214)
+    doc.roundedRect(15, 42, 23, 9, 2, 2, 'F')
+    doc.setTextColor(255)
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(7.5)
+    doc.text(`GIORNO ${day.day_number}`, 26.5, 47.8, { align: 'center' })
+
+    doc.setTextColor(12, 35, 58)
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(11)
-    doc.text('Tappa', 15, 46)
-
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(9)
     const routeLines = doc.splitTextToSize(
       routeLabel(day.start_city, day.end_city, day.waypoints || []),
       76,
     )
-    doc.text(routeLines, 15, 53)
+    doc.text(routeLines.slice(0, 3), 15, 59)
 
+    let infoY = 59 + Math.min(routeLines.length, 3) * 5 + 4
+    doc.setFontSize(7)
+    doc.setTextColor(100)
+    doc.text('DATA', 15, infoY)
+    doc.text('KM PREVISTI', 52, infoY)
     doc.setFont('helvetica', 'bold')
-    doc.setFontSize(8)
-    doc.text('Data', 15, 70)
-    doc.text('Km previsti', 52, 70)
-
-    doc.setFont('helvetica', 'normal')
     doc.setFontSize(8.5)
-    doc.text(formatDate(day.travel_date), 15, 76)
-    doc.text(
-      day.planned_km !== null
-        ? `${Number(day.planned_km).toFixed(1)} km`
-        : '—',
-      52,
-      76,
-    )
+    doc.setTextColor(35)
+    doc.text(formatDate(day.travel_date), 15, infoY + 6)
+    doc.text(day.planned_km !== null ? `${Number(day.planned_km).toFixed(1)} km` : '—', 52, infoY + 6)
+
+    let waypointY = infoY + 17
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(7)
+    doc.setTextColor(100)
+    doc.text('TAPPE INTERMEDIE', 15, waypointY)
+    waypointY += 6
+
+    const waypoints = day.waypoints || []
+    if (waypoints.length === 0) {
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(8)
+      doc.setTextColor(110)
+      doc.text('Nessuna tappa intermedia', 15, waypointY)
+      waypointY += 7
+    } else {
+      waypoints.slice(0, 6).forEach((waypoint, index) => {
+        doc.setFillColor(226, 239, 252)
+        doc.roundedRect(15, waypointY - 4.5, 76, 7, 1.8, 1.8, 'F')
+        doc.setTextColor(20, 116, 214)
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(7.5)
+        doc.text(`${index + 1}. ${waypoint}`, 18, waypointY, { maxWidth: 70 })
+        waypointY += 9
+      })
+    }
 
     doc.setFont('helvetica', 'bold')
-    doc.setFontSize(8)
-    doc.text('Note della tappa', 15, 90)
-
+    doc.setFontSize(7)
+    doc.setTextColor(100)
+    doc.text('NOTE DELLA GIORNATA', 15, waypointY + 2)
     doc.setFont('helvetica', 'normal')
-    doc.setFontSize(8)
+    doc.setFontSize(7.5)
     doc.setTextColor(65)
     const dayNoteLines = doc.splitTextToSize(day.notes || '—', 76)
-    doc.text(dayNoteLines.slice(0, 5), 15, 97)
+    doc.text(dayNoteLines.slice(0, 4), 15, waypointY + 8)
 
     const dailyTrackPoints = trackPointsForDay(day, trackPoints)
     const dailyTrackImage = await createTrackDiagram(
@@ -1177,17 +1206,17 @@ export async function exportTripPdf({
 
     if (dailyTrackImage) {
       doc.setFont('helvetica', 'bold')
-      doc.setFontSize(8)
-      doc.setTextColor(35)
-      doc.text('Traccia del giorno', 15, 129)
+      doc.setFontSize(7)
+      doc.setTextColor(100)
+      doc.text('MAPPA / TRACCIA DEL GIORNO', 15, 132)
 
       doc.addImage(
         dailyTrackImage,
         'PNG',
         15,
-        134,
+        137,
         76,
-        48,
+        43,
         undefined,
         'FAST',
       )
@@ -1195,11 +1224,7 @@ export async function exportTripPdf({
       doc.setFont('helvetica', 'normal')
       doc.setFontSize(6.5)
       doc.setTextColor(90)
-      doc.text(
-        `${dailyTrackPoints.length} punti GPS`,
-        15,
-        187,
-      )
+      doc.text(`${dailyTrackPoints.length} punti GPS`, 15, 186)
     }
 
     // Colonna destra: pernottamenti
@@ -1243,8 +1268,8 @@ export async function exportTripPdf({
         hotelY = 36
       }
 
-      doc.setFillColor(252, 252, 252)
-      doc.setDrawColor(205)
+      doc.setFillColor(250, 252, 255)
+      doc.setDrawColor(205, 220, 235)
       doc.roundedRect(
         rightX,
         hotelY,
