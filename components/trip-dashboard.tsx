@@ -649,8 +649,11 @@ const renumberTripDaysByDate = async (tripId: string) => {
 }
 
 const encodeDayNotes = (notes: string, waypoints: string[]) => {
+  const cleanNotes = notes
+    .replace(/\[\[WAYPOINTS:[\s\S]*?\]\]\s*/g, '')
+    .trim()
   const clean = waypoints.map((value) => value.trim()).filter(Boolean)
-  return `[[WAYPOINTS:${JSON.stringify(clean)}]]\n${notes.trim()}`.trim()
+  return `[[WAYPOINTS:${JSON.stringify(clean)}]]\n${cleanNotes}`.trim()
 }
 
 const decodeDayNotes = (stored: string | null | undefined) => {
