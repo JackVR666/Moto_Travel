@@ -655,11 +655,15 @@ const encodeDayNotes = (notes: string, waypoints: string[]) => {
 
 const decodeDayNotes = (stored: string | null | undefined) => {
   const value = stored || ''
-  const match = value.match(/^\[\[WAYPOINTS:(.*?)\]\]\n?/)
-  if (!match) return { notes: value, waypoints: [] as string[] }
+  const marker = '[[WAYPOINTS:'
+  const start = value.indexOf(marker)
+  if (start < 0) return { notes: value, waypoints: [] as string[] }
+  const end = value.indexOf(']]', start)
+  if (end < 0) return { notes: value, waypoints: [] as string[] }
   try {
-    const parsed = JSON.parse(match[1])
-    return { notes: value.slice(match[0].length), waypoints: Array.isArray(parsed) ? parsed.map(String) : [] }
+    const parsed = JSON.parse(value.slice(start + marker.length, end))
+    const notes = (value.slice(0, start) + value.slice(end + 2)).replace(/^\s+|\s+$/g, '')
+    return { notes, waypoints: Array.isArray(parsed) ? parsed.map(String).filter(Boolean) : [] }
   } catch {
     return { notes: value, waypoints: [] as string[] }
   }
