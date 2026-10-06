@@ -184,7 +184,7 @@ function routeLabel(
   endCity: string | null,
   waypoints: string[] = [],
 ): string {
-  return [startCity, ...waypoints, endCity].filter(Boolean).join(' → ') || '—'
+  return [startCity, ...waypoints, endCity].filter(Boolean).join('  -  ') || '—'
 }
 
 function paymentLabel(accommodation: PdfAccommodation): string {
@@ -622,7 +622,7 @@ export async function exportTripPdf({
     compress: true,
   })
 
-  const logoDataUrl = await loadImageAsDataUrl('/logo/logo-horizontal.png')
+  const logoDataUrl = await loadImageAsDataUrl('/viaggi-logo.png')
 
   const margin = 10
   const pageWidth = doc.internal.pageSize.getWidth()
@@ -710,9 +710,9 @@ export async function exportTripPdf({
         logoDataUrl,
         'PNG',
         margin + 4,
-        15,
-        43,
-        11,
+        14,
+        20,
+        14,
         undefined,
         'FAST',
       )
@@ -721,13 +721,16 @@ export async function exportTripPdf({
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(13)
     doc.setTextColor(255)
-    doc.text(label, logoDataUrl ? margin + 53 : margin + 5, 21)
+    const headerX = logoDataUrl ? margin + 31 : margin + 5
+    const headerWidth = pageWidth - margin - headerX - 5
+    const headerLines = doc.splitTextToSize(label, headerWidth)
+    doc.text(headerLines.slice(0, 2), headerX, headerLines.length > 1 ? 18.5 : 21)
 
     if (subtitle) {
       doc.setFont('helvetica', 'normal')
       doc.setFontSize(7)
       doc.setTextColor(210)
-      doc.text(subtitle, logoDataUrl ? margin + 53 : margin + 5, 26)
+      doc.text(subtitle, headerX, headerLines.length > 1 ? 27 : 26, { maxWidth: headerWidth })
     }
   }
 
@@ -743,8 +746,8 @@ export async function exportTripPdf({
       'PNG',
       margin + 5,
       16,
-      63,
-      16,
+      24,
+      24,
       undefined,
       'FAST',
     )
@@ -755,7 +758,7 @@ export async function exportTripPdf({
   doc.setFontSize(17)
   doc.text(
     title || 'Viaggio senza titolo',
-    logoDataUrl ? margin + 75 : margin + 7,
+    logoDataUrl ? margin + 36 : margin + 7,
     26,
   )
 
@@ -763,15 +766,15 @@ export async function exportTripPdf({
   doc.setFontSize(9)
   doc.setTextColor(215)
   doc.text(
-    `${formatDate(startDate)} → ${formatDate(endDate)}`,
-    logoDataUrl ? margin + 75 : margin + 7,
+    `${formatDate(startDate)}  -  ${formatDate(endDate)}`,
+    logoDataUrl ? margin + 36 : margin + 7,
     34,
   )
 
   doc.setFontSize(6.5)
   doc.text(
     `Generato il ${generatedAt}`,
-    logoDataUrl ? margin + 75 : margin + 7,
+    logoDataUrl ? margin + 36 : margin + 7,
     40,
   )
 
@@ -915,7 +918,8 @@ export async function exportTripPdf({
     doc.setTextColor(12, 35, 58)
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(10.5)
-    doc.text(routeLabel(day.start_city, day.end_city, day.waypoints || []), margin + 33, overviewY + 10, { maxWidth: 150 })
+    const overviewRoute = doc.splitTextToSize(routeLabel(day.start_city, day.end_city, day.waypoints || []), 150)
+    doc.text(overviewRoute.slice(0, 2), margin + 33, overviewY + 8)
 
     doc.setFont('helvetica', 'normal')
     doc.setFontSize(7.5)
