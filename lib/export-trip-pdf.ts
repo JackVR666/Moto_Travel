@@ -61,6 +61,7 @@ export type ExportTripPdfInput = {
   expenses: PdfExpense[]
   expenseCategories: PdfExpenseCategory[]
   trackPoints: PdfTrackPoint[]
+  travelType?: 'moto' | 'auto' | 'aereo' | 'misto' | 'altro'
 }
 
 function formatDate(value: string | null | undefined): string {
@@ -607,6 +608,7 @@ export async function exportTripPdf({
   expenses,
   expenseCategories,
   trackPoints,
+  travelType = 'altro',
 }: ExportTripPdfInput): Promise<void> {
   const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
     import('jspdf'),
@@ -663,6 +665,15 @@ export async function exportTripPdf({
     }))
     .filter((item) => item.total > 0)
 
+  const travelTypeLabel: Record<string, string> = {
+    moto: 'Moto',
+    auto: 'Auto',
+    aereo: 'Aereo',
+    misto: 'Misto',
+    altro: 'Altro',
+  }
+  const currentTravelLabel = travelTypeLabel[travelType] || 'Viaggio'
+
   const generatedAt = new Date().toLocaleString('it-IT', {
     dateStyle: 'short',
     timeStyle: 'short',
@@ -677,7 +688,7 @@ export async function exportTripPdf({
     doc.setTextColor(95)
 
     doc.text(
-      `${title || 'Viaggio'} · Moto /=\\ Viaggi`,
+      `${title || 'Viaggio'} · ${currentTravelLabel} · Viaggi`,
       margin,
       pageHeight - 5,
     )
@@ -871,205 +882,64 @@ export async function exportTripPdf({
   footer()
 
   // ==========================================================
-  // PAGINA 2 — TABELLA RIEPILOGATIVA UNIFORME
+  // PAGINA 2 — PANORAMICA DELLE GIORNATE
   // ==========================================================
   doc.addPage('a4', 'landscape')
-  sectionHeader(
-    'Tabella riepilogativa',
-    'Sintesi essenziale di tappe, pernottamenti e costi',
-  )
+  sectionHeader('Il viaggio giorno per giorno', 'Percorso, tappe intermedie, km e pernottamenti')
 
-  const summaryRows: string[][] = []
-
+  let overviewY = 37
   for (const day of sortedDays) {
     const dayAccommodations = accommodations.filter((accommodation) =>
       accommodationCoversDay(accommodation, day),
-    ) 
+    )
+    const cardHeight = 31 + Math.min((day.waypoints || []).length, 3) * 4
 
-    if (dayAccommodations.length === 0) {
-      summaryRows.push([
-        `Giorno ${day.day_number}`,
-        routeLabel(day.start_city, day.end_city, day.waypoints || []),
-        formatDate(day.travel_date),
-        day.planned_km !== null
-          ? Number(day.planned_km).toFixed(0)
-          : '—',
-        '—',
-        '—',
-        '—',
-        '—',
-        '—',
-        '—',
-        '—',
-        '—',
-      ])
-      continue
+    if (overviewY + cardHeight > pageHeight - 14) {
+      footer()
+      doc.addPage('a4', 'landscape')
+      sectionHeader('Il viaggio giorno per giorno', 'Continua')
+      overviewY = 37
     }
 
-    dayAccommodations.forEach((accommodation, index) => {
-      summaryRows.push([
-        index === 0 ? `Giorno ${day.day_number}` : '',
-        index === 0
-          ? routeLabel(day.start_city, day.end_city, day.waypoints || [])
-          : 'Stesso soggiorno',
+    doc.setFillColor(247, 250, 253)
+    doc.setDrawColor(210, 224, 238)
+    doc.roundedRect(margin, overviewY, pageWidth - margin * 2, cardHeight, 3, 3, 'FD')
 
-        index === 0 ? formatDate(day.travel_date) : '',
+    doc.setFillColor(20, 116, 214)
+    doc.roundedRect(margin + 5, overviewY + 6, 22, 10, 2.5, 2.5, 'F')
+    doc.setTextColor(255)
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(8)
+    doc.text(`GIORNO ${day.day_number}`, margin + 16, overviewY + 12.5, { align: 'center' })
 
-        index === 0 && day.planned_km !== null
-          ? Number(day.planned_km).toFixed(0)
-          : '',
+    doc.setTextColor(12, 35, 58)
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(10.5)
+    doc.text(routeLabel(day.start_city, day.end_city, day.waypoints || []), margin + 33, overviewY + 10, { maxWidth: 150 })
 
-        accommodation.name,
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(7.5)
+    doc.setTextColor(90)
+    doc.text(formatDate(day.travel_date), margin + 33, overviewY + 17)
+    doc.text(day.planned_km !== null ? `${Number(day.planned_km).toFixed(0)} km previsti` : 'Km non indicati', margin + 63, overviewY + 17)
 
-        accommodation.address || '—',
+    const hotel = dayAccommodations[0]
+    const hotelText = hotel ? `Pernotto: ${hotel.name}` : 'Nessun pernottamento'
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(hotel ? 35 : 120)
+    doc.text(hotelText, margin + 115, overviewY + 17, { maxWidth: 95 })
 
-        `${formatDate(accommodation.check_in_date)}
-      ${formatTime(accommodation.check_in_time)}`,
+    const waypoints = day.waypoints || []
+    if (waypoints.length > 0) {
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(7.2)
+      doc.setTextColor(20, 116, 214)
+      doc.text(`Tappe: ${waypoints.join('  •  ')}`, margin + 33, overviewY + 24, { maxWidth: pageWidth - margin * 2 - 40 })
+    }
 
-        `${formatDate(accommodation.check_out_date)}
-      ${formatTime(accommodation.check_out_time)}`,
-
-        accommodation.price !== null
-          ? formatMoney(Number(accommodation.price) / countNights(accommodation))
-          : '—',
-
-        accommodation.free_cancellation_until
-          ? formatDate(accommodation.free_cancellation_until)
-          : '—',
-
-        paymentLabel(accommodation),
-
-        accommodation.breakfast_included
-          ? 'Inclusa'
-          : '—',
-      ])
-    })
+    overviewY += cardHeight + 5
   }
-
-  autoTable(doc, {
-    startY: 36,
-    margin: { left: margin, right: margin, bottom: 12 },
-    theme: 'grid',
-    head: [[
-      'Giorno',
-      'Tappa',
-      'Data',
-      'Km',
-      'Pernottamento',
-      'Indirizzo',
-      'Check-in',
-      'Check-out',
-      'Costo',
-      'Disdetta',
-      'Pagamento',
-      'Colazione',
-    ]],
-    body: summaryRows,
-    styles: {
-      font: 'helvetica',
-      fontStyle: 'normal',
-      fontSize: 7.3,
-      cellPadding: 2,
-      valign: 'middle',
-      overflow: 'linebreak',
-      lineColor: 205,
-      lineWidth: 0.15,
-      textColor: 35,
-      minCellHeight: 8,
-    },
-    headStyles: {
-      font: 'helvetica',
-      fontStyle: 'bold',
-      fillColor: [20, 116, 214],
-      textColor: 255,
-      halign: 'center',
-    },
-    alternateRowStyles: {
-      fillColor: [246, 248, 250],
-    },
-    columnStyles: {
-      0: {
-        cellWidth: 15,
-        halign: 'center',
-        font: 'helvetica',
-        fontStyle: 'normal',
-      },
-      1: {
-        cellWidth: 40,
-        font: 'helvetica',
-        fontStyle: 'normal',
-        overflow: 'linebreak',
-      },
-      2: {
-        cellWidth: 20,
-        halign: 'center',
-        font: 'helvetica',
-        fontStyle: 'normal',
-      },
-      3: {
-        cellWidth: 10,
-        halign: 'right',
-        font: 'helvetica',
-        fontStyle: 'normal',
-      },
-      4: {
-        cellWidth: 37,
-        font: 'helvetica',
-        fontStyle: 'normal',
-        overflow: 'linebreak',
-      },
-      5: {
-        cellWidth: 50,
-        font: 'helvetica',
-        fontStyle: 'normal',
-      },
-      6: {
-        cellWidth: 20,
-        font: 'helvetica',
-        halign: 'center',
-        fontStyle: 'normal',
-        overflow: 'linebreak',
-      },
-      7: {
-        cellWidth: 20,
-        halign: 'center',
-        font: 'helvetica',
-        fontStyle: 'normal',
-      },
-      8: {
-        cellWidth: 15,
-        halign: 'right',
-        font: 'helvetica',
-        fontStyle: 'normal',
-      },
-      9: {
-        cellWidth: 20,
-        halign: 'center',
-        font: 'helvetica',
-        fontStyle: 'normal',
-      },
-      10: {
-        cellWidth: 15,
-        halign: 'center',
-        font: 'helvetica',
-        fontStyle: 'normal',
-      },
-      11: {
-        cellWidth: 15,
-        halign: 'center',
-        font: 'helvetica',
-        fontStyle: 'normal',
-      },
-    },
-    didParseCell: (data) => {
-      if (data.section === 'body') {
-        data.cell.styles.font = 'helvetica'
-        data.cell.styles.fontStyle = 'normal'
-        data.cell.styles.charSpace = 0
-      }
-    },
-    didDrawPage: footer,
-  })
+  footer()
 
   // ==========================================================
   // PAGINA — TRACCIA COMPLETA
