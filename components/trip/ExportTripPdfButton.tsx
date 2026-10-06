@@ -22,6 +22,7 @@ type ExportTripPdfButtonProps = {
   expenses: PdfExpense[]
   expenseCategories: PdfExpenseCategory[]
   trackPoints: PdfTrackPoint[]
+  travelType: 'moto' | 'auto' | 'aereo' | 'misto' | 'altro'
 }
 
 export function ExportTripPdfButton({
@@ -34,6 +35,7 @@ export function ExportTripPdfButton({
   expenses,
   expenseCategories,
   trackPoints,
+  travelType,
 }: ExportTripPdfButtonProps) {
   const [exporting, setExporting] = useState(false)
 
@@ -56,6 +58,7 @@ export function ExportTripPdfButton({
         expenses,
         expenseCategories,
         trackPoints,
+        travelType,
       })
     } catch (error) {
       console.error('Errore generazione PDF:', error)
