@@ -478,9 +478,9 @@ export function PlanningTab({
         <div>
           <div className="flex items-center gap-1.5">
             <Route className="size-4 text-primary" />
-            <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">Itinerario pianificato</h4>
+            <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">Mappa itinerario pianificato</h4>
           </div>
-          <p className="mt-1 text-[10px] text-muted-foreground">Le tappe vengono posizionate automaticamente e collegate con il percorso stradale previsto.</p>
+          <p className="mt-1 text-[10px] text-muted-foreground">Vista grafica delle tappe pianificate con percorso stradale previsto. Questa sezione è sempre visibile tra l'inserimento della giornata e l'elenco delle giornate.</p>
         </div>
         {mapLoading && <span className="text-[9px] font-bold text-primary">Calcolo percorso…</span>}
       </div>
