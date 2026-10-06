@@ -7,6 +7,7 @@ export type PdfTripDay = {
   end_city: string | null
   planned_km: number | null
   notes: string | null
+  waypoints?: string[]
 }
 
 export type PdfAccommodation = {
@@ -180,8 +181,9 @@ function stayDayLabel(
 function routeLabel(
   startCity: string | null,
   endCity: string | null,
+  waypoints: string[] = [],
 ): string {
-  return `${startCity || '—'} - ${endCity || '—'}`
+  return [startCity, ...waypoints, endCity].filter(Boolean).join(' → ') || '—'
 }
 
 function paymentLabel(accommodation: PdfAccommodation): string {
@@ -689,7 +691,7 @@ export async function exportTripPdf({
   }
 
   const sectionHeader = (label: string, subtitle?: string) => {
-    doc.setFillColor(8, 8, 8)
+    doc.setFillColor(10, 27, 45)
     doc.roundedRect(margin, 12, pageWidth - margin * 2, 18, 2.5, 2.5, 'F')
 
     if (logoDataUrl) {
@@ -721,7 +723,7 @@ export async function exportTripPdf({
   // ==========================================================
   // PAGINA 1 — COPERTINA + RIEPILOGO
   // ==========================================================
-  doc.setFillColor(8, 8, 8)
+  doc.setFillColor(10, 27, 45)
   doc.roundedRect(margin, 12, pageWidth - margin * 2, 34, 3, 3, 'F')
 
   if (logoDataUrl) {
@@ -802,7 +804,7 @@ export async function exportTripPdf({
       textColor: 35,
     },
     headStyles: {
-      fillColor: [48, 59, 76],
+      fillColor: [20, 116, 214],
       textColor: 255,
       fontStyle: 'bold',
     },
@@ -835,7 +837,7 @@ export async function exportTripPdf({
         lineWidth: 0.15,
       },
       headStyles: {
-        fillColor: [73, 85, 104],
+        fillColor: [18, 78, 130],
         textColor: 255,
         fontStyle: 'bold',
       },
@@ -887,7 +889,7 @@ export async function exportTripPdf({
     if (dayAccommodations.length === 0) {
       summaryRows.push([
         `Giorno ${day.day_number}`,
-        routeLabel(day.start_city, day.end_city),
+        routeLabel(day.start_city, day.end_city, day.waypoints || []),
         formatDate(day.travel_date),
         day.planned_km !== null
           ? Number(day.planned_km).toFixed(0)
@@ -904,7 +906,7 @@ export async function exportTripPdf({
       summaryRows.push([
         index === 0 ? `Giorno ${day.day_number}` : '',
         index === 0
-          ? routeLabel(day.start_city, day.end_city)
+          ? routeLabel(day.start_city, day.end_city, day.waypoints || [])
           : 'Stesso soggiorno',
 
         index === 0 ? formatDate(day.travel_date) : '',
@@ -1115,7 +1117,7 @@ export async function exportTripPdf({
     const pageLabel = `Giorno ${day.day_number}`
 
     sectionHeader(
-      `${pageLabel} · ${routeLabel(day.start_city, day.end_city)}`,
+      `${pageLabel} · ${routeLabel(day.start_city, day.end_city, day.waypoints || [])}`,
       `${formatDate(day.travel_date)} · ${
         day.planned_km !== null
           ? `${Number(day.planned_km).toFixed(0)} km`
@@ -1135,7 +1137,7 @@ export async function exportTripPdf({
     doc.setFont('helvetica', 'normal')
     doc.setFontSize(9)
     const routeLines = doc.splitTextToSize(
-      routeLabel(day.start_city, day.end_city),
+      routeLabel(day.start_city, day.end_city, day.waypoints || []),
       76,
     )
     doc.text(routeLines, 15, 53)
@@ -1236,7 +1238,7 @@ export async function exportTripPdf({
         doc.addPage('a4', 'landscape')
         sectionHeader(
           `${pageLabel} · Pernottamenti`,
-          routeLabel(day.start_city, day.end_city),
+          routeLabel(day.start_city, day.end_city, day.waypoints || []),
         )
         hotelY = 36
       }
