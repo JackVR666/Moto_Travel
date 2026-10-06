@@ -234,20 +234,27 @@ export function PlanningTab({
     sortedTripDays.forEach((day) => {
       const start = day.start_city?.trim()
       const end = day.end_city?.trim()
-      if (start && !result.some((item) => item.label.toLowerCase() === start.toLowerCase())) {
-        result.push({ label: start, dayNumber: Number(day.day_number), kind: 'start' })
-      }
-      const dayWaypoints = Array.isArray(day.waypoints) && day.waypoints.length > 0 ? day.waypoints : decodeWaypoints(day.notes)
+      const dayNumber = Number(day.day_number)
+      if (start) result.push({ label: start, dayNumber, kind: 'start' })
+
+      const dayWaypoints = Array.isArray(day.waypoints) && day.waypoints.length > 0
+        ? day.waypoints
+        : decodeWaypoints(day.notes)
       dayWaypoints.forEach((waypoint) => {
-        if (!result.some((item) => item.label.toLowerCase() === waypoint.toLowerCase())) {
-          result.push({ label: waypoint, dayNumber: Number(day.day_number), kind: 'end' })
-        }
+        const label = waypoint.trim()
+        if (label) result.push({ label, dayNumber, kind: 'end' })
       })
-      if (end && !result.some((item) => item.label.toLowerCase() === end.toLowerCase())) {
-        result.push({ label: end, dayNumber: Number(day.day_number), kind: 'end' })
-      }
+
+      if (end) result.push({ label: end, dayNumber, kind: 'end' })
     })
-    return result
+    return result.filter((item, index, items) => {
+      if (index === 0) return true
+      const previous = items[index - 1]
+      return !(
+        previous.dayNumber === item.dayNumber &&
+        previous.label.toLowerCase() === item.label.toLowerCase()
+      )
+    })
   }, [tripDays])
 
   useEffect(() => {
