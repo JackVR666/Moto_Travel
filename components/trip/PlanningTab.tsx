@@ -98,6 +98,9 @@ type PlanningTabProps = {
     dayEndCity: string
     setDayEndCity: (value: string) => void
 
+    dayWaypoints: string[]
+    setDayWaypoints: (value: string[]) => void
+
     dayPlannedKm: string
     setDayPlannedKm: (value: string) => void
 
@@ -156,6 +159,8 @@ export function PlanningTab({
     setDayStartCity,
     dayEndCity,
     setDayEndCity,
+    dayWaypoints,
+    setDayWaypoints,
     dayPlannedKm,
     setDayPlannedKm,
     dayTitle,
@@ -198,6 +203,20 @@ export function PlanningTab({
     (a, b) => Number(a.day_number) - Number(b.day_number)
   )
 
+  const decodeWaypoints = (stored: string | null | undefined) => {
+    const match = (stored || '').match(/^\[\[WAYPOINTS:(.*?)\]\]\n?/)
+    if (!match) return [] as string[]
+    try {
+      const parsed = JSON.parse(match[1])
+      return Array.isArray(parsed) ? parsed.map(String).filter(Boolean) : []
+    } catch {
+      return []
+    }
+  }
+
+  const visibleDayNotes = (stored: string | null | undefined) =>
+    (stored || '').replace(/^\[\[WAYPOINTS:.*?\]\]\n?/, '')
+
   const itineraryCities = useMemo(() => {
     const result: { label: string; dayNumber: number; kind: 'start' | 'end' }[] = []
     sortedTripDays.forEach((day) => {
@@ -206,6 +225,11 @@ export function PlanningTab({
       if (start && !result.some((item) => item.label.toLowerCase() === start.toLowerCase())) {
         result.push({ label: start, dayNumber: Number(day.day_number), kind: 'start' })
       }
+      decodeWaypoints(day.notes).forEach((waypoint) => {
+        if (!result.some((item) => item.label.toLowerCase() === waypoint.toLowerCase())) {
+          result.push({ label: waypoint, dayNumber: Number(day.day_number), kind: 'end' })
+        }
+      })
       if (end && !result.some((item) => item.label.toLowerCase() === end.toLowerCase())) {
         result.push({ label: end, dayNumber: Number(day.day_number), kind: 'end' })
       }
@@ -424,6 +448,28 @@ export function PlanningTab({
             />
             </div>
 
+            <div className="space-y-2 sm:col-span-3">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[10px] uppercase font-bold text-muted-foreground">Tappe intermedie</span>
+                <Button type="button" variant="outline" size="sm" onClick={() => setDayWaypoints([...dayWaypoints, ''])} className="h-7 gap-1 px-2 text-[10px]">
+                  <Plus className="size-3" /> Aggiungi tappa
+                </Button>
+              </div>
+              {dayWaypoints.length === 0 ? (
+                <p className="text-[10px] text-muted-foreground">Facoltative. Esempio: Verona → Innsbruck → Kufstein → Salisburgo.</p>
+              ) : (
+                <div className="space-y-2">
+                  {dayWaypoints.map((waypoint, index) => (
+                    <div key={index} className="flex items-center gap-2">
+                      <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/15 text-[9px] font-black text-primary">{index + 1}</span>
+                      <input type="text" placeholder="Es. Innsbruck" value={waypoint} onChange={(e) => setDayWaypoints(dayWaypoints.map((value, i) => i === index ? e.target.value : value))} className="min-w-0 flex-1 rounded-md border border-border bg-background py-1.5 px-2.5 text-xs text-foreground focus:outline-none" />
+                      <button type="button" onClick={() => setDayWaypoints(dayWaypoints.filter((_, i) => i !== index))} className="rounded-md border border-border p-1.5 text-muted-foreground hover:text-destructive" aria-label={`Elimina tappa ${index + 1}`}><Trash2 className="size-3.5" /></button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <div className="space-y-0.5">
             <span className="text-[10px] uppercase font-bold text-muted-foreground">Km previsti</span>
             <input
@@ -594,7 +640,7 @@ export function PlanningTab({
 
                   {(day.start_city || day.end_city) && (
                     <p className="mt-0.5 truncate text-[8px] text-muted-foreground sm:text-[10px]">
-                      {day.start_city || '—'} → {day.end_city || '—'}
+                      {[day.start_city, ...decodeWaypoints(day.notes), day.end_city].filter(Boolean).join(' → ') || '—'}
                     </p>
                   )}
                 </div>
@@ -639,9 +685,9 @@ export function PlanningTab({
                 </p>
                 )}
 
-                  {day.notes && (
+                  {visibleDayNotes(day.notes) && (
                     <p className="text-[11px] text-muted-foreground leading-relaxed whitespace-pre-line">
-                      {day.notes}
+                      {visibleDayNotes(day.notes)}
                     </p>
                   )}
                   
