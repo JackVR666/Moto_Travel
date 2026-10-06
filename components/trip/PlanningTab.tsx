@@ -231,22 +231,38 @@ export function PlanningTab({
   }
 
   const itineraryCities = useMemo(() => {
-    const result: { label: string; dayNumber: number; kind: 'start' | 'end' }[] = []
+    const result: { label: string; searchLabel?: string; fallbackSearchLabel?: string; dayNumber: number; kind: 'start' | 'end' }[] = []
     sortedTripDays.forEach((day) => {
-      const start = day.start_city?.trim()
-      const end = day.end_city?.trim()
       const dayNumber = Number(day.day_number)
-      if (start) result.push({ label: start, dayNumber, kind: 'start' })
+      const dayAccommodation = accommodations.find((accommodation) => accommodation.trip_day_id === day.id)
+      const previousDay = sortedTripDays.find((candidate) => Number(candidate.day_number) === dayNumber - 1)
+      const previousAccommodation = previousDay
+        ? accommodations.find((accommodation) => accommodation.trip_day_id === previousDay.id)
+        : undefined
+
+      const start = previousAccommodation?.name?.trim() || day.start_city?.trim()
+      const startSearch = previousAccommodation
+        ? [previousAccommodation.name, previousAccommodation.address].filter(Boolean).join(', ')
+        : start
+      const startFallback = previousAccommodation?.address?.trim() || undefined
+
+      const end = dayAccommodation?.name?.trim() || day.end_city?.trim()
+      const endSearch = dayAccommodation
+        ? [dayAccommodation.name, dayAccommodation.address].filter(Boolean).join(', ')
+        : end
+      const endFallback = dayAccommodation?.address?.trim() || undefined
+
+      if (start) result.push({ label: start, searchLabel: startSearch, fallbackSearchLabel: startFallback, dayNumber, kind: 'start' })
 
       const dayWaypoints = Array.isArray(day.waypoints) && day.waypoints.length > 0
         ? day.waypoints
         : decodeWaypoints(day.notes)
       dayWaypoints.forEach((waypoint) => {
         const label = waypoint.trim()
-        if (label) result.push({ label, dayNumber, kind: 'end' })
+        if (label) result.push({ label, searchLabel: label, dayNumber, kind: 'end' })
       })
 
-      if (end) result.push({ label: end, dayNumber, kind: 'end' })
+      if (end) result.push({ label: end, searchLabel: endSearch, fallbackSearchLabel: endFallback, dayNumber, kind: 'end' })
     })
     return result.filter((item, index, items) => {
       if (index === 0) return true
@@ -256,7 +272,7 @@ export function PlanningTab({
         previous.label.toLowerCase() === item.label.toLowerCase()
       )
     })
-  }, [tripDays])
+  }, [tripDays, accommodations])
 
   const mapDayNumbers = useMemo(
     () => Array.from(new Set(sortedTripDays.map((day) => Number(day.day_number)))).sort((a, b) => a - b),
@@ -286,12 +302,23 @@ export function PlanningTab({
       try {
         const located: PlannedMapPoint[] = []
         for (const city of displayedItineraryCities) {
-          const response = await fetch(
-            `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(city.label)}`,
-            { headers: { 'Accept-Language': 'it' } }
-          )
-          if (!response.ok) throw new Error('Geocodifica non disponibile')
-          const matches = await response.json()
+          const geocode = async (query: string) => {
+            const response = await fetch(
+              `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(query)}`,
+              { headers: { 'Accept-Language': 'it' } }
+            )
+            if (!response.ok) throw new Error('Geocodifica non disponibile')
+            return response.json()
+          }
+
+          let matches = await geocode(city.searchLabel || city.label)
+          if (!matches?.[0] && city.fallbackSearchLabel) {
+            matches = await geocode(city.fallbackSearchLabel)
+          }
+          if (!matches?.[0] && city.searchLabel !== city.label) {
+            matches = await geocode(city.label)
+          }
+
           if (matches?.[0]) {
             located.push({
               ...city,
