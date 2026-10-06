@@ -24,6 +24,7 @@ type TripDay = {
     end_city: string | null
     planned_km: number | null
     display_order: number | null
+    waypoints?: string[]
 }
 
 type PlanningTabProps = {
@@ -236,7 +237,8 @@ export function PlanningTab({
       if (start && !result.some((item) => item.label.toLowerCase() === start.toLowerCase())) {
         result.push({ label: start, dayNumber: Number(day.day_number), kind: 'start' })
       }
-      decodeWaypoints(day.notes).forEach((waypoint) => {
+      const dayWaypoints = Array.isArray(day.waypoints) && day.waypoints.length > 0 ? day.waypoints : decodeWaypoints(day.notes)
+      dayWaypoints.forEach((waypoint) => {
         if (!result.some((item) => item.label.toLowerCase() === waypoint.toLowerCase())) {
           result.push({ label: waypoint, dayNumber: Number(day.day_number), kind: 'end' })
         }
@@ -684,7 +686,7 @@ export function PlanningTab({
 
                   {(day.start_city || day.end_city) && (
                     <p className="mt-0.5 truncate text-[8px] text-muted-foreground sm:text-[10px]">
-                      {[day.start_city, ...decodeWaypoints(day.notes), day.end_city].filter(Boolean).join(' → ') || '—'}
+                      {[day.start_city, ...(day.waypoints || decodeWaypoints(day.notes)), day.end_city].filter(Boolean).join(' → ') || '—'}
                     </p>
                   )}
                 </div>
