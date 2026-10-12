@@ -27,6 +27,12 @@ export const ATLAS_CATEGORIES = {
     color: "#b45309",
   },
 
+  attrazione_turistica: {
+    label: "Attrazione turistica",
+    icon: Camera,
+    color: "#0d9488",
+  },
+
   monumento: {
     label: "Monumento",
     icon: Landmark,
