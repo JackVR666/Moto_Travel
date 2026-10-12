@@ -588,6 +588,7 @@ export function AtlasMapView() {
                 icon={createCategoryMarkerIcon(
                   place.category,
                   Boolean(place.is_favorite),
+                  dynamicCategories,
                 )}
               >
                 <Popup minWidth={240} maxWidth={290}>
