@@ -210,6 +210,8 @@ export function AtlasHome() {
         </div>
       )}
 
+      <div className="flex justify-end"><Button variant="outline" size="sm" onClick={() => router.push("/atlas/categorie")}><Tags className="mr-2 size-4" /> Gestisci categorie Atlante</Button></div>
+
       {/* Ultimi luoghi */}
       <section className="rounded-2xl border border-border bg-card/90 p-4 shadow-[0_12px_32px_rgba(0,0,0,0.18)] sm:p-5">
         <div className="mb-4 flex items-center justify-between gap-3">
