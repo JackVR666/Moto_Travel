@@ -21,6 +21,7 @@ import {
 } from "@/lib/atlasCategories";
 
 import { supabase } from "@/lib/supabase";
+import { useAtlasCategories } from "@/lib/useAtlasCategories";
 import { Button } from "@/components/ui/button";
 
 type Coordinates = {
@@ -40,6 +41,7 @@ type Trip = {
 
 export default function NuovoLuogoPage() {
   const router = useRouter();
+  const atlasCategories = useAtlasCategories();
 
   const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
 
@@ -680,9 +682,9 @@ export default function NuovoLuogoPage() {
                 >
                   <option value="">Non specificata</option>
 
-                  {Object.entries(ATLAS_CATEGORIES).map(
-                    ([value, config]) => (
-                      <option key={value} value={value}>
+                  {atlasCategories.map(
+                    (config) => (
+                      <option key={config.slug} value={config.slug}>
                         {config.label}
                       </option>
                     )
