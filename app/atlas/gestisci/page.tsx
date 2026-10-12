@@ -23,6 +23,7 @@ import {
 } from "@/lib/atlasCategories";
 
 import { supabase } from "@/lib/supabase";
+import { useAtlasCategories } from "@/lib/useAtlasCategories";
 import { Button } from "@/components/ui/button";
 
 type Trip = {
@@ -72,6 +73,7 @@ const EMPTY_FORM: EditForm = {
 
 export default function GestisciLuoghiPage() {
   const router = useRouter();
+  const atlasCategories = useAtlasCategories();
 
   const [places, setPlaces] = useState<Place[]>([]);
   const [trips, setTrips] = useState<Trip[]>([]);
@@ -471,9 +473,9 @@ export default function GestisciLuoghiPage() {
                   >
                     <option value="">Non specificata</option>
 
-                    {Object.entries(ATLAS_CATEGORIES).map(
-                      ([value, config]) => (
-                        <option key={value} value={value}>
+                    {atlasCategories.map(
+                      (config) => (
+                        <option key={config.slug} value={config.slug}>
                           {config.label}
                         </option>
                       )
