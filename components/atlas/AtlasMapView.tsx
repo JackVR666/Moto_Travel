@@ -28,6 +28,7 @@ import L, { type LatLngExpression, type Map as LeafletMap } from "leaflet";
 import "leaflet/dist/leaflet.css";
 
 import { supabase } from "@/lib/supabase";
+import { useAtlasCategories } from "@/lib/useAtlasCategories";
 import { Button } from "@/components/ui/button";
 
 import { renderToStaticMarkup } from "react-dom/server";
@@ -64,7 +65,9 @@ const ITALY_CENTER: LatLngExpression = [42.8, 12.8];
 
 const categoryMarkerCache = new Map<string, L.DivIcon>();
 
-function getCategoryConfig(category: string | null) {
+function getCategoryConfig(category: string | null, categories: ReturnType<typeof useAtlasCategories>) {
+  const dynamic = categories.find(c => c.slug === category);
+  if(dynamic) return {label:dynamic.label,color:dynamic.color,icon: ATLAS_CATEGORIES[category as keyof typeof ATLAS_CATEGORIES]?.icon || MapPin};
   const categoryValue = (category ?? "").trim();
 
   if (!categoryValue) {
@@ -91,8 +94,9 @@ function getCategoryConfig(category: string | null) {
 function createCategoryMarkerIcon(
   category: string | null,
   isFavorite: boolean,
+  categories: ReturnType<typeof useAtlasCategories>,
 ) {
-  const cacheKey = `${category ?? "default"}-${isFavorite}`;
+  const cacheKey = `${category ?? "default"}-${isFavorite}-${categories.find(c=>c.slug===category)?.color ?? ""}`;
 
   const cachedIcon = categoryMarkerCache.get(cacheKey);
 
@@ -100,7 +104,7 @@ function createCategoryMarkerIcon(
     return cachedIcon;
   }
 
-  const categoryConfig = getCategoryConfig(category);
+  const categoryConfig = getCategoryConfig(category, categories);
   const CategoryIcon = categoryConfig.icon;
 
   const iconSvg = renderToStaticMarkup(
@@ -183,6 +187,7 @@ const userMarkerIcon = L.divIcon({
 
 export function AtlasMapView() {
   const router = useRouter();
+  const dynamicCategories = useAtlasCategories();
   const mapRef = useRef<LeafletMap | null>(null);
 
   const [places, setPlaces] = useState<Place[]>([]);
