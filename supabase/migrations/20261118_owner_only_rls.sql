@@ -1,14 +1,11 @@
 -- ESEGUI SOLO DOPO aver creato e verificato il tuo account Supabase Auth.
--- Sostituisci la stringa UUID qui sotto con l'ID utente in Authentication > Users.
+-- Account proprietario configurato: controlla che lo UID corrisponda a Authentication > Users.
 -- Prima di applicare questo script, assicurati di poter entrare nell'app.
 DO $$
-DECLARE owner_id uuid := '00000000-0000-0000-0000-000000000000';
+DECLARE owner_id uuid := '3a9130a8-c61b-4558-93c1-245a7327e965';
 DECLARE tab text;
 DECLARE pol record;
 BEGIN
-  IF owner_id = '00000000-0000-0000-0000-000000000000'::uuid THEN
-    RAISE EXCEPTION 'Sostituisci owner_id con il tuo User UID Supabase Auth prima di eseguire';
-  END IF;
   IF NOT EXISTS (SELECT 1 FROM auth.users WHERE id = owner_id) THEN
     RAISE EXCEPTION 'User UID non trovato in auth.users';
   END IF;
